@@ -1,0 +1,12 @@
+[submodule "external_lib/rocksdb"]
+	path = external_lib/rocksdb
+	url = git@git.motis-project.de:lib/rocksdb-flat.git
+[submodule "external_lib/geo"]
+	path = external_lib/geo
+	url = git@git.motis-project.de:lib/geo.git
+[submodule "external_lib/osmium"]
+	path = external_lib/osmium
+	url = git@git.motis-project.de:lib/osmium.git
+[submodule "external_lib/net"]
+	path = external_lib/net
+	url = git@git.motis-project.de:lib/net.git

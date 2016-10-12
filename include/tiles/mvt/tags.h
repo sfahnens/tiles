@@ -24,7 +24,7 @@ enum GeomType : int {
 enum class Value : protozero::pbf_tag_type {
   optional_string_string_value = 1,
   optional_float_float_value = 2,
-  optional_double_double_valze = 3,
+  optional_double_double_value = 3,
   optional_int64_int_value = 4, 
   optional_uint64_uint_value = 5,
   optional_sint64_sint_value = 6,

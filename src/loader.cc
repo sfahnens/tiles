@@ -5,17 +5,17 @@
 
 #include "rocksdb/utilities/spatial_db.h"
 
-#include "geo/webmercator.h"
-
 #include "tiles/cities.h"
+#include "tiles/flat_geometry.h"
+#include "tiles/globals.h"
+#include "tiles/slice.h"
+#include "tiles/util.h"
 
 using namespace rocksdb;
 using namespace rocksdb::spatial;
 
 using namespace tiles;
 using namespace geo;
-
-using proj = geo::webmercator4096;
 
 constexpr char kDatabasePath[] = "spatial";
 
@@ -26,14 +26,13 @@ void checked(Status&& status) {
   }
 }
 
-constexpr auto kPointFeature = 1.0;
-
 int main() {
   if (!boost::filesystem::is_directory(kDatabasePath)) {
     std::cout << "creating database" << std::endl;
-    checked(
-        SpatialDB::Create(SpatialDBOptions(), kDatabasePath,
-                          {SpatialIndexOptions("zoom10", bbox(0, 0, 0), 10)}));
+    checked(SpatialDB::Create(
+        SpatialDBOptions(), kDatabasePath,
+        {SpatialIndexOptions("zoom10", bbox(proj::tile_bounds_merc(0, 0, 0)),
+                             10)}));
   }
 
   SpatialDB* db;
@@ -46,12 +45,13 @@ int main() {
   for (auto const& city : cities) {
     FeatureSet feature;
     feature.Set("name", city.name_);
+    feature.Set("layer", std::string{"cities"});
     std::cout << "insert " << city.name_ << " @ ";
 
-    auto const xy = proj::latlng_to_meters(city.pos_);
+    auto const xy = latlng_to_merc(city.pos_);
     std::vector<double> mem{kPointFeature, xy.x_, xy.y_};
 
-    checked(db->Insert(WriteOptions(), bbolx(xy), to_slice(mem), feature,
+    checked(db->Insert(WriteOptions(), bbox(xy), to_slice(mem), feature,
                        {"zoom10"}));
   }
 

@@ -11,18 +11,17 @@
 #include "net/http/server/server.hpp"
 #include "net/http/server/shutdown_handler.hpp"
 
-#include "geo/webmercator.h"
+#include "tiles/mvt/builder.h"
+#include "tiles/mvt/dummy.h"
+#include "tiles/mvt/tile_spec.h"
+#include "tiles/util.h"
 
-#include "tiles/writer.h"
-
-using namespace geo;
+using namespace tiles;
 using namespace net::http::server;
 using namespace rocksdb;
 using namespace rocksdb::spatial;
 
 constexpr char kDatabasePath[] = "spatial";
-
-using proj = geo::webmercator4096;
 
 void checked(Status&& status) {
   if (!status.ok()) {
@@ -51,33 +50,45 @@ int main() {
   });
 
   // z, x, y
-  router.route("GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$",
-               [&](auto const& req, auto cb) {
-                 std::cout << "received a request: " << req.uri << std::endl;
+  router.route("GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$", [&](auto const& req,
+                                                               auto cb) {
+    try {
+      std::cout << "received a request: " << req.uri << std::endl;
 
-    auto const bounds = proj::tile_bounds(std::stoul(req.path_params[1]),
-                                                std::stoul(req.path_params[2]),
-                                                std::stoul(req.path_params[0]);
+      auto const spec =
+          tile_spec{static_cast<uint32_t>(std::stoul(req.path_params[1])),
+                    static_cast<uint32_t>(std::stoul(req.path_params[2])),
+                    static_cast<uint32_t>(std::stoul(req.path_params[0]))};
+      tile_builder tb{spec};
 
-    Cursor* cur = db->Query(ReadOptions(), bbox(bounds),
-                            "zoom10");
+      std::cout << "merc bounds: " << spec.merc_bounds_.minx_ << " "
+                << spec.merc_bounds_.maxx_ << "|" << spec.merc_bounds_.miny_
+                << " " << spec.merc_bounds_.maxy_ << std::endl;
 
-    std::vector<meters> found;
-    while (cur->Valid()) {
-      // std::cout << "#" << std::string(cur->blob().data(), cur->blob().size())
-      //           << std::endl;
+      std::cout << "pixl bounds: " << spec.px_bounds_.minx_ << " "
+                << spec.px_bounds_.maxx_ << "|" << spec.px_bounds_.miny_ << " "
+                << spec.px_bounds_.maxy_ << std::endl;
 
-      auto mem = from_slice(cur->blob());
-      found.emplace_back(mem.at(1), mem.at(2));
+      Cursor* cur =
+          db->Query(ReadOptions(), bbox(spec.merc_bounds_), spec.z_str());
+      while (cur->Valid()) {
+        std::cout << "found feature" << std::endl;
+        tb.add_feature(cur->feature_set(), cur->blob());
+        cur->Next();
+      }
 
-      cur->Next();
+      reply rep = reply::stock_reply(reply::ok);
+      rep.content = tb.finish();
+      // rep.content = make_tile();
+      add_cors_headers(rep);
+      cb(rep);
+    } catch (std::exception const& e) {
+      std::cout << "unhandled error: " << e.what() << std::endl;
+    } catch (...) {
+      std::cout << "unhandled unknown error" << std::endl;
     }
 
-    reply rep = reply::stock_reply(reply::ok);
-    rep.content = tiles::make_tile(meters);
-    add_cors_headers(rep);
-    cb(rep);
-               });
+  });
 
   server.listen("0.0.0.0", "8888", router);
 

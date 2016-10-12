@@ -36,10 +36,10 @@ var simple = {
             "type": "raster",
             "source": "raster"
         }, {
-            "id": "circles",
+            "id": "cities",
             "type": "circle",
             "source": "osm",
-            "source-layer": "yolo"
+            "source-layer": "cities"
         }
     ]
 };
@@ -47,7 +47,7 @@ var simple = {
 var map = new mapboxgl.Map({
     container: 'map',
     style: simple,
-    zoom: 2,
+    zoom: 1,
     center: [-14, 35]
 });
 

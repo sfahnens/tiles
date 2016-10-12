@@ -31,6 +31,6 @@ set_target_properties(loader PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra"
 target_link_libraries(loader ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} rocksdb geo)
 
 
-add_executable(server src/server.cc)
+add_executable(server src/server.cc src/mvt/builder.cc src/mvt/encoder.cc)
 set_target_properties(server PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
 target_link_libraries(server ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} rocksdb geo net-http_server)

@@ -65,16 +65,17 @@ int main() {
                 << spec.merc_bounds_.maxx_ << "|" << spec.merc_bounds_.miny_
                 << " " << spec.merc_bounds_.maxy_ << std::endl;
 
-      std::cout << "pixl bounds: " << spec.px_bounds_.minx_ << " "
-                << spec.px_bounds_.maxx_ << "|" << spec.px_bounds_.miny_ << " "
-                << spec.px_bounds_.maxy_ << std::endl;
+      std::cout << "pixl bounds: " << spec.pixel_bounds_.minx_ << " "
+                << spec.pixel_bounds_.maxx_ << "|" << spec.pixel_bounds_.miny_
+                << " " << spec.pixel_bounds_.maxy_ << std::endl;
 
       Cursor* cur =
           db->Query(ReadOptions(), bbox(spec.merc_bounds_), spec.z_str());
       while (cur->Valid()) {
-        std::cout << "found feature" << std::endl;
+        // std::cout << "found feature" << std::endl;
         tb.add_feature(cur->feature_set(), cur->blob());
         cur->Next();
+        // break;
       }
 
       reply rep = reply::stock_reply(reply::ok);

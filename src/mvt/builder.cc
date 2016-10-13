@@ -135,7 +135,7 @@ struct tile_builder::impl {
                 << (*it).second.type() << std::endl;
       return;  // invalid feature
     }
-
+    
     get_or_create(builders_, (*it).second.get_string(), [&]() {
       return std::make_unique<layer_builder>((*it).second.get_string(), spec_);
     })->add_feature(meta, geo);

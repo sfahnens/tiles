@@ -1,11 +1,12 @@
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 
 #include "boost/filesystem.hpp"
 
 #include "rocksdb/utilities/spatial_db.h"
 
-#include "tiles/cities.h"
+#include "tiles/data.h"
 #include "tiles/flat_geometry.h"
 #include "tiles/globals.h"
 #include "tiles/slice.h"
@@ -38,9 +39,6 @@ int main() {
   SpatialDB* db;
   checked(SpatialDB::Open(SpatialDBOptions(), kDatabasePath, &db));
 
-  FeatureSet feature;
-  feature.Set("type", "dummy");
-
   auto const cities = load_cities("/data/osm/hessen-latest.osm.pbf");
   for (auto const& city : cities) {
     FeatureSet feature;
@@ -49,15 +47,50 @@ int main() {
     std::cout << "insert " << city.name_ << " @ ";
 
     auto const xy = latlng_to_merc(city.pos_);
-    std::vector<double> mem{kPointFeature, xy.x_, xy.y_};
+    std::vector<flat_geometry> mem{flat_geometry{feature_type::POINT},
+                                   flat_geometry{xy.x_},
+                                   flat_geometry{xy.y_}};
 
     checked(db->Insert(WriteOptions(), bbox(xy), to_slice(mem), feature,
                        {"zoom10"}));
   }
+  std::cout << cities.size() << std::endl;
+
+  auto const railways = load_railways("/data/osm/hessen-latest.osm.pbf");
+  for (auto const& railway : railways) {
+
+    if (railway.size() < 2) {
+      continue;
+    }
+
+    FeatureSet feature;
+    feature.Set("layer", std::string{"rail"});
+
+    std::vector<flat_geometry> mem{
+        flat_geometry{feature_type::POLYLINE, railway.size()}};
+    mem.reserve(railway.size() * 2 + 1);
+
+    double minx = std::numeric_limits<double>::infinity();
+    double miny = std::numeric_limits<double>::infinity();
+    double maxx = -std::numeric_limits<double>::infinity();
+    double maxy = -std::numeric_limits<double>::infinity();
+
+    for (auto const& pos : railway) {
+      auto const xy = latlng_to_merc(pos);
+      mem.push_back(flat_geometry{xy.x_});
+      mem.push_back(flat_geometry{xy.y_});
+
+      minx = xy.x_ < minx ? xy.x_ : minx;
+      miny = xy.y_ < miny ? xy.y_ : miny;
+      maxx = xy.x_ > maxx ? xy.x_ : maxx;
+      maxy = xy.y_ > maxy ? xy.y_ : maxy;
+    }
+
+    checked(db->Insert(WriteOptions(), {minx, miny, maxx, maxy}, to_slice(mem),
+                       feature, {"zoom10"}));
+  }
 
   checked(db->Compact());
-
-  std::cout << cities.size() << std::endl;
 
   return 0;
 }

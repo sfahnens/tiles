@@ -21,16 +21,52 @@ include_directories(SYSTEM external_lib/miniz)
 include_directories(SYSTEM external_lib/osmium/include)
 include_directories(SYSTEM external_lib/rocksdb/include)
 include_directories(SYSTEM external_lib/rocksdb/external_lib/snappy)
+include_directories(SYSTEM external_lib/sparsehash/src)
+include_directories(SYSTEM external_lib/sol2)
+include_directories(SYSTEM external_lib/lua-5.1/src)
 
-add_subdirectory(external_lib/net EXCLUDE_FROM_ALL)
 add_subdirectory(external_lib/geo EXCLUDE_FROM_ALL)
+add_subdirectory(external_lib/lua-5.1 EXCLUDE_FROM_ALL)
+add_subdirectory(external_lib/net EXCLUDE_FROM_ALL)
 add_subdirectory(external_lib/rocksdb EXCLUDE_FROM_ALL)
 
-add_executable(loader src/loader.cc)
-set_target_properties(loader PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-target_link_libraries(loader ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} rocksdb geo)
+set(TILES_CXX_FLAGS "-std=c++14 -Wall -Wextra")
+
+file(GLOB_RECURSE tiles-import-files src/import.cc src/loader/*.cc)
+
+add_executable(tiles-import ${tiles-import-files})
+set_target_properties(tiles-import PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
+target_link_libraries(tiles-import
+  ${Boost_LIBRARIES}
+  ${ZLIB_LIBRARIES}
+  rocksdb
+  lua
+  geo
+)
+
+file(GLOB_RECURSE tiles-server-files src/server.cc src/mvt/*.cc)
+
+add_executable(tiles-server ${tiles-server-files})
+set_target_properties(tiles-server PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
+target_link_libraries(tiles-server
+  ${Boost_LIBRARIES}
+  ${ZLIB_LIBRARIES}
+  rocksdb
+  geo
+  net-http_server
+)
+
+add_executable(luatest src/luatest.cc)
+set_target_properties(luatest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
+target_link_libraries(luatest ${Boost_LIBRARIES} lua)
 
 
-add_executable(server src/server.cc src/mvt/builder.cc src/mvt/encoder.cc)
-set_target_properties(server PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-target_link_libraries(server ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} rocksdb geo net-http_server)
+# add_executable(area_test external_lib/osmium/examples/osmium_area_test.cpp)
+# set_target_properties(area_test PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
+# target_link_libraries(area_test ${Boost_LIBRARIES} ${ZLIB_LIBRARIES})
+
+
+
+add_executable(osmtest src/osmtest.cc)
+set_target_properties(osmtest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
+target_link_libraries(osmtest ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} geo)

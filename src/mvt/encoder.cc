@@ -4,7 +4,7 @@
 
 #include "tiles/mvt/tags.h"
 
-#include "tiles/flat_geometry.h"
+#include "tiles/geo/flat_geometry.h"
 
 using namespace geo;
 using namespace rocksdb;

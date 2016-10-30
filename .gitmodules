@@ -10,3 +10,12 @@
 [submodule "external_lib/net"]
 	path = external_lib/net
 	url = git@git.motis-project.de:lib/net.git
+[submodule "external_lib/sparsehash"]
+	path = external_lib/sparsehash
+	url = git@git.motis-project.de:lib/sparsehash.git
+[submodule "external_lib/lua-5.1"]
+	path = external_lib/lua-5.1
+	url = git@git.motis-project.de:lib/lua.git
+[submodule "external_lib/sol2"]
+	path = external_lib/sol2
+	url = git@github.com:skyborla/sol2.git

@@ -1,12 +1,31 @@
 
 
 function process_node(node)
-
   if node:has_tag("place", "city") then
-    print(node:get_id())
-
     node:set_target_layer("cities")
     node:set_approved()
   end
+end
 
+function process_way(way)
+  -- if not way:has_tag("railway", "rail") or
+  --    way:has_any_tag("usage", {"industrial", "military", "test", "tourism"}) or
+  --    way:has_any_tag("service", {"yard", "spur"}) or
+  --    way:has_tag("railway:preserved", "yes") then
+  --   return
+  -- end
+  
+  if not way:has_tag("railway", "rail") or
+     way:has_tag("usage", "industrial") or
+     way:has_tag("usage", "military") or
+     way:has_tag("usage", "test") or
+     way:has_tag("usage", "tourism") or
+     way:has_tag("service", "yard") or
+     way:has_tag("service", "spur") or
+     way:has_tag("railway:preserved", "yes") then
+    return
+  end
+
+  way:set_target_layer("rail")
+  way:set_approved()
 end

@@ -14,4 +14,6 @@ int main() {
   }
 
   load();
+
+  std::cout << "exit" << std::endl;
 }

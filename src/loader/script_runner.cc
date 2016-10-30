@@ -13,11 +13,15 @@ struct script_runner::impl {
         "pending_feature",  //
         "get_id", &pending_feature::get_id,  //
         "has_tag", &pending_feature::has_tag,  //
+        "has_any_tag", &pending_feature::has_any_tag,  //
         "set_approved", &pending_feature::set_approved,  //
         "set_target_layer", &pending_feature::set_target_layer);
 
     lua_.new_usertype<pending_node>("pending_node", sol::base_classes,
                                     sol::bases<pending_feature>());
+
+    lua_.new_usertype<pending_way>("pending_way", sol::base_classes,
+                                   sol::bases<pending_feature>());
 
     process_node_ = lua_["process_node"];
     process_way_ = lua_["process_way"];
@@ -40,6 +44,7 @@ script_runner::~script_runner() = default;
 void script_runner::process_node(pending_node& node) {
   impl_->process_node_(node);
 }
+
 void script_runner::process_way(pending_way& way) { impl_->process_way_(way); }
 
 void script_runner::process_relation(pending_relation& relation) {

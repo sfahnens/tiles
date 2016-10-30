@@ -19,3 +19,6 @@
 [submodule "external_lib/sol2"]
 	path = external_lib/sol2
 	url = git@github.com:skyborla/sol2.git
+[submodule "external_lib/conf"]
+	path = external_lib/conf
+	url = git@git.motis-project.de:lib/conf.git

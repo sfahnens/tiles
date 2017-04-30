@@ -1,6 +1,6 @@
 <!DOCTYPE html>
     <title>tiles / mapbox</title>
-    <script src="mapbox-gl-dev.js"></script>
+    <script src="mapbox-gl.js"></script>
     <link href="mapbox-gl.css" rel="stylesheet" />
     <style>
     head, body, #map {
@@ -56,7 +56,20 @@ var map = new mapboxgl.Map({
     center: [-14, 35]
 });
 
-map.addControl(new mapboxgl.Navigation());
+// map.addControl(new mapboxgl.Navigation());
+
+
+map.on('click', 'cities', e =>  {
+    console.log(e);
+});
+
+map.on('click', 'rail', e =>  {
+    console.log(e);
+});
+
+
+
+
 </script>
 
 </body>

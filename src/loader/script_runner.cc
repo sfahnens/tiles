@@ -15,7 +15,8 @@ struct script_runner::impl {
         "has_tag", &pending_feature::has_tag,  //
         "has_any_tag", &pending_feature::has_any_tag,  //
         "set_approved", &pending_feature::set_approved,  //
-        "set_target_layer", &pending_feature::set_target_layer);
+        "set_target_layer", &pending_feature::set_target_layer,  //
+        "add_tag_as_metadata", &pending_feature::add_tag_as_metadata);
 
     lua_.new_usertype<pending_node>("pending_node", sol::base_classes,
                                     sol::bases<pending_feature>());

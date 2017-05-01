@@ -8,10 +8,10 @@
 #include "tiles/geo/flat_geometry.h"
 #include "tiles/geo/flat_point.h"
 #include "tiles/geo/pixel32.h"
-#include "tiles/osm_util.h"
 #include "tiles/slice.h"
 #include "tiles/util.h"
 
+#include "tiles/loader/osm_util.h"
 #include "tiles/loader/pending_feature.h"
 #include "tiles/loader/script_runner.h"
 
@@ -63,6 +63,11 @@ struct loader {
 
         FeatureSet feature;
         feature.Set("layer", pending.target_layer_);
+
+        for(auto const& tag : pending.tag_as_metadata_) {
+          feature.Set(tag, std::string{node.get_value_by_key(tag.c_str(), "")});
+        }
+
 
         // XXX
         // auto const geometry = make_point(location);
@@ -132,7 +137,7 @@ void load() {
   std::cout << "p1: nodes" << std::endl;
   l.load_nodes();
   std::cout << "p2: ways" << std::endl;
-  l.load_ways();
+  // l.load_ways();
   std::cout << "p3: done" << std::endl;
 }
 

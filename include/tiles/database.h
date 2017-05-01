@@ -21,13 +21,13 @@ using spatial_db_ptr = std::unique_ptr<rocksdb::spatial::SpatialDB>;
 
 inline spatial_db_ptr open_spatial_db(std::string const& path,
                                       bool read_only = false) {
-  return {};
-  // using namespace rocksdb::spatial;
+  using namespace rocksdb::spatial;
 
-  // SpatialDB* db;
-  // checked(SpatialDB::Open(SpatialDBOptions(), path, &db, read_only));
+  SpatialDB* db;
+  checked(
+      SpatialDB::Open(SpatialDBOptions(), path, &db, {}, nullptr, read_only));
 
-  // return std::unique_ptr<rocksdb::spatial::SpatialDB>(db);
+  return std::unique_ptr<rocksdb::spatial::SpatialDB>(db);
 }
 
 inline rocksdb::Status create_spatial_db(

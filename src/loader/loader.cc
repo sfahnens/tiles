@@ -64,10 +64,9 @@ struct loader {
         FeatureSet feature;
         feature.Set("layer", pending.target_layer_);
 
-        for(auto const& tag : pending.tag_as_metadata_) {
+        for (auto const& tag : pending.tag_as_metadata_) {
           feature.Set(tag, std::string{node.get_value_by_key(tag.c_str(), "")});
         }
-
 
         // XXX
         // auto const geometry = make_point(location);
@@ -117,7 +116,7 @@ struct loader {
         }
 
         checked(db_->Insert(WriteOptions(), {minx, miny, maxx, maxy},
-                           to_slice(mem), feature, {"zoom10"}));
+                            to_slice(mem), feature, {"zoom10"}));
       }
     });
   }
@@ -137,7 +136,7 @@ void load() {
   std::cout << "p1: nodes" << std::endl;
   l.load_nodes();
   std::cout << "p2: ways" << std::endl;
-  // l.load_ways();
+  l.load_ways();
   std::cout << "p3: done" << std::endl;
 }
 

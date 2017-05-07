@@ -1,9 +1,16 @@
 #pragma once
 
-#include <map>
+#include <chrono>
+#include <cstdio>
+#include <ctime>
 #include <algorithm>
+#include <map>
+#include <stdexcept>
 
 #include "geo/webmercator.h"
+
+#include "rocksdb/utilities/spatial_db.h"
+
 
 namespace tiles {
 
@@ -55,3 +62,17 @@ inline auto transform_to_vec(Container const& c, UnaryOperation op)
 }
 
 }  // namespace tiles
+
+#ifndef log_err
+#define log_err(M, ...) fprintf(stderr, "[ERR] " M "\n", ##__VA_ARGS__);
+#endif
+
+#ifdef verify
+#undef verify
+#endif
+
+#define verify(A, M, ...)        \
+  if (!(A)) {                    \
+    log_err(M, ##__VA_ARGS__);   \
+    throw std::runtime_error(M); \
+  }

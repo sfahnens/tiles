@@ -82,7 +82,7 @@ if(TILES_STANDALONE)
 endif()
 
 
-file(GLOB_RECURSE tiles-files src/mvt/*.cc)
+file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc)
 
 add_library(tiles ${tiles-files})
 set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
@@ -92,3 +92,10 @@ target_link_libraries(tiles
   rocksdb
   geo
 )
+
+
+file(GLOB_RECURSE tiles-test-files test/*.cc)
+
+add_executable(tiles-test ${tiles-test-files})
+set_target_properties(tiles-test PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
+target_link_libraries(tiles-test tiles)

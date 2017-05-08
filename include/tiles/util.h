@@ -11,11 +11,15 @@
 
 #include "rocksdb/utilities/spatial_db.h"
 
-
 namespace tiles {
 
 inline rocksdb::spatial::BoundingBox<double> bbox(geo::merc_bounds const& b) {
   return {b.minx_, b.miny_, b.maxx_, b.maxy_};
+}
+
+inline rocksdb::spatial::BoundingBox<double> bbox(geo::pixel_bounds const& b) {
+  return {static_cast<double>(b.minx_), static_cast<double>(b.miny_),
+          static_cast<double>(b.maxx_), static_cast<double>(b.maxy_)};
 }
 
 inline rocksdb::spatial::BoundingBox<double> bbox(geo::merc_xy const& m) {

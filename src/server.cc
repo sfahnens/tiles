@@ -70,10 +70,19 @@ int main() {
                 << spec.pixel_bounds_.maxx_ << "|" << spec.pixel_bounds_.miny_
                 << " " << spec.pixel_bounds_.maxy_ << std::endl;
 
-      Cursor* cur =
-          db->Query(ReadOptions(), bbox(spec.merc_bounds_), spec.z_str());
+      auto const delta_z = 20 - spec.z_;
+      auto bounds = spec.pixel_bounds_;
+      bounds.minx_ = bounds.minx_ << delta_z;
+      bounds.miny_ = bounds.miny_ << delta_z;
+      bounds.maxx_ = bounds.maxx_ << delta_z;
+      bounds.maxy_ = bounds.maxy_ << delta_z;
+
+      std::cout << "lvl 20 pixl bounds: " << bounds.minx_ << " " << bounds.maxx_
+                << "|" << bounds.miny_ << " " << bounds.maxy_ << std::endl;
+
+      Cursor* cur = db->Query(ReadOptions(), bbox(bounds), spec.z_str());
       while (cur->Valid()) {
-        // std::cout << "found feature" << std::endl;
+        std::cout << "found feature" << std::endl;
         tb.add_feature(cur->feature_set(), cur->blob());
         cur->Next();
         // break;

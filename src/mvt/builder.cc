@@ -3,6 +3,9 @@
 #include <iostream>
 #include <limits>
 
+#include "tiles/fixed/deserialize.h"
+#include "tiles/fixed/shift.h"
+
 #include "tiles/mvt/encoder.h"
 #include "tiles/mvt/tags.h"
 #include "tiles/util.h"
@@ -64,10 +67,17 @@ struct layer_builder {
   }
 
   void write_geometry(pbf_builder<tags::Feature>& pb, Slice const& geo) {
-    auto const encoded = encode_geometry(geo, spec_);
-    pb.add_enum(tags::Feature::optional_GeomType_type, encoded.first);
-    pb.add_packed_uint32(tags::Feature::packed_uint32_geometry,
-                         begin(encoded.second), end(encoded.second));
+    auto geometry = deserialize(geo.ToString());
+    // TODO simplify
+    shift(geometry, spec_.z_);
+    // TODO clip
+
+    encode_geometry(pb, geometry, spec_);
+
+    // auto const encoded = encode_geometry(geo, spec_);
+    // pb.add_enum(tags::Feature::optional_GeomType_type, encoded.first);
+    // pb.add_packed_uint32(tags::Feature::packed_uint32_geometry,
+    //                      begin(encoded.second), end(encoded.second));
   }
 
   std::string finish() {

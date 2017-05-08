@@ -34,6 +34,8 @@ std::string serialize(fixed_polyline const& polyline) {
               tags::FixedGeometryType::POLYLINE);
 
   {
+
+    // TODO this is zigzag64!!!!!!!!
     pz::packed_field_sint32 sw{
         pb, static_cast<pz::pbf_tag_type>(
                 tags::FixedGeometry::packed_sint32_geometry)};

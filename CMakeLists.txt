@@ -31,6 +31,7 @@ if(TILES_STANDALONE)
   include_directories(SYSTEM external_lib/rocksdb/external_lib/snappy)
   include_directories(SYSTEM external_lib/sparsehash/src)
   include_directories(SYSTEM external_lib/sol2)
+  include_directories(SYSTEM external_lib/utl/include)
 
   add_subdirectory(external_lib/conf EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/geo EXCLUDE_FROM_ALL)
@@ -38,7 +39,21 @@ if(TILES_STANDALONE)
   add_subdirectory(external_lib/lz4 EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/net EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/rocksdb EXCLUDE_FROM_ALL)
+endif()
 
+file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc)
+
+add_library(tiles ${tiles-files})
+set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
+target_link_libraries(tiles
+  ${Boost_LIBRARIES}
+  ${ZLIB_LIBRARIES}
+  rocksdb
+  geo
+)
+
+
+if(TILES_STANDALONE)
   file(GLOB_RECURSE tiles-import-files src/import.cc src/loader/*.cc)
 
   add_executable(tiles-import ${tiles-import-files})
@@ -46,18 +61,20 @@ if(TILES_STANDALONE)
   target_link_libraries(tiles-import
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    tiles
     rocksdb
     lua
     geo
   )
 
-  file(GLOB_RECURSE tiles-server-files src/server.cc src/mvt/*.cc)
+  file(GLOB_RECURSE tiles-server-files src/server.cc)
 
   add_executable(tiles-server ${tiles-server-files})
   set_target_properties(tiles-server PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
   target_link_libraries(tiles-server
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    tiles
     rocksdb
     geo
     net-http_server
@@ -66,7 +83,6 @@ if(TILES_STANDALONE)
   add_executable(luatest src/luatest.cc)
   set_target_properties(luatest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
   target_link_libraries(luatest ${Boost_LIBRARIES} lua)
-
 
   # add_executable(area_test external_lib/osmium/examples/osmium_area_test.cpp)
   # set_target_properties(area_test PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
@@ -80,19 +96,6 @@ if(TILES_STANDALONE)
   set_target_properties(geotest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
   target_link_libraries(geotest ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} geo)
 endif()
-
-
-file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc)
-
-add_library(tiles ${tiles-files})
-set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
-target_link_libraries(tiles
-  ${Boost_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  rocksdb
-  geo
-)
-
 
 file(GLOB_RECURSE tiles-test-files test/*.cc)
 

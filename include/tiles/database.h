@@ -35,9 +35,12 @@ inline rocksdb::Status create_spatial_db(
                                  extra_column_families = {}) {
   using namespace rocksdb::spatial;
 
+  auto box = rocksdb::spatial::BoundingBox<double>{0, 0, proj::map_size(20), proj::map_size(20)};
+
+
   return SpatialDB::Create(
       SpatialDBOptions(), path,
-      {SpatialIndexOptions("zoom10", bbox(proj::tile_bounds_merc(0, 0, 0)),
+      {SpatialIndexOptions("zoom10", box, // bbox(proj::tile_bounds_merc(0, 0, 0)),
                            10)},
       extra_column_families);
 }

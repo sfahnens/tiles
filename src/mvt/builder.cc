@@ -3,8 +3,9 @@
 #include <iostream>
 #include <limits>
 
-#include "tiles/fixed/io/deserialize.h"
+#include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
+#include "tiles/fixed/io/deserialize.h"
 
 #include "tiles/mvt/encoder.h"
 #include "tiles/mvt/tags.h"
@@ -70,7 +71,7 @@ struct layer_builder {
     auto geometry = deserialize(geo.ToString());
     // TODO simplify
     shift(geometry, spec_.z_);
-    // TODO clip
+    geometry = clip(geometry, spec_);
 
     encode_geometry(pb, geometry, spec_);
 
@@ -145,7 +146,7 @@ struct tile_builder::impl {
                 << (*it).second.type() << std::endl;
       return;  // invalid feature
     }
-    
+
     get_or_create(builders_, (*it).second.get_string(), [&]() {
       return std::make_unique<layer_builder>((*it).second.get_string(), spec_);
     })->add_feature(meta, geo);

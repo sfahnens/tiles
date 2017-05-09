@@ -9,15 +9,15 @@ fixed_geometry clip(fixed_null_geometry const&, tile_spec const&) {
 }
 
 bool within(fixed_xy const& point, geo::pixel_bounds const& box) {
-  return point.x_ < box.minx_ || point.y_ < box.miny_ ||  //
-         point.x_ > box.maxx_ || point.y_ > box.maxy_;
+  return point.x_ >= box.minx_ && point.y_ >= box.miny_ &&  //
+         point.x_ <= box.maxx_ && point.y_ <= box.maxy_;
 }
 
 fixed_geometry clip(fixed_xy const& point, tile_spec const& spec) {
   if (within(point, spec.pixel_bounds_)) {
-    return fixed_null_geometry{};
-  } else {
     return point;
+  } else {
+    return fixed_null_geometry{};
   }
 }
 
@@ -87,6 +87,8 @@ fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
       }
     }
 
+    // std::cout << t0 << " " << t1 << std::endl;
+
     if (result.back().empty()) {
       result.back().emplace_back(x0 + t0 * dx, y0 + t0 * dy);
     }
@@ -106,6 +108,7 @@ fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
     auto curr_within = within(line[i], box);
 
     if (last_within && curr_within) {
+      // std::cout << "full within" << std::endl;
       draw_within(line, i);
     } else {
       if (draw_liang_barsky(line, i) && !curr_within) {
@@ -115,11 +118,13 @@ fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
     last_within = curr_within;
   }
 
-  if(result.back().empty()) {
+  // std::cout << result.size() << std::endl;
+
+  if (result.back().empty()) {
     result.erase(std::next(end(result), -1));
   }
 
-  if(result.empty()) {
+  if (result.empty()) {
     return fixed_null_geometry{};
   } else {
     return fixed_polyline{std::move(result)};

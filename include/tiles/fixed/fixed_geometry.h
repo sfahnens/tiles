@@ -26,6 +26,11 @@ struct polygon_tag;
 template <typename Tag>
 struct fixed_container {
   std::vector<std::vector<fixed_xy>> geometry_;
+
+  friend bool operator==(fixed_container<Tag> const& lhs,
+                         fixed_container<Tag> const& rhs) {
+    return lhs.geometry_ == rhs.geometry_;
+  }
 };
 
 using fixed_polyline = fixed_container<polyline_tag>;

@@ -51,7 +51,7 @@ void encode(pz::pbf_builder<tags::Feature>& pb, fixed_polyline const& polyline,
     pz::packed_field_uint32 sw{pb, geometry_tag};
 
     for (auto const& line : polyline.geometry_) {
-      verify(polyline.geometry_.size() > 1, "empty polyline");
+      verify(line.size() > 1, "empty polyline");
 
       sw.add_element(encode_command(MOVE_TO, 1));
       sw.add_element(encode_zigzag32(x_encoder.encode(line.front().x_)));

@@ -14,6 +14,8 @@ using fixed_xy = geo::xy<fixed_coord_t>;
 constexpr auto kFixedCoordMin = std::numeric_limits<fixed_coord_t>::min();
 constexpr auto kFixedCoordMax = std::numeric_limits<fixed_coord_t>::max();
 
+using fixed_delta_t = int32_t;
+
 constexpr fixed_coord_t kFixedCoordMagicOffset = kFixedCoordMax / 2ul;
 
 struct fixed_null_geometry {};
@@ -22,12 +24,12 @@ struct polyline_tag;
 struct polygon_tag;
 
 template <typename Tag>
-struct fixed_simple_container {
-  std::vector<fixed_xy> geometry_;
+struct fixed_container {
+  std::vector<std::vector<fixed_xy>> geometry_;
 };
 
-using fixed_polyline = fixed_simple_container<polyline_tag>;
-using fixed_polygon = fixed_simple_container<polygon_tag>;
+using fixed_polyline = fixed_container<polyline_tag>;
+using fixed_polygon = fixed_container<polygon_tag>;
 
 using fixed_geometry = boost::variant<fixed_null_geometry, fixed_xy,
                                       fixed_polyline, fixed_polygon>;

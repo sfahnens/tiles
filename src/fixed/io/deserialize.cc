@@ -1,10 +1,9 @@
-#include "tiles/fixed/deserialize.h"
+#include "tiles/fixed/io/deserialize.h"
 
 #include "protozero/pbf_message.hpp"
 
-#include "tiles/fixed/tags.h"
-#include "tiles/fixed/delta.h"
-
+#include "tiles/fixed/algo/delta.h"
+#include "tiles/fixed/io/tags.h"
 #include "tiles/util.h"
 
 namespace pz = protozero;
@@ -42,14 +41,15 @@ fixed_polyline deserialize_polyline(
   auto it_pair = msg.get_packed_sint32();
 
   fixed_polyline result;
-  result.geometry_.resize(get_next(it_pair));
+  result.geometry_.emplace_back();
+  result.geometry_[0].resize(get_next(it_pair));
 
   delta_decoder x_decoder{kFixedCoordMagicOffset};
   delta_decoder y_decoder{kFixedCoordMagicOffset};
 
-  for (auto i = 0u; i < result.geometry_.size(); ++i) {
-    result.geometry_[i].x_ = x_decoder.decode(get_next(it_pair));
-    result.geometry_[i].y_ = y_decoder.decode(get_next(it_pair));
+  for (auto i = 0u; i < result.geometry_[0].size(); ++i) {
+    result.geometry_[0][i].x_ = x_decoder.decode(get_next(it_pair));
+    result.geometry_[0][i].y_ = y_decoder.decode(get_next(it_pair));
   }
 
   return result;

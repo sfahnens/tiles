@@ -2,9 +2,9 @@
 
 #include <climits>
 
-namespace tiles {
+#include "tiles/fixed/fixed_geometry.h"
 
-using fixed_delta_t = int32_t;
+namespace tiles {
 
 struct delta_encoder {
   delta_encoder(fixed_coord_t init) : curr_(init) {}

@@ -1,9 +1,10 @@
-#include "tiles/fixed/serialize.h"
+#include "tiles/fixed/io/serialize.h"
 
 #include "boost/numeric/conversion/cast.hpp"
 
-#include "tiles/fixed/delta.h"
-#include "tiles/fixed/tags.h"
+#include "tiles/fixed/algo/delta.h"
+#include "tiles/fixed/io/tags.h"
+#include "tiles/util.h"
 
 namespace pz = protozero;
 
@@ -43,9 +44,11 @@ std::string serialize(fixed_polyline const& polyline) {
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};
 
+    verify(polyline.geometry_.size() == 1, "unsupported geometry");
+
     sw.add_element(
-        boost::numeric_cast<fixed_delta_t>(polyline.geometry_.size()));
-    for (auto const& point : polyline.geometry_) {
+        boost::numeric_cast<fixed_delta_t>(polyline.geometry_[0].size()));
+    for (auto const& point : polyline.geometry_[0]) {
       sw.add_element(x_encoder.encode(point.x_));
       sw.add_element(y_encoder.encode(point.y_));
     }

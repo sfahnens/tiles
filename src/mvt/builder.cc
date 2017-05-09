@@ -3,8 +3,8 @@
 #include <iostream>
 #include <limits>
 
-#include "tiles/fixed/deserialize.h"
-#include "tiles/fixed/shift.h"
+#include "tiles/fixed/io/deserialize.h"
+#include "tiles/fixed/algo/shift.h"
 
 #include "tiles/mvt/encoder.h"
 #include "tiles/mvt/tags.h"

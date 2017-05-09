@@ -8,9 +8,9 @@
 
 #include "tiles/database.h"
 
-#include "tiles/fixed/bounding_box.h"
+#include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/fixed_geometry.h"
-#include "tiles/fixed/serialize.h"
+#include "tiles/fixed/io/serialize.h"
 
 #include "tiles/slice.h"
 #include "tiles/util.h"
@@ -84,7 +84,7 @@ struct loader {
       auto pending = pending_way{way};
 
       if (way.nodes().size() < 2) {
-        return; // XXX
+        return;  // XXX
       }
 
       runner_.process_way(pending);
@@ -96,10 +96,13 @@ struct loader {
         feature.Set("layer", pending.target_layer_);
 
         fixed_polyline polyline;
-        polyline.geometry_ =
+        polyline.geometry_.emplace_back(
             utl::to_vec(way.nodes(), [this](auto const& node_ref) {
               return node_index_.get(node_ref.ref());
-            });
+            }));
+
+        // TODO verify that distances fit into int32_t (or clipping will not
+        // work)
 
         auto const string = serialize(polyline);
 

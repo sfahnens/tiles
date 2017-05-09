@@ -1,6 +1,6 @@
 #include "catch.hpp"
 
-#include "tiles/fixed/clip.h"
+#include "tiles/fixed/algo/clip.h"
 
 using namespace tiles;
 
@@ -43,4 +43,11 @@ TEST_CASE("fixed point clip") {
     REQUIRE(result.which() == point_index);
     CHECK(boost::get<fixed_xy>(result) == test_case);
   }
+}
+
+
+TEST_CASE("fixed point polyline") {
+
+
+
 }

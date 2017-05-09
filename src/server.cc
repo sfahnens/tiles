@@ -82,7 +82,7 @@ int main() {
 
       Cursor* cur = db->Query(ReadOptions(), bbox(bounds), spec.z_str());
       while (cur->Valid()) {
-        std::cout << "found feature" << std::endl;
+        // std::cout << "found feature" << std::endl;
         tb.add_feature(cur->feature_set(), cur->blob());
         cur->Next();
         // break;

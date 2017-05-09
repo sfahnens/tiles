@@ -22,7 +22,14 @@ fixed_geometry clip(fixed_xy const& point, tile_spec const& spec) {
 }
 
 fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
-  auto const& box = spec.pixel_bounds_;
+  // auto const& box = spec.pixel_bounds_;
+
+  auto const delta_z = 20 - spec.z_;
+  auto box = spec.pixel_bounds_;
+  box.minx_ = box.minx_ << delta_z;
+  box.miny_ = box.miny_ << delta_z;
+  box.maxx_ = box.maxx_ << delta_z;
+  box.maxy_ = box.maxy_ << delta_z;
 
   std::vector<std::vector<fixed_xy>> result;
   result.emplace_back();
@@ -71,14 +78,15 @@ fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
         return false;
       }
 
-      r = static_cast<double>(q) / static_cast<double>(p);
       if (p < 0) {
+        r = static_cast<double>(q) / static_cast<double>(p);
         if (r > t1) {
           return false;
         } else if (r > t0) {
           t0 = r;
         }
       } else if (p > 0) {
+        r = static_cast<double>(q) / static_cast<double>(p);
         if (r < t0) {
           return false;
         } else if (r < t1) {

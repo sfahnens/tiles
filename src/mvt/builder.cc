@@ -70,8 +70,8 @@ struct layer_builder {
   void write_geometry(pbf_builder<tags::Feature>& pb, Slice const& geo) {
     auto geometry = deserialize(geo.ToString());
     // TODO simplify
-    shift(geometry, spec_.z_);
     geometry = clip(geometry, spec_);
+    shift(geometry, spec_.z_);
 
     encode_geometry(pb, geometry, spec_);
 

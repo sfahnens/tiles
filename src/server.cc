@@ -20,12 +20,10 @@ using namespace net::http::server;
 using namespace rocksdb;
 using namespace rocksdb::spatial;
 
-
 inline rocksdb::spatial::BoundingBox<double> bbox(geo::pixel_bounds const& b) {
   return {static_cast<double>(b.minx_), static_cast<double>(b.miny_),
           static_cast<double>(b.maxx_), static_cast<double>(b.maxy_)};
 }
-
 
 constexpr char kDatabasePath[] = "spatial";
 
@@ -68,25 +66,7 @@ int main() {
                     static_cast<uint32_t>(std::stoul(req.path_params[0]))};
       tile_builder tb{spec};
 
-      std::cout << "merc bounds: " << spec.merc_bounds_.minx_ << " "
-                << spec.merc_bounds_.maxx_ << "|" << spec.merc_bounds_.miny_
-                << " " << spec.merc_bounds_.maxy_ << std::endl;
-
-      std::cout << "pixl bounds: " << spec.pixel_bounds_.minx_ << " "
-                << spec.pixel_bounds_.maxx_ << "|" << spec.pixel_bounds_.miny_
-                << " " << spec.pixel_bounds_.maxy_ << std::endl;
-
-      auto const delta_z = 20 - spec.z_;
-      auto bounds = spec.pixel_bounds_;
-      bounds.minx_ = bounds.minx_ << delta_z;
-      bounds.miny_ = bounds.miny_ << delta_z;
-      bounds.maxx_ = bounds.maxx_ << delta_z;
-      bounds.maxy_ = bounds.maxy_ << delta_z;
-
-      std::cout << "lvl 20 pixl bounds: " << bounds.minx_ << " " << bounds.maxx_
-                << "|" << bounds.miny_ << " " << bounds.maxy_ << std::endl;
-
-      Cursor* cur = db->Query(ReadOptions(), bbox(bounds), spec.z_str());
+      Cursor* cur = db->Query(ReadOptions(), spec.bbox(), spec.z_str());
       while (cur->Valid()) {
         // std::cout << "found feature" << std::endl;
         tb.add_feature(cur->feature_set(), cur->blob());

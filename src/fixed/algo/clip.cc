@@ -14,20 +14,7 @@ bool within(fixed_xy const& point, geo::pixel_bounds const& box) {
 }
 
 fixed_geometry clip(fixed_xy const& point, tile_spec const& spec) {
-  auto const overdraw = 128;
-
-  auto const delta_z = 20 - spec.z_;
-  auto box = spec.pixel_bounds_;
-  box.minx_ = std::max((box.minx_ << delta_z) - overdraw,
-                       static_cast<int64_t>(kFixedCoordMin));
-  box.miny_ = std::max((box.miny_ << delta_z) - overdraw,
-                       static_cast<int64_t>(kFixedCoordMin));
-  box.maxx_ = std::min((box.maxx_ << delta_z) + overdraw,
-                       static_cast<int64_t>(kFixedCoordMax));
-  box.maxy_ = std::min((box.maxy_ << delta_z) + overdraw,
-                       static_cast<int64_t>(kFixedCoordMax));
-
-  if (within(point, box)) {
+  if (within(point, spec.overdraw_bounds_)) {
     return point;
   } else {
     return fixed_null_geometry{};
@@ -35,20 +22,7 @@ fixed_geometry clip(fixed_xy const& point, tile_spec const& spec) {
 }
 
 fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
-  // auto const& box = spec.pixel_bounds_;
-
-  auto const overdraw = 128;
-
-  auto const delta_z = 20 - spec.z_;
-  auto box = spec.pixel_bounds_;
-  box.minx_ = std::max((box.minx_ << delta_z) - overdraw,
-                       static_cast<int64_t>(kFixedCoordMin));
-  box.miny_ = std::max((box.miny_ << delta_z) - overdraw,
-                       static_cast<int64_t>(kFixedCoordMin));
-  box.maxx_ = std::min((box.maxx_ << delta_z) + overdraw,
-                       static_cast<int64_t>(kFixedCoordMax));
-  box.maxy_ = std::min((box.maxy_ << delta_z) + overdraw,
-                       static_cast<int64_t>(kFixedCoordMax));
+  auto const& box = spec.overdraw_bounds_;
 
   std::vector<std::vector<fixed_xy>> result;
   result.emplace_back();

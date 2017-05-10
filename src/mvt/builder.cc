@@ -71,6 +71,9 @@ struct layer_builder {
     auto geometry = deserialize(geo.ToString());
     // TODO simplify
     geometry = clip(geometry, spec_);
+
+    // TODO check on no-geometry --> cancel feature!
+
     shift(geometry, spec_.z_);
 
     encode_geometry(pb, geometry, spec_);

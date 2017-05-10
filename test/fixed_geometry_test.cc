@@ -1,5 +1,7 @@
 #include "catch.hpp"
 
+#include <random>
+
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/fixed/io/deserialize.h"
 #include "tiles/fixed/io/serialize.h"

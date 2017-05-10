@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "osmium/osm.hpp"
 
 #include "tiles/globals.h"

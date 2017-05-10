@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <vector>
 
 #include "boost/variant.hpp"
 
@@ -38,6 +39,10 @@ using fixed_polygon = fixed_container<polygon_tag>;
 
 using fixed_geometry = boost::variant<fixed_null_geometry, fixed_xy,
                                       fixed_polyline, fixed_polygon>;
+
+struct fixed_geometry_index {
+  static int const null;
+};
 
 inline fixed_xy latlng_to_fixed(geo::latlng const& pos) {
   constexpr int64_t kMax = std::numeric_limits<uint32_t>::max();

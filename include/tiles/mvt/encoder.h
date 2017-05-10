@@ -4,8 +4,9 @@
 
 #include "rocksdb/slice.h"
 
+#include "tiles/tile_spec.h"
+
 #include "tiles/mvt/tags.h"
-#include "tiles/mvt/tile_spec.h"
 
 #include "tiles/fixed/fixed_geometry.h"
 

@@ -3,6 +3,9 @@
 #include <iostream>
 #include <limits>
 
+#include "utl/get_or_create.h"
+#include "utl/get_or_create_index.h"
+
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
 #include "tiles/fixed/io/deserialize.h"
@@ -81,8 +84,8 @@ struct layer_builder {
         continue;
       }
 
-      t.emplace_back(get_or_create_index(meta_key_cache_, pair.first));
-      t.emplace_back(get_or_create_index(meta_value_cache_, pair.second));
+      t.emplace_back(utl::get_or_create_index(meta_key_cache_, pair.first));
+      t.emplace_back(utl::get_or_create_index(meta_value_cache_, pair.second));
     }
 
     pb.add_packed_uint32(tags::Feature::packed_uint32_tags, begin(t), end(t));
@@ -156,7 +159,7 @@ struct tile_builder::impl {
       return;  // invalid feature
     }
 
-    get_or_create(builders_, (*it).second.get_string(), [&]() {
+    utl::get_or_create(builders_, (*it).second.get_string(), [&]() {
       return std::make_unique<layer_builder>((*it).second.get_string(), spec_);
     })->add_feature(meta, geo);
   }

@@ -2,7 +2,7 @@
 
 #include "tiles/fixed/fixed_geometry.h"
 
-#include "tiles/mvt/tile_spec.h"
+#include "tiles/tile_spec.h"
 
 namespace tiles {
 

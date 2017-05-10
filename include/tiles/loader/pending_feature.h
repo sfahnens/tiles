@@ -4,7 +4,7 @@
 
 #include "osmium/osm.hpp"
 
-#include "tiles/globals.h"
+#include "tiles/tile_spec.h"
 
 namespace tiles {
 

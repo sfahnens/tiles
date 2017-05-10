@@ -12,7 +12,6 @@
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/fixed/io/serialize.h"
 
-#include "tiles/slice.h"
 #include "tiles/util.h"
 
 #include "tiles/loader/osm_util.h"

@@ -1,8 +1,12 @@
 #pragma once
 
-#include "tiles/globals.h"
+#include "geo/webmercator.h"
 
 namespace tiles {
+
+constexpr auto kTileSize = 4096;
+using proj = geo::webmercator<kTileSize, 20>;
+constexpr auto kMaxZoomLevel = proj::kMaxZoomLevel;
 
 struct tile_spec {
   tile_spec(uint32_t const x, uint32_t const y, uint32_t const z)

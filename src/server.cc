@@ -12,14 +12,20 @@
 #include "net/http/server/shutdown_handler.hpp"
 
 #include "tiles/mvt/builder.h"
-#include "tiles/mvt/dummy.h"
-#include "tiles/mvt/tile_spec.h"
+#include "tiles/tile_spec.h"
 #include "tiles/util.h"
 
 using namespace tiles;
 using namespace net::http::server;
 using namespace rocksdb;
 using namespace rocksdb::spatial;
+
+
+inline rocksdb::spatial::BoundingBox<double> bbox(geo::pixel_bounds const& b) {
+  return {static_cast<double>(b.minx_), static_cast<double>(b.miny_),
+          static_cast<double>(b.maxx_), static_cast<double>(b.maxy_)};
+}
+
 
 constexpr char kDatabasePath[] = "spatial";
 

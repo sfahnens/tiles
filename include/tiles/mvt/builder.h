@@ -6,7 +6,7 @@
 #include "rocksdb/slice.h"
 #include "rocksdb/utilities/spatial_db.h"
 
-#include "tiles/mvt/tile_spec.h"
+#include "tiles/tile_spec.h"
 
 namespace tiles {
 

@@ -5,7 +5,9 @@
 
 #include "boost/variant.hpp"
 
-#include "tiles/globals.h"
+#include "geo/webmercator.h"
+
+#include "tiles/tile_spec.h"
 
 namespace tiles {
 
@@ -44,12 +46,16 @@ struct fixed_geometry_index {
   static int const null;
 };
 
-inline fixed_xy latlng_to_fixed(geo::latlng const& pos) {
-  constexpr int64_t kMax = std::numeric_limits<uint32_t>::max();
+constexpr auto kFixedDefaultZoomLevel = 20ul;
+static_assert(kFixedDefaultZoomLevel <= kMaxZoomLevel, "invalid default zoom");
 
-  auto const px = proj::merc_to_pixel(latlng_to_merc(pos), proj::kMaxZoomLevel);
-  return {static_cast<fixed_coord_t>(std::min(px.x_, kMax)),
-          static_cast<fixed_coord_t>(std::min(px.y_, kMax))};
+inline fixed_xy latlng_to_fixed(geo::latlng const& pos) {
+  auto const merc_xy =
+      proj::merc_to_pixel(geo::latlng_to_merc(pos), kFixedDefaultZoomLevel);
+  return {static_cast<fixed_coord_t>(std::min(
+              merc_xy.x_, static_cast<geo::pixel_coord_t>(kFixedCoordMax))),
+          static_cast<fixed_coord_t>(std::min(
+              merc_xy.y_, static_cast<geo::pixel_coord_t>(kFixedCoordMax)))};
 }
 
 }  // namespace tiles

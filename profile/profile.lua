@@ -3,6 +3,7 @@
 function process_node(node)
   if node:has_tag("place", "city") then
     node:set_target_layer("cities")
+    node:add_tag_as_metadata("name")
     node:set_approved()
   end
 end

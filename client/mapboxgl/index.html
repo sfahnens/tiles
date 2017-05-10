@@ -21,7 +21,9 @@ var simple = {
     "sources": {
         "osm": {
             "type": "vector",
-            "tiles": ["http://localhost:8888/{z}/{x}/{y}.mvt"]
+            // "tiles": ["http://localhost:8080/path/tiles/{z}/{x}/{y}.mvt"]
+            "tiles": ["http://localhost:8888/{z}/{x}/{y}.mvt"],
+            "maxzoom": 20
         },
         "raster": {
             "type": "raster",
@@ -45,6 +47,7 @@ var simple = {
             "type": "line",
             "source": "osm",
             "source-layer": "rail"
+            // "source-layer": "motis"
         }
     ]
 };

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <vector>
+
 #include "osmium/osm.hpp"
 
-#include "tiles/globals.h"
+#include "tiles/tile_spec.h"
 
 namespace tiles {
 
@@ -37,10 +39,16 @@ struct pending_feature {
     target_layer_ = std::move(target_layer);
   }
 
+  void add_tag_as_metadata(std::string tag) {
+    tag_as_metadata_.emplace_back(tag);
+  }
+
   osmium::OSMObject const& obj_;
 
   std::array<bool, kMaxZoomLevel + 1> is_approved_;
   std::string target_layer_;
+
+  std::vector<std::string> tag_as_metadata_;
 };
 
 struct pending_node : public pending_feature {

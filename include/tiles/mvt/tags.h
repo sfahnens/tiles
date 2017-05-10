@@ -25,14 +25,14 @@ enum class Value : protozero::pbf_tag_type {
   optional_string_string_value = 1,
   optional_float_float_value = 2,
   optional_double_double_value = 3,
-  optional_int64_int_value = 4, 
+  optional_int64_int_value = 4,
   optional_uint64_uint_value = 5,
   optional_sint64_sint_value = 6,
   optional_bool_bool_value = 7
 };
 
 enum class Feature : protozero::pbf_tag_type {
-  optional_uint64_id = 1, 
+  optional_uint64_id = 1,
   packed_uint32_tags = 2,
   optional_GeomType_type = 3,
   packed_uint32_geometry = 4

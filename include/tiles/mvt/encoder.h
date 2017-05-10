@@ -4,12 +4,15 @@
 
 #include "rocksdb/slice.h"
 
+#include "tiles/tile_spec.h"
+
 #include "tiles/mvt/tags.h"
-#include "tiles/mvt/tile_spec.h"
+
+#include "tiles/fixed/fixed_geometry.h"
 
 namespace tiles {
 
-std::pair<tags::GeomType, std::vector<uint32_t>> encode_geometry(
-    rocksdb::Slice const&, tile_spec const&);
+void encode_geometry(protozero::pbf_builder<tags::Feature>&,
+                     fixed_geometry const&, tile_spec const&);
 
 }  // namespace tiles

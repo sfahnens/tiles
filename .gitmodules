@@ -22,3 +22,9 @@
 [submodule "external_lib/conf"]
 	path = external_lib/conf
 	url = git@git.motis-project.de:lib/conf.git
+[submodule "external_lib/lz4"]
+	path = external_lib/lz4
+	url = git@git.motis-project.de:lib/lz4.git
+[submodule "external_lib/utl"]
+	path = external_lib/utl
+	url = git@git.motis-project.de:lib/utl.git

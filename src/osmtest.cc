@@ -40,7 +40,12 @@ int main() {
 
   file_index idx{fd};
 
-  foreach_osm_node("/data/osm/planet-latest.osm.pbf", [&](auto const& node) {
+  // std::string osm_file = "/data/osm/planet-latest.osm.pbf";
+  // std::string osm_file = "/data/osm/germany-latest.osm.pbf";
+  std::string osm_file = "/data/osm/hessen-latest.osm.pbf";
+
+
+  foreach_osm_node(osm_file, [&](auto const& node) {
     ++counter;
     max = std::max(max, node.id());
 
@@ -48,18 +53,20 @@ int main() {
             latlng_to_pixel32({node.location().lat(), node.location().lon()}));
   });
 
-  // std::cout << "node count " << counter << std::endl;
-  // std::cout << "max nodeid " << max << std::endl;
+  std::cout << "node count " << counter << std::endl;
+  std::cout << "max nodeid " << max << std::endl;
 
   // std::map<long, size_t> delta_idx_map_;
-  std::map<long, size_t> delta_coord_map_;
+  // std::map<long, size_t> delta_coord_map_;
 
   size_t dist_counter = 0;
-  size_t sixteen_counter = 0;
-  size_t fourteen_counter = 0;
+  size_t twenty_counter = 0;
+  size_t fifteen_counter = 0;
+  size_t thirteen_counter = 0;
   size_t six_counter = 0;
 
-  foreach_osm_way("/data/osm/planet-latest.osm.pbf", [&](auto const& way) {
+
+  foreach_osm_way(osm_file, [&](auto const& way) {
     auto const& nodes = way.nodes();
 
     for (auto i = 1u; i < nodes.size(); ++i) {
@@ -75,29 +82,39 @@ int main() {
 
       auto const dx =
           std::abs(static_cast<long>(pos_1.x_) - static_cast<long>(pos_0.x_));
-      if (dx < 2 << (16 - 1)) {
-        ++sixteen_counter;
+
+      if (dx < (2 << (20))) {
+        ++twenty_counter;
       }
 
-      if (dx < 2 << (14 - 1)) {
-        ++fourteen_counter;
+      if (dx < (2 << (15))) {
+        ++fifteen_counter;
       }
 
-      if (dx < 2 << (6 - 1)) {
+      if (dx < (2 << (13))) {
+        ++thirteen_counter;
+      }
+
+      if (dx < (2 << (6))) {
         ++six_counter;
       }
 
       auto const dy =
           std::abs(static_cast<long>(pos_1.y_) - static_cast<long>(pos_0.y_));
-      if (dy < 2 << (16 - 1)) {
-        ++sixteen_counter;
+
+      if (dy < (2 << (20))) {
+        ++twenty_counter;
       }
 
-      if (dy < 2 << (14 - 1)) {
-        ++fourteen_counter;
+      if (dy < (2 << (15))) {
+        ++fifteen_counter;
       }
 
-      if (dy < 2 << (6 - 1)) {
+      if (dy < (2 << (13))) {
+        ++thirteen_counter;
+      }
+
+      if (dy < (2 << (6))) {
         ++six_counter;
       }
 
@@ -109,8 +126,9 @@ int main() {
   });
 
   std::cout << "distances\t:" << std::setw(22) << dist_counter << std::endl;
-  std::cout << "-  16 bit\t:" << std::setw(22) << sixteen_counter << std::endl;
-  std::cout << "-  14 bit\t:" << std::setw(22) << fourteen_counter << std::endl;
+  std::cout << "-  20 bit\t:" << std::setw(22) << twenty_counter << std::endl;
+  std::cout << "-  15 bit\t:" << std::setw(22) << fifteen_counter << std::endl;
+  std::cout << "-  13 bit\t:" << std::setw(22) << thirteen_counter << std::endl;
   std::cout << "-   6 bit\t:" << std::setw(22) << six_counter << std::endl;
 
   // auto const hist =[](std::string const& name, std::map<long, size_t> const&

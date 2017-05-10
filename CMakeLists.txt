@@ -20,6 +20,8 @@ set(TILES_CXX_FLAGS "-std=c++14 -Wall -Wextra")
 SET(TILES_STANDALONE ON CACHE BOOL "get dependencies from external_lib")
 
 if(TILES_STANDALONE)
+
+
   include_directories(SYSTEM external_lib/conf/include)
   include_directories(SYSTEM external_lib/geo/include)
   include_directories(SYSTEM external_lib/lua-5.1/src)
@@ -90,7 +92,12 @@ if(TILES_STANDALONE)
 
   add_executable(osmtest src/osmtest.cc)
   set_target_properties(osmtest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-  target_link_libraries(osmtest ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} geo)
+  target_link_libraries(osmtest
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${Boost_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    geo
+  )
 
   add_executable(geotest src/geotest.cc)
   set_target_properties(geotest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")

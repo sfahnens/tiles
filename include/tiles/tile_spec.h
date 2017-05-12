@@ -19,9 +19,9 @@ struct tile_spec {
       : x_(x), y_(y), z_(z), delta_z_(kMaxZoomLevel - z) {
     verify(delta_z_ >= 0 && delta_z_ <= kMaxZoomLevel, "invalid z");
 
-    pixel_bounds_ = proj::tile_bounds_pixel(x_, y_, z_);
+    pixel_bounds_ = proj::tile_bounds_pixel(x_, y_); // lvl z
 
-    bounds_ = pixel_bounds_;
+    bounds_ = pixel_bounds_; // lvl 20
     bounds_.minx_ = bounds_.minx_ << delta_z_;
     bounds_.miny_ = bounds_.miny_ << delta_z_;
     bounds_.maxx_ = bounds_.maxx_ << delta_z_;

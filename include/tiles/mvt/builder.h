@@ -14,9 +14,9 @@ struct tile_builder {
   struct config {
     config() {}
 
-    bool simplify = false;
-    bool render_debug_info = false;
-    bool verbose = false;
+    bool simplify_ = false;
+    bool render_debug_info_ = false;
+    bool verbose_ = false;
   };
 
   explicit tile_builder(tile_spec const&, config const& = {});

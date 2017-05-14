@@ -63,13 +63,13 @@ struct layer_builder {
     auto geometry = deserialize(geo.ToString());
     // TODO simplify
 
-    if (config_.verbose) {
+    if (config_.verbose_) {
       dump(geometry);
     }
 
     geometry = clip(geometry, spec_);
 
-    if (config_.verbose) {
+    if (config_.verbose_) {
       std::cout << "--" << std::endl;
       dump(geometry);
     }
@@ -213,7 +213,7 @@ struct tile_builder::impl {
         continue;
       }
 
-      if (config_.debug_geometry_) {
+      if (config_.render_debug_info_) {
         pair.second->render_debug_info();
       }
 

@@ -7,6 +7,7 @@
 #include "utl/get_or_create_index.h"
 
 #include "tiles/fixed/algo/clip.h"
+#include "tiles/fixed/algo/simplify.h"
 #include "tiles/fixed/algo/shift.h"
 #include "tiles/fixed/io/deserialize.h"
 #include "tiles/fixed/io/dump.h"
@@ -62,6 +63,8 @@ struct layer_builder {
   bool write_geometry(pbf_builder<tags::Feature>& pb, Slice const& geo) {
     auto geometry = deserialize(geo.ToString());
     // TODO simplify
+
+    geometry = simplify(geometry, spec_.z_);
 
     if (config_.verbose_) {
       dump(geometry);

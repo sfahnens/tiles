@@ -11,7 +11,15 @@
 namespace tiles {
 
 struct tile_builder {
-  explicit tile_builder(tile_spec const&);
+  struct config {
+    config() {}
+
+    bool simplify = false;
+    bool render_debug_info = false;
+    bool verbose = false;
+  };
+
+  explicit tile_builder(tile_spec const&, config const& = {});
   ~tile_builder();
 
   void add_feature(rocksdb::spatial::FeatureSet const& meta,

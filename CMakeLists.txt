@@ -20,8 +20,6 @@ set(TILES_CXX_FLAGS "-std=c++14 -Wall -Wextra")
 SET(TILES_STANDALONE ON CACHE BOOL "get dependencies from external_lib")
 
 if(TILES_STANDALONE)
-
-
   include_directories(SYSTEM external_lib/conf/include)
   include_directories(SYSTEM external_lib/geo/include)
   include_directories(SYSTEM external_lib/lua-5.1/src)
@@ -43,7 +41,7 @@ if(TILES_STANDALONE)
   add_subdirectory(external_lib/rocksdb EXCLUDE_FROM_ALL)
 endif()
 
-file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc)
+file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc src/tile_database.cc)
 
 add_library(tiles ${tiles-files})
 set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})

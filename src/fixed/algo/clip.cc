@@ -9,6 +9,8 @@
 #include "boost/geometry/geometries/register/multi_linestring.hpp"
 #include "boost/geometry/geometries/register/point.hpp"
 
+#include "utl/erase_if.h"
+
 #include "tiles/util.h"
 
 BOOST_GEOMETRY_REGISTER_POINT_2D(geo::xy<int64_t>, int64_t,  //
@@ -46,9 +48,10 @@ fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
                                 polyline.geometry_,  //
                                 output.geometry_);
 
-  if (output.geometry_.empty() ||
-      std::all_of(begin(output.geometry_), end(output.geometry_),
-                  [](auto const& geo) { return geo.empty(); })) {
+  utl::erase_if(output.geometry_,
+                [](auto const& line) { return line.size() < 2; });
+
+  if (output.geometry_.empty()) {
     return fixed_null_geometry{};
   } else {
     return output;

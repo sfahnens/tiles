@@ -18,9 +18,9 @@ std::string serialize(fixed_xy const& point) {
               tags::FixedGeometryType::POINT);
 
   {
-    pz::packed_field_sint32 sw{
+    pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
-                tags::FixedGeometry::packed_sint32_geometry)};
+                tags::FixedGeometry::packed_sint64_geometry)};
     sw.add_element(point.x_ - kFixedCoordMagicOffset);
     sw.add_element(point.y_ - kFixedCoordMagicOffset);
   }
@@ -37,9 +37,9 @@ std::string serialize(fixed_polyline const& polyline) {
   {
 
     // TODO this is zigzag64!!!!!!!!
-    pz::packed_field_sint32 sw{
+    pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
-                tags::FixedGeometry::packed_sint32_geometry)};
+                tags::FixedGeometry::packed_sint64_geometry)};
 
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};

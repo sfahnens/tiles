@@ -24,28 +24,22 @@ struct cf_holder {
 };
 
 struct tile_database {
-  tile_database(std::string path, bool read_only)
-      : path_(std::move(path)),
-        read_only_(read_only),
-        prep_tiles_cf_(kPrepTilesColumnFamilyName) {}
+  using error_handler_t = std::function<void(std::string const&)>;
 
-  void open(std::vector<cf_holder*> const& extra_cfs);
+  tile_database(error_handler_t error_handler)
+      : error_handler_(std::move(error_handler)),
+        prep_tiles_cf_(kPrepTilesColumnFamilyName) {}
 
   void verify_database_open() const {
     if (!db_) {
-      emit_error("tile_database: database not open");
+      error_handler_("tile_database: database not open");
     }
   }
 
   void verify_status(rocksdb::Status const& status) const {
     if (!status.ok()) {
-      emit_error(status.ToString());
+      error_handler_(status.ToString());
     }
-  }
-
-  virtual void emit_error(std::string const& msg) const {
-    std::cout << "tile_database error: " << msg << std::endl;
-    std::exit(1);
   }
 
   void put_tile(tile_spec const&, rocksdb::Slice const&);
@@ -58,15 +52,18 @@ struct tile_database {
 
   void compact(int num_threads = std::thread::hardware_concurrency());
 
-  std::string path_;
-  bool read_only_;
+  error_handler_t error_handler_;
 
   std::unique_ptr<rocksdb::spatial::SpatialDB> db_;
   cf_holder prep_tiles_cf_;
-
-private:
-  void create_database(
-      std::vector<rocksdb::ColumnFamilyDescriptor> const&) const;
 };
+
+std::unique_ptr<tile_database> make_tile_database(
+    std::string const& path, bool read_only, bool truncate,
+    std::vector<cf_holder*> const& extra_cfs,
+    tile_database::error_handler_t error_handler = [](std::string const& msg) {
+      std::cout << "tile_database error: " << msg << std::endl;
+      std::exit(1);
+    });
 
 }  // namespace tiles

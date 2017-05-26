@@ -68,4 +68,62 @@ struct tile_spec {
   geo::pixel_bounds pixel_bounds_, bounds_, overdraw_bounds_;
 };
 
+struct tile_iterator {
+  tile_iterator() : tile_iterator(0, 0, 0) {}
+  explicit tile_iterator(uint32_t const z) : tile_iterator(0, 0, z) {}
+  tile_iterator(uint32_t const x, uint32_t const y, uint32_t const z)
+      : x_(x), y_(y), z_(z) {}
+
+  tile_spec operator*() const { return tile_spec{x_, y_, z_}; }
+
+  tile_iterator& operator++() {
+    if (z_ > kMaxZoomLevel) {
+      return *this;
+    }
+
+    uint32_t const tile_count = 1 << z_;
+
+    ++x_;
+    if (x_ == tile_count) {
+      x_ = 0;
+      ++y_;
+      if (y_ == tile_count) {
+        y_ = 0;
+        ++z_;
+      }
+    }
+
+    return *this;
+  }
+
+  bool operator==(tile_iterator const& o) const {
+    return std::tie(z_, x_, y_) == std::tie(o.z_, o.x_, o.y_);
+  }
+  bool operator!=(tile_iterator const& o) const {
+    return std::tie(z_, x_, y_) != std::tie(o.z_, o.x_, o.y_);
+  }
+  bool operator>(tile_iterator const& o) const {
+    return std::tie(z_, x_, y_) > std::tie(o.z_, o.x_, o.y_);
+  }
+  bool operator<(tile_iterator const& o) const {
+    return std::tie(z_, x_, y_) < std::tie(o.z_, o.x_, o.y_);
+  }
+  bool operator>=(tile_iterator const& o) const {
+    return std::tie(z_, x_, y_) >= std::tie(o.z_, o.x_, o.y_);
+  }
+  bool operator<=(tile_iterator const& o) const {
+    return std::tie(z_, x_, y_) <= std::tie(o.z_, o.x_, o.y_);
+  }
+
+private:
+  uint32_t x_, y_, z_;
+};
+
+struct tile_pyramid {
+  using iterator = tile_iterator;
+
+  iterator begin() const { return iterator{}; }
+  iterator end() const { return iterator{kMaxZoomLevel + 1}; }
+};
+
 }  // namespace tiles

@@ -3,12 +3,14 @@
 #include <iostream>
 #include <limits>
 
+#include "boost/algorithm/string/predicate.hpp"
+
 #include "utl/get_or_create.h"
 #include "utl/get_or_create_index.h"
 
 #include "tiles/fixed/algo/clip.h"
-#include "tiles/fixed/algo/simplify.h"
 #include "tiles/fixed/algo/shift.h"
+#include "tiles/fixed/algo/simplify.h"
 #include "tiles/fixed/io/deserialize.h"
 #include "tiles/fixed/io/dump.h"
 
@@ -52,12 +54,26 @@ struct layer_builder {
     std::string feature_buf;
     pbf_builder<tags::Feature> feature_pb(feature_buf);
 
-    if (write_geometry(feature_pb, geo)) {
+    if (in_z_range(meta) && write_geometry(feature_pb, geo)) {
       has_geometry_ = true;
 
       write_metadata(feature_pb, meta);
       pb_.add_message(tags::Layer::repeated_Feature_features, feature_buf);
     }
+  }
+
+  bool in_z_range(FeatureSet const& meta) {
+    auto min_it = meta.Find("__min_z");
+    if (min_it != meta.end() && (*min_it).second.get_int() > spec_.z_) {
+      return false;
+    }
+
+    auto max_it = meta.Find("__max_z");
+    if (max_it != meta.end() && (*max_it).second.get_int() < spec_.z_) {
+      return false;
+    }
+
+    return true;
   }
 
   bool write_geometry(pbf_builder<tags::Feature>& pb, Slice const& geo) {
@@ -95,7 +111,7 @@ struct layer_builder {
     std::vector<uint32_t> t;
 
     for (auto const& pair : meta) {
-      if (pair.first == "layer") {
+      if (pair.first == "layer" || boost::starts_with(pair.first, "__")) {
         continue;
       }
 

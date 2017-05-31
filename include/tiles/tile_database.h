@@ -13,6 +13,7 @@
 namespace tiles {
 
 constexpr auto kPrepTilesColumnFamilyName = "tiles-prep-tiles";
+constexpr auto kInvalidPrepMaxZoomLevel = std::numeric_limits<uint32_t>::max();
 
 struct cf_holder {
   explicit cf_holder(std::string name, rocksdb::ColumnFamilyOptions options =
@@ -28,7 +29,8 @@ struct tile_database {
 
   tile_database(error_handler_t error_handler)
       : error_handler_(std::move(error_handler)),
-        prep_tiles_cf_(kPrepTilesColumnFamilyName) {}
+        prep_tiles_cf_(kPrepTilesColumnFamilyName),
+        prep_max_zoom_level_(kInvalidPrepMaxZoomLevel) {}
 
   void verify_database_open() const {
     if (!db_) {
@@ -42,7 +44,6 @@ struct tile_database {
     }
   }
 
-  void put_tile(tile_spec const&, rocksdb::Slice const&);
   void put_feature(rocksdb::spatial::BoundingBox<double> const&,
                    rocksdb::Slice const&, rocksdb::spatial::FeatureSet const&,
                    std::vector<std::string> const&);
@@ -50,12 +51,15 @@ struct tile_database {
   std::string get_tile(tile_spec const&, tile_builder::config const& tb_config =
                                              tile_builder::config{}) const;
 
+  void prepare_tiles(uint32_t max_z = 10);
+
   void compact(int num_threads = std::thread::hardware_concurrency());
 
   error_handler_t error_handler_;
 
   std::unique_ptr<rocksdb::spatial::SpatialDB> db_;
   cf_holder prep_tiles_cf_;
+  uint32_t prep_max_zoom_level_;
 };
 
 std::unique_ptr<tile_database> make_tile_database(

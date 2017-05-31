@@ -9,6 +9,8 @@ namespace rs = rocksdb::spatial;
 
 namespace tiles {
 
+constexpr auto kPrepTilesMaxZoomKey = "__max_zoom_level";
+
 void create_database(tile_database const& tile_db, std::string const& path,
                      std::vector<r::ColumnFamilyDescriptor> const& cf_descs) {
   auto const box =
@@ -54,6 +56,15 @@ std::unique_ptr<tile_database> make_tile_database(
     std::get<0>(tup)->handle_.reset(std::get<1>(tup));
   }
 
+  std::string prep_max_zoom_level;
+  auto status =
+      tile_db->db_->Get(r::ReadOptions(), tile_db->prep_tiles_cf_.handle_.get(),
+                        kPrepTilesMaxZoomKey, &prep_max_zoom_level);
+  if (!status.IsNotFound()) {
+    tile_db->verify_status(status);
+    tile_db->prep_max_zoom_level_ = std::stoi(prep_max_zoom_level);
+  }
+
   return tile_db;
 }
 
@@ -61,19 +72,27 @@ void tile_database::put_feature(
     rs::BoundingBox<double> const& bbox, r::Slice const& slice,
     rs::FeatureSet const& feature,
     std::vector<std::string> const& spatial_indexes) {
-  verify_database_open();
-
   verify_status(
       db_->Insert(r::WriteOptions(), bbox, slice, feature, spatial_indexes));
 }
 
-void tile_database::put_tile(tile_spec const&, r::Slice const&) {
-  // TODO prepared tile stuff
-}
-
 std::string tile_database::get_tile(
     tile_spec const& spec, tile_builder::config const& tb_config) const {
-  verify_database_open();
+
+  if (prep_max_zoom_level_ != kInvalidPrepMaxZoomLevel &&
+      spec.z_ <= prep_max_zoom_level_) {
+    std::string v;
+    auto status = db_->Get(r::ReadOptions(), prep_tiles_cf_.handle_.get(),
+                           spec.rocksdb_quad_key(), &v);
+
+    if (status.IsNotFound()) {
+      return "";
+    } else {
+      verify_status(status);
+    }
+
+    return v;
+  }
 
   tile_builder builder{spec, tb_config};
 
@@ -85,6 +104,26 @@ std::string tile_database::get_tile(
   }
 
   return builder.finish();
+}
+
+void tile_database::prepare_tiles(uint32_t max_z) {
+  for (auto const& spec : tile_pyramid{}) {
+    if (spec.z_ > max_z) {
+      break;
+    }
+
+    auto tile = get_tile(spec);
+
+    if (tile.empty()) {
+      continue;
+    }
+
+    verify_status(db_->Put(r::WriteOptions(), prep_tiles_cf_.handle_.get(),
+                           spec.rocksdb_quad_key(), tile));
+  }
+
+  verify_status(db_->Put(r::WriteOptions(), prep_tiles_cf_.handle_.get(),
+                         kPrepTilesMaxZoomKey, std::to_string(max_z)));
 }
 
 void tile_database::compact(int num_threads) {

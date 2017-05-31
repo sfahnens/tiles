@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rocksdb/utilities/spatial_db.h"
+#include "utilities/spatialdb/utils.h"
 
 #include "geo/webmercator.h"
 
@@ -62,6 +63,14 @@ struct tile_spec {
     return {
         static_cast<double>(bounds_.minx_), static_cast<double>(bounds_.miny_),
         static_cast<double>(bounds_.maxx_), static_cast<double>(bounds_.maxy_)};
+  }
+
+  std::string rocksdb_quad_key() const {
+    namespace rs = rocksdb::spatial;
+
+    std::string key;
+    rs::PutFixed64BigEndian(&key, rs::GetQuadKeyFromTile(x_, y_, z_));
+    return key;
   }
 
   uint32_t x_, y_, z_, delta_z_;

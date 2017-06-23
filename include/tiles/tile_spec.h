@@ -16,7 +16,6 @@ constexpr auto kMaxZoomLevel = proj::kMaxZoomLevel;
 constexpr auto kOverdraw = 128;
 
 struct tile_spec {
-
   tile_spec(uint32_t const x, uint32_t const y, uint32_t const z)
       : x_(x), y_(y), z_(z), delta_z_(kMaxZoomLevel - z) {
     verify(kMaxZoomLevel >= z, "invalid z");
@@ -76,6 +75,14 @@ struct tile_spec {
   uint32_t x_, y_, z_, delta_z_;
   geo::pixel_bounds pixel_bounds_, bounds_, overdraw_bounds_;
 };
+
+tile_spec make_tile_spec(geo::latlng const& pos, uint32_t z) {
+  auto const merc = latlng_to_merc(pos);
+  auto const x = merc_to_pixel_x(merc.x_, z) / proj::kTileSize;
+  auto const y = merc_to_pixel_y(merc.y_, z) / proj::kTileSize;
+
+  return tile_spec{x, y, z};
+}
 
 struct tile_iterator {
   tile_iterator() : tile_iterator(0, 0, 0) {}

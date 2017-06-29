@@ -76,14 +76,6 @@ struct tile_spec {
   geo::pixel_bounds pixel_bounds_, bounds_, overdraw_bounds_;
 };
 
-tile_spec make_tile_spec(geo::latlng const& pos, uint32_t z) {
-  auto const merc = latlng_to_merc(pos);
-  auto const x = merc_to_pixel_x(merc.x_, z) / proj::kTileSize;
-  auto const y = merc_to_pixel_y(merc.y_, z) / proj::kTileSize;
-
-  return tile_spec{x, y, z};
-}
-
 struct tile_iterator {
   tile_iterator() : tile_iterator(0, 0, 0) {}
   explicit tile_iterator(uint32_t const z) : tile_iterator(0, 0, z) {}

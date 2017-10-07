@@ -58,4 +58,8 @@ inline fixed_xy latlng_to_fixed(geo::latlng const& pos) {
               merc_xy.y_, static_cast<geo::pixel_coord_t>(kFixedCoordMax)))};
 }
 
+inline geo::latlng fixed_to_latlng(fixed_xy const& pos) {
+  return geo::merc_to_latlng(proj::pixel_to_merc(pos, kFixedDefaultZoomLevel));
+}
+
 }  // namespace tiles

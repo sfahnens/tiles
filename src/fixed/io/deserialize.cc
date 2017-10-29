@@ -20,10 +20,10 @@ fixed_delta_t get_next(ITPair& it_pair) {
 
 fixed_xy deserialize_point(pz::pbf_message<tags::FixedGeometry>&& msg) {
   verify(msg.next(), "invalid message");
-  verify(msg.tag() == tags::FixedGeometry::packed_sint32_geometry,
+  verify(msg.tag() == tags::FixedGeometry::packed_sint64_geometry,
          "invalid tag");
 
-  auto it_pair = msg.get_packed_sint32();
+  auto it_pair = msg.get_packed_sint64();
 
   auto x = get_next(it_pair);
   auto y = get_next(it_pair);
@@ -35,10 +35,10 @@ fixed_xy deserialize_point(pz::pbf_message<tags::FixedGeometry>&& msg) {
 fixed_polyline deserialize_polyline(
     pz::pbf_message<tags::FixedGeometry>&& msg) {
   verify(msg.next(), "invalid message");
-  verify(msg.tag() == tags::FixedGeometry::packed_sint32_geometry,
+  verify(msg.tag() == tags::FixedGeometry::packed_sint64_geometry,
          "invalid tag");
 
-  auto it_pair = msg.get_packed_sint32();
+  auto it_pair = msg.get_packed_sint64();
 
   fixed_polyline result;
   result.geometry_.emplace_back();

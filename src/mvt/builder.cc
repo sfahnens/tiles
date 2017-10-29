@@ -3,12 +3,16 @@
 #include <iostream>
 #include <limits>
 
+#include "boost/algorithm/string/predicate.hpp"
+
 #include "utl/get_or_create.h"
 #include "utl/get_or_create_index.h"
 
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
+#include "tiles/fixed/algo/simplify.h"
 #include "tiles/fixed/io/deserialize.h"
+#include "tiles/fixed/io/dump.h"
 
 #include "tiles/mvt/encoder.h"
 #include "tiles/mvt/tags.h"
@@ -38,8 +42,9 @@ struct variant_less {
 };
 
 struct layer_builder {
-  layer_builder(std::string const& name, tile_spec const& spec)
-      : spec_(spec), has_geometry_(false), buf_(), pb_(buf_) {
+  layer_builder(std::string const& name, tile_spec const& spec,
+                tile_builder::config const& cfg)
+      : spec_(spec), config_(cfg), has_geometry_(false), buf_(), pb_(buf_) {
     pb_.add_uint32(tags::Layer::required_uint32_version, 2);
     pb_.add_string(tags::Layer::required_string_name, name);
     pb_.add_uint32(tags::Layer::optional_uint32_extent, 4096);
@@ -49,7 +54,7 @@ struct layer_builder {
     std::string feature_buf;
     pbf_builder<tags::Feature> feature_pb(feature_buf);
 
-    if (write_geometry(feature_pb, geo)) {
+    if (in_z_range(meta) && write_geometry(feature_pb, geo)) {
       has_geometry_ = true;
 
       write_metadata(feature_pb, meta);
@@ -57,10 +62,36 @@ struct layer_builder {
     }
   }
 
+  bool in_z_range(FeatureSet const& meta) {
+    auto min_it = meta.Find("__min_z");
+    if (min_it != meta.end() && (*min_it).second.get_int() > spec_.z_) {
+      return false;
+    }
+
+    auto max_it = meta.Find("__max_z");
+    if (max_it != meta.end() && (*max_it).second.get_int() < spec_.z_) {
+      return false;
+    }
+
+    return true;
+  }
+
   bool write_geometry(pbf_builder<tags::Feature>& pb, Slice const& geo) {
     auto geometry = deserialize(geo.ToString());
     // TODO simplify
+
+    geometry = simplify(geometry, spec_.z_);
+
+    if (config_.verbose_) {
+      dump(geometry);
+    }
+
     geometry = clip(geometry, spec_);
+
+    if (config_.verbose_) {
+      std::cout << "--" << std::endl;
+      dump(geometry);
+    }
 
     if (geometry.which() == fixed_geometry_index::null) {
       return false;
@@ -80,7 +111,7 @@ struct layer_builder {
     std::vector<uint32_t> t;
 
     for (auto const& pair : meta) {
-      if (pair.first == "layer") {
+      if (pair.first == "layer" || boost::starts_with(pair.first, "__")) {
         continue;
       }
 
@@ -89,6 +120,27 @@ struct layer_builder {
     }
 
     pb.add_packed_uint32(tags::Feature::packed_uint32_tags, begin(t), end(t));
+  }
+
+  void render_debug_info() {
+    fixed_polyline box;
+    box.geometry_.emplace_back();
+    box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.miny_);
+    box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.maxy_);
+    box.geometry_.back().emplace_back(spec_.bounds_.maxx_, spec_.bounds_.maxy_);
+    box.geometry_.back().emplace_back(spec_.bounds_.maxx_, spec_.bounds_.miny_);
+    box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.miny_);
+
+    fixed_geometry geometry{box};
+
+    shift(geometry, spec_.z_);
+    {
+      std::string feature_buf;
+      pbf_builder<tags::Feature> feature_pb(feature_buf);
+
+      encode_geometry(feature_pb, geometry, spec_);
+      pb_.add_message(tags::Layer::repeated_Feature_features, feature_buf);
+    }
   }
 
   std::string finish() {
@@ -137,6 +189,7 @@ struct layer_builder {
   }
 
   tile_spec const& spec_;
+  tile_builder::config const& config_;
 
   bool has_geometry_;
 
@@ -148,7 +201,8 @@ struct layer_builder {
 };
 
 struct tile_builder::impl {
-  explicit impl(tile_spec const& spec) : spec_(spec) {}
+  explicit impl(tile_spec const& spec, tile_builder::config const& cfg)
+      : spec_(spec), config_(cfg) {}
 
   void add_feature(FeatureSet const& meta, Slice const& geo) {
     auto it = meta.Find("layer");
@@ -160,7 +214,8 @@ struct tile_builder::impl {
     }
 
     utl::get_or_create(builders_, (*it).second.get_string(), [&]() {
-      return std::make_unique<layer_builder>((*it).second.get_string(), spec_);
+      return std::make_unique<layer_builder>((*it).second.get_string(), spec_,
+                                             config_);
     })->add_feature(meta, geo);
   }
 
@@ -169,10 +224,16 @@ struct tile_builder::impl {
     pbf_builder<tags::Tile> pb(buf);
 
     for (auto const& pair : builders_) {
-      std::cout << "append layer: " << pair.first << std::endl;
+      if (config_.verbose_) {
+        std::cout << "append layer: " << pair.first << std::endl;
+      }
 
       if (!pair.second->has_geometry_) {
         continue;
+      }
+
+      if (config_.render_debug_info_) {
+        pair.second->render_debug_info();
       }
 
       pb.add_message(tags::Tile::repeated_Layer_layers, pair.second->finish());
@@ -182,11 +243,13 @@ struct tile_builder::impl {
   }
 
   tile_spec const& spec_;
+  tile_builder::config const& config_;
+
   std::map<std::string, std::unique_ptr<layer_builder>> builders_;
 };
 
-tile_builder::tile_builder(tile_spec const& spec)
-    : impl_(std::make_unique<impl>(spec)) {}
+tile_builder::tile_builder(tile_spec const& spec, config const& cfg)
+    : impl_(std::make_unique<impl>(spec, cfg)) {}
 
 tile_builder::~tile_builder() = default;
 

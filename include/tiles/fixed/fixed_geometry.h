@@ -11,13 +11,13 @@
 
 namespace tiles {
 
-using fixed_coord_t = uint32_t;
+using fixed_coord_t = int64_t;
 using fixed_xy = geo::xy<fixed_coord_t>;
 
-constexpr auto kFixedCoordMin = std::numeric_limits<fixed_coord_t>::min();
-constexpr auto kFixedCoordMax = std::numeric_limits<fixed_coord_t>::max();
+constexpr fixed_coord_t kFixedCoordMin = 0;
+constexpr fixed_coord_t kFixedCoordMax = proj::map_size(kMaxZoomLevel);
 
-using fixed_delta_t = int32_t;
+using fixed_delta_t = int64_t;
 
 constexpr fixed_coord_t kFixedCoordMagicOffset = kFixedCoordMax / 2ul;
 
@@ -56,6 +56,10 @@ inline fixed_xy latlng_to_fixed(geo::latlng const& pos) {
               merc_xy.x_, static_cast<geo::pixel_coord_t>(kFixedCoordMax))),
           static_cast<fixed_coord_t>(std::min(
               merc_xy.y_, static_cast<geo::pixel_coord_t>(kFixedCoordMax)))};
+}
+
+inline geo::latlng fixed_to_latlng(fixed_xy const& pos) {
+  return geo::merc_to_latlng(proj::pixel_to_merc(pos, kFixedDefaultZoomLevel));
 }
 
 }  // namespace tiles

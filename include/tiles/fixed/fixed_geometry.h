@@ -29,10 +29,12 @@ struct polygon_tag;
 template <typename Tag>
 struct fixed_container {
   std::vector<std::vector<fixed_xy>> geometry_;
+  std::vector<bool> type_;
 
   friend bool operator==(fixed_container<Tag> const& lhs,
                          fixed_container<Tag> const& rhs) {
-    return lhs.geometry_ == rhs.geometry_;
+    return std::tie(lhs.geometry_, lhs.type_) ==
+           std::tie(rhs.geometry_, rhs.type_);
   }
 };
 
@@ -61,5 +63,9 @@ inline fixed_xy latlng_to_fixed(geo::latlng const& pos) {
 inline geo::latlng fixed_to_latlng(fixed_xy const& pos) {
   return geo::merc_to_latlng(proj::pixel_to_merc(pos, kFixedDefaultZoomLevel));
 }
+
+struct fixed_box {
+  fixed_coord_t min_x_, min_y_, max_x_, max_y_;
+};
 
 }  // namespace tiles

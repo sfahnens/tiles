@@ -34,8 +34,8 @@ fixed_geometry simplify(fixed_polyline const& polyline,
   return output;
 }
 
-fixed_geometry simplify(fixed_polygon const&, uint32_t const) {
-  return fixed_null_geometry{};
+fixed_geometry simplify(fixed_polygon const& in, uint32_t const) {
+  return in;
 }
 
 fixed_geometry simplify(fixed_geometry const& geometry, uint32_t const z) {

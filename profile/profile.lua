@@ -30,3 +30,14 @@ function process_way(way)
   way:set_target_layer("rail")
   way:set_approved()
 end
+
+
+function process_area(area)
+  if not area:has_tag("building", "yes") or
+     area:has_tag("building", "residential") then
+    return
+  end
+
+  area:set_target_layer("building")
+  area:set_approved()
+end

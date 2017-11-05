@@ -17,8 +17,7 @@ enum FixedGeometryType : int {
 
 enum class FixedGeometry : protozero::pbf_tag_type {
   required_FixedGeometryType_type = 1,
-  packed_sint64_geometry = 2,
-  // packed_sint64_geometry = 3
+  packed_sint64_geometry = 2
 };
 
 } // namespace tags

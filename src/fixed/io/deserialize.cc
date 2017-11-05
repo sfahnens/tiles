@@ -55,6 +55,37 @@ fixed_polyline deserialize_polyline(
   return result;
 }
 
+fixed_polygon deserialize_polygon(pz::pbf_message<tags::FixedGeometry>&& msg) {
+  verify(msg.next(), "invalid message");
+  verify(msg.tag() == tags::FixedGeometry::packed_sint64_geometry,
+         "invalid tag");
+
+  auto it_pair = msg.get_packed_sint64();
+
+  delta_decoder x_decoder{kFixedCoordMagicOffset};
+  delta_decoder y_decoder{kFixedCoordMagicOffset};
+
+  fixed_polygon result;
+
+  auto const total_size = get_next(it_pair);
+  fixed_delta_t processed_size = 0;
+
+  while (processed_size < total_size) {
+    auto const prefix = get_next(it_pair);
+    result.type_.emplace_back(prefix > 0);
+
+    auto const size = std::abs(prefix);
+    processed_size += size;
+
+    result.geometry_.emplace_back(size);
+    for (auto i = 0u; i < size; ++i) {
+      result.geometry_.back()[i].x_ = x_decoder.decode(get_next(it_pair));
+      result.geometry_.back()[i].y_ = y_decoder.decode(get_next(it_pair));
+    }
+  }
+  return result;
+}
+
 fixed_geometry deserialize(std::string const& str) {
   pz::pbf_message<tags::FixedGeometry> msg{str};
 
@@ -68,6 +99,8 @@ fixed_geometry deserialize(std::string const& str) {
       return deserialize_point(std::move(msg));
     case tags::FixedGeometryType::POLYLINE:
       return deserialize_polyline(std::move(msg));
+    case tags::FixedGeometryType::POLYGON:
+      return deserialize_polygon(std::move(msg));
     default: verify(false, "unknown geometry");
   }
 }

@@ -48,6 +48,12 @@ var simple = {
             "source": "osm",
             "source-layer": "rail"
             // "source-layer": "motis"
+        },
+        {
+            "id": "building",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "building"
         }
     ]
 };
@@ -55,8 +61,10 @@ var simple = {
 var map = new mapboxgl.Map({
     container: 'map',
     style: simple,
-    zoom: 1,
-    center: [-14, 35]
+    // zoom: 1,
+    // center: [-14, 35]
+    zoom: 14,
+    center: [8.6671065, 49.8747541]
 });
 
 // map.addControl(new mapboxgl.Navigation());

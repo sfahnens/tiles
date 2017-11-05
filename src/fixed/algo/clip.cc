@@ -58,8 +58,8 @@ fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
   }
 }
 
-fixed_geometry clip(fixed_polygon const&, tile_spec const&) {
-  return fixed_null_geometry{};
+fixed_geometry clip(fixed_polygon const& in, tile_spec const&) {
+  return in;
 }
 
 fixed_geometry clip(fixed_geometry const& geometry, tile_spec const& spec) {

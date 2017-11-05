@@ -25,7 +25,7 @@ inline rocksdb::spatial::BoundingBox<double> bbox(geo::pixel_bounds const& b) {
           static_cast<double>(b.maxx_), static_cast<double>(b.maxy_)};
 }
 
-constexpr char kDatabasePath[] = "spatial";
+constexpr char kDatabasePath[] = "database";
 
 void checked(Status&& status) {
   if (!status.ok()) {
@@ -68,7 +68,7 @@ int main() {
 
       Cursor* cur = db->Query(ReadOptions(), spec.bbox(), spec.z_str());
       while (cur->Valid()) {
-        // std::cout << "found feature" << std::endl;
+        std::cout << "found feature" << std::endl;
         tb.add_feature(cur->feature_set(), cur->blob());
         cur->Next();
         // break;

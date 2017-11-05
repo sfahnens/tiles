@@ -66,8 +66,32 @@ void encode(pz::pbf_builder<tags::Feature>& pb, fixed_polyline const& polyline,
   }
 }
 
-void encode(pz::pbf_builder<tags::Feature>&, fixed_polygon const&,
-            tile_spec const&) {}
+void encode(pz::pbf_builder<tags::Feature>& pb, fixed_polygon const& polygon,
+            tile_spec const& spec) {
+  pb.add_enum(tags::Feature::optional_GeomType_type, tags::GeomType::POLYGON);
+
+  delta_encoder x_encoder{static_cast<fixed_coord_t>(spec.pixel_bounds_.minx_)};
+  delta_encoder y_encoder{static_cast<fixed_coord_t>(spec.pixel_bounds_.miny_)};
+
+  {
+    pz::packed_field_uint32 sw{pb, geometry_tag};
+
+    for (auto const& line : polygon.geometry_) {
+      verify(line.size() > 1, "empty polygon");
+
+      sw.add_element(encode_command(MOVE_TO, 1));
+      sw.add_element(encode_zigzag32(x_encoder.encode(line.front().x_)));
+      sw.add_element(encode_zigzag32(y_encoder.encode(line.front().y_)));
+
+      sw.add_element(encode_command(LINE_TO, line.size() - 1));
+      for (auto i = 1u; i < line.size(); ++i) {
+        sw.add_element(encode_zigzag32(x_encoder.encode(line[i].x_)));
+        sw.add_element(encode_zigzag32(y_encoder.encode(line[i].y_)));
+      }
+      sw.add_element(encode_command(CLOSE_PATH, 1));
+    }
+  }
+}
 
 void encode_geometry(pz::pbf_builder<tags::Feature>& pb,
                      fixed_geometry const& geometry, tile_spec const& spec) {

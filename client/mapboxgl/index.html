@@ -54,6 +54,49 @@ var simple = {
             "type": "fill",
             "source": "osm",
             "source-layer": "building"
+        },
+        {
+            "id": "landuse.industrial",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "filter": ["==", "landuse", "industrial"],
+            "paint": {"fill-color": "#00ffff"}
+        }, {
+            "id": "landuse.residential",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "filter": ["==", "landuse", "residential"],
+            "paint": {"fill-color": "#0000ff"}
+        }, {
+            "id": "landuse.commercial",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "filter": ["==", "landuse", "commercial"],
+            "paint": {"fill-color": "#0000ff"}
+        }, {
+            "id": "landuse.forest",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "filter": ["==", "landuse", "forest"],
+            "paint": {"fill-color": "#00aa00"}
+        }, {
+            "id": "landuse.farmland",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "filter": ["==", "landuse", "farmland"],
+            "paint": {"fill-color": "#00ff00"}
+        }, {
+            "id": "landuse.commerical",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "filter": ["==", "landuse", "commerical"],
+            "paint": {"fill-color": "#ff0000"}
         }
     ]
 };
@@ -74,9 +117,10 @@ map.on('click', 'cities', e =>  {
     console.log(e);
 });
 
-map.on('click', 'rail', e =>  {
+map.on('click', 'landuse.industrial', e =>  {
     console.log(e);
 });
+
 
 
 

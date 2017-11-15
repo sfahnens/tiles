@@ -33,11 +33,20 @@ end
 
 
 function process_area(area)
-  if not area:has_tag("building", "yes") or
-     area:has_tag("building", "residential") then
+  if area:has_any_tag2("landuse",
+    "residential", "retail", "industrial", "forest", "farmland", "commercial") then
+    area:set_target_layer("landuse")
+    area:add_tag_as_metadata("landuse")
+    area:set_approved()
     return
   end
 
-  area:set_target_layer("building")
-  area:set_approved()
+
+  -- if not area:has_tag("building", "yes") or
+  --    area:has_tag("building", "residential") then
+  --   return
+  -- end
+
+  -- area:set_target_layer("building")
+  -- area:set_approved()
 end

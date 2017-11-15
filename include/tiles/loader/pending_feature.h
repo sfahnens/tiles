@@ -4,6 +4,8 @@
 
 #include "osmium/osm.hpp"
 
+#include "sol.hpp"
+
 #include "tiles/tile_spec.h"
 
 namespace tiles {
@@ -19,11 +21,19 @@ struct pending_feature {
   }
 
   bool has_any_tag(std::string const& key,
-                   std::vector<std::string> const& values) {
+                   std::vector<std::string> const values) {
     auto const actual_value = obj_.get_value_by_key(key.c_str(), "");
     return std::any_of(
         begin(values), end(values),
         [&actual_value](auto const& value) { return actual_value == value; });
+  }
+
+
+    bool has_any_tag2(std::string const& key, sol::variadic_args va) {
+    auto const actual_value = obj_.get_value_by_key(key.c_str(), "");
+    return std::any_of(
+        std::begin(va), std::end(va),
+        [&actual_value](std::string const& value) { return actual_value == value; });
   }
 
   // void set_approved(bool value = true) { is_approved_ = value; }

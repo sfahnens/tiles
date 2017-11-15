@@ -21,6 +21,7 @@ struct feature_handler::script_runner {
         "get_id", &pending_feature::get_id,  //
         "has_tag", &pending_feature::has_tag,  //
         "has_any_tag", &pending_feature::has_any_tag,  //
+        "has_any_tag2", &pending_feature::has_any_tag2,  //
         "set_approved", &pending_feature::set_approved,  //
         "set_target_layer", &pending_feature::set_target_layer,  //
         "add_tag_as_metadata", &pending_feature::add_tag_as_metadata);
@@ -109,6 +110,12 @@ void feature_handler::area(osmium::Area const& area) {
 
   rocksdb::spatial::FeatureSet fs;
   fs.Set("layer", feature.target_layer_);
+
+  for(auto const& tag : feature.tag_as_metadata_) {
+    std::string const& meta = area.get_value_by_key(tag.c_str(), "");
+    // std::cout << tag << " -> " << meta << std::endl;
+    fs.Set(tag, meta); // XXX
+  }
 
   // std::cout << "area " << area.id() << " approved and added" << std::endl;
 

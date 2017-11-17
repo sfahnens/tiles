@@ -26,7 +26,7 @@ using namespace protozero;
 namespace tiles {
 
 struct variant_less {
-  bool operator()(Variant const& a, Variant const& b) {
+  bool operator()(Variant const& a, Variant const& b) const {
     if (a.type() != b.type()) {
       return a.type() < b.type();
     }
@@ -80,18 +80,18 @@ struct layer_builder {
     auto geometry = deserialize(geo.ToString());
     geometry = simplify(geometry, spec_.z_);
 
-    if (config_.verbose_) {
-      dump(geometry);
-    }
+    // if (config_.verbose_) {
+    //   dump(geometry);
+    // }
 
     geometry = clip(geometry, spec_);
 
-    if (config_.verbose_) {
-      std::cout << "--" << std::endl;
-      dump(geometry);
-    }
+    // if (config_.verbose_) {
+    //   std::cout << "--" << std::endl;
+    //   dump(geometry);
+    // }
 
-    if (geometry.which() == fixed_geometry_index::null) {
+    if(std::holds_alternative<fixed_null>(geometry)) {
       return false;
     }
 
@@ -121,24 +121,25 @@ struct layer_builder {
   }
 
   void render_debug_info() {
-    fixed_polyline box;
-    box.geometry_.emplace_back();
-    box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.miny_);
-    box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.maxy_);
-    box.geometry_.back().emplace_back(spec_.bounds_.maxx_, spec_.bounds_.maxy_);
-    box.geometry_.back().emplace_back(spec_.bounds_.maxx_, spec_.bounds_.miny_);
-    box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.miny_);
+    throw std::runtime_error("FIX ME");
+    // fixed_polyline box;
+    // box.geometry_.emplace_back();
+    // box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.miny_);
+    // box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.maxy_);
+    // box.geometry_.back().emplace_back(spec_.bounds_.maxx_, spec_.bounds_.maxy_);
+    // box.geometry_.back().emplace_back(spec_.bounds_.maxx_, spec_.bounds_.miny_);
+    // box.geometry_.back().emplace_back(spec_.bounds_.minx_, spec_.bounds_.miny_);
 
-    fixed_geometry geometry{box};
+    // fixed_geometry geometry{box};
 
-    shift(geometry, spec_.z_);
-    {
-      std::string feature_buf;
-      pbf_builder<tags::Feature> feature_pb(feature_buf);
+    // shift(geometry, spec_.z_);
+    // {
+    //   std::string feature_buf;
+    //   pbf_builder<tags::Feature> feature_pb(feature_buf);
 
-      encode_geometry(feature_pb, geometry, spec_);
-      pb_.add_message(tags::Layer::repeated_Feature_features, feature_buf);
-    }
+    //   encode_geometry(feature_pb, geometry, spec_);
+    //   pb_.add_message(tags::Layer::repeated_Feature_features, feature_buf);
+    // }
   }
 
   std::string finish() {

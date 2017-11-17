@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "tiles/fixed/fixed_geometry.h"
+
 // #include "boost/filesystem.hpp"
 
 // #include "tiles/database.h"

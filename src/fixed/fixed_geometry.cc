@@ -2,7 +2,7 @@
 
 namespace tiles {
 
-int const fixed_geometry_index::null =
-    fixed_geometry{fixed_null_geometry{}}.which();
+// int const fixed_geometry_index::null =
+//     fixed_geometry{fixed_null_geometry{}}.which();
 
 }  // namespace tiles

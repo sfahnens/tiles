@@ -1,5 +1,7 @@
 #include "tiles/fixed/io/serialize.h"
 
+#include <numeric>
+
 #include "boost/numeric/conversion/cast.hpp"
 
 #include "utl/zip.h"
@@ -12,22 +14,37 @@ namespace pz = protozero;
 
 namespace tiles {
 
-std::string serialize(fixed_xy const& point) {
+template <typename SW, typename Points>
+void serialize_points(SW& sw, delta_encoder& x_enc, delta_encoder& y_enc,
+                      Points const& points) {
+  sw.add_element(boost::numeric_cast<fixed_delta_t>(points.size()));
+  for (auto const& point : points) {
+    sw.add_element(x_enc.encode(point.x()));
+    sw.add_element(y_enc.encode(point.y()));
+  }
+}
+
+std::string serialize(fixed_point const& point) {
   std::string buffer;
   pz::pbf_builder<tags::FixedGeometry> pb(buffer);
 
   pb.add_enum(tags::FixedGeometry::required_FixedGeometryType_type,
               tags::FixedGeometryType::POINT);
 
-  {
+   {
     pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
                 tags::FixedGeometry::packed_sint64_geometry)};
-    sw.add_element(point.x_ - kFixedCoordMagicOffset);
-    sw.add_element(point.y_ - kFixedCoordMagicOffset);
+
+    delta_encoder x_encoder{kFixedCoordMagicOffset};
+    delta_encoder y_encoder{kFixedCoordMagicOffset};
+
+    verify(!point.empty(), "empty point");
+    serialize_points(sw, x_encoder, y_encoder, point);
   }
   return buffer;
 }
+
 
 std::string serialize(fixed_polyline const& polyline) {
   std::string buffer;
@@ -44,19 +61,17 @@ std::string serialize(fixed_polyline const& polyline) {
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};
 
-    verify(polyline.geometry_.size() == 1, "unsupported geometry");
+    verify(!polyline.empty(), "empty polyline");
+    sw.add_element(boost::numeric_cast<fixed_delta_t>(polyline.size()));
 
-    sw.add_element(
-        boost::numeric_cast<fixed_delta_t>(polyline.geometry_[0].size()));
-    for (auto const& point : polyline.geometry_[0]) {
-      sw.add_element(x_encoder.encode(point.x_));
-      sw.add_element(y_encoder.encode(point.y_));
+    for (auto const& line : polyline) {
+      serialize_points(sw, x_encoder, y_encoder, line);
     }
   }
   return buffer;
 }
 
-std::string serialize(fixed_polygon const& polygon) {
+std::string serialize(fixed_polygon const& multi_polygon) {
   std::string buffer;
   pz::pbf_builder<tags::FixedGeometry> pb(buffer);
 
@@ -70,21 +85,16 @@ std::string serialize(fixed_polygon const& polygon) {
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};
 
-    verify(!polygon.geometry_.empty(), "empty polygon");
-    verify(polygon.geometry_.size() == polygon.type_.size(), "invalid polygon");
+    verify(!multi_polygon.empty(), "empty polygon");
+    sw.add_element(boost::numeric_cast<fixed_delta_t>(multi_polygon.size()));
 
-    auto const total_size = std::accumulate(
-        begin(polygon.geometry_), end(polygon.geometry_), 0,
-        [](auto acc, auto geometry) { return acc + geometry.size(); });
-    sw.add_element(boost::numeric_cast<fixed_delta_t>(total_size));
+    for (auto const& polygon : multi_polygon) {
+      serialize_points(sw, x_encoder, y_encoder, polygon.outer());
 
-    for (auto const& ring : utl::zip(polygon.geometry_, polygon.type_)) {
       sw.add_element(
-          boost::numeric_cast<fixed_delta_t>(std::get<0>(ring).size()) *
-          (std::get<1>(ring) ? 1 : -1));
-      for (auto const& point : std::get<0>(ring)) {
-        sw.add_element(x_encoder.encode(point.x_));
-        sw.add_element(y_encoder.encode(point.y_));
+          boost::numeric_cast<fixed_delta_t>(polygon.inners().size()));
+      for(auto const& inner : polygon.inners()) {
+        serialize_points(sw, x_encoder, y_encoder, inner);
       }
     }
   }

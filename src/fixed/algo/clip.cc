@@ -1,70 +1,60 @@
 #include "tiles/fixed/algo/clip.h"
 
-#include <vector>
+// #include "boost/geometry/algorithms/intersection.hpp"
 
 #include "boost/geometry.hpp"
-
-#include "boost/geometry/geometries/register/box.hpp"
-#include "boost/geometry/geometries/register/linestring.hpp"
-#include "boost/geometry/geometries/register/multi_linestring.hpp"
-#include "boost/geometry/geometries/register/point.hpp"
 
 #include "utl/erase_if.h"
 
 #include "tiles/util.h"
 
-BOOST_GEOMETRY_REGISTER_POINT_2D(geo::xy<int64_t>, int64_t,  //
-                                 cs::cartesian, x_, y_);
-
-BOOST_GEOMETRY_REGISTER_LINESTRING(std::vector<tiles::fixed_xy>);
-BOOST_GEOMETRY_REGISTER_MULTI_LINESTRING(
-    std::vector<std::vector<tiles::fixed_xy>>);
-
-BOOST_GEOMETRY_REGISTER_BOX_2D_4VALUES(geo::pixel_bounds, geo::pixel_xy,  //
-                                       minx_, miny_, maxx_, maxy_);
-
 namespace tiles {
 
-fixed_geometry clip(fixed_null_geometry const&, tile_spec const&) {
-  return fixed_null_geometry{};
+fixed_geometry clip(fixed_null const&, fixed_box const&) {
+  return fixed_null{};
 }
 
-bool within(fixed_xy const& point, geo::pixel_bounds const& box) {
-  return point.x_ >= box.minx_ && point.y_ >= box.miny_ &&  //
-         point.x_ <= box.maxx_ && point.y_ <= box.maxy_;
-}
+fixed_geometry clip(fixed_point const& in, fixed_box const& box) {
+  fixed_point out;
 
-fixed_geometry clip(fixed_xy const& point, tile_spec const& spec) {
-  if (within(point, spec.overdraw_bounds_)) {
-    return point;
+  for (auto const& point : in) {
+    if (boost::geometry::within(point, box)) {
+      out.push_back(point);
+    }
+  }
+
+  if (out.empty()) {
+    return fixed_null{};
   } else {
-    return fixed_null_geometry{};
+    return out;
   }
 }
 
-fixed_geometry clip(fixed_polyline const& polyline, tile_spec const& spec) {
-  fixed_polyline output;
-  boost::geometry::intersection(spec.overdraw_bounds_,  //
-                                polyline.geometry_,  //
-                                output.geometry_);
+fixed_geometry clip(fixed_polyline const& in, fixed_box const& box) {
+  fixed_polyline out;
+  boost::geometry::intersection(box, in, out);
 
-  utl::erase_if(output.geometry_,
-                [](auto const& line) { return line.size() < 2; });
-
-  if (output.geometry_.empty()) {
-    return fixed_null_geometry{};
+  utl::erase_if(out, [](auto const& line) { return line.size() < 2; });
+  if (out.empty()) {
+    return fixed_null{};
   } else {
-    return output;
+    return out;
   }
 }
 
-fixed_geometry clip(fixed_polygon const& in, tile_spec const&) {
-  return in;
+fixed_geometry clip(fixed_polygon const& in, fixed_box const& box) {
+  fixed_polygon out;
+  boost::geometry::intersection(box, in, out);
+
+  if (out.empty()) {
+    return fixed_null{};
+  } else {
+    return out;  // XX what about empty rings?
+  }
 }
 
-fixed_geometry clip(fixed_geometry const& geometry, tile_spec const& spec) {
-  return boost::apply_visitor(
-      [&](auto const& unpacked) { return clip(unpacked, spec); }, geometry);
+fixed_geometry clip(fixed_geometry const& in, fixed_box const& box) {
+  return std::visit([&](auto const& arg) { return clip(arg, box); }, in);
 }
 
 }  // namespace tiles

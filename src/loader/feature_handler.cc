@@ -62,10 +62,10 @@ void feature_handler::node(osmium::Node const& node) {
   auto const converted = convert_osm_geometry(node);
 
   rocksdb::spatial::BoundingBox<double> box{
-      static_cast<double>(converted.first.min_x_),
-      static_cast<double>(converted.first.min_y_),
-      static_cast<double>(converted.first.max_x_),
-      static_cast<double>(converted.first.max_y_)};
+      static_cast<double>(converted.first.min_corner().x()),
+      static_cast<double>(converted.first.min_corner().y()),
+      static_cast<double>(converted.first.max_corner().x()),
+      static_cast<double>(converted.first.max_corner().y())};
 
   db_.put_feature(box, rocksdb::Slice(converted.second), fs,
                   tile_spec::zoom_level_names());
@@ -91,10 +91,10 @@ void feature_handler::way(osmium::Way const& way) {
   auto const converted = convert_osm_geometry(way);
 
   rocksdb::spatial::BoundingBox<double> box{
-      static_cast<double>(converted.first.min_x_),
-      static_cast<double>(converted.first.min_y_),
-      static_cast<double>(converted.first.max_x_),
-      static_cast<double>(converted.first.max_y_)};
+      static_cast<double>(converted.first.min_corner().x()),
+      static_cast<double>(converted.first.min_corner().y()),
+      static_cast<double>(converted.first.max_corner().x()),
+      static_cast<double>(converted.first.max_corner().y())};
 
   db_.put_feature(box, rocksdb::Slice(converted.second), fs,
                   tile_spec::zoom_level_names());
@@ -122,10 +122,10 @@ void feature_handler::area(osmium::Area const& area) {
   auto const converted = convert_osm_geometry(area);
 
   rocksdb::spatial::BoundingBox<double> box{
-      static_cast<double>(converted.first.min_x_),
-      static_cast<double>(converted.first.min_y_),
-      static_cast<double>(converted.first.max_x_),
-      static_cast<double>(converted.first.max_y_)};
+      static_cast<double>(converted.first.min_corner().x()),
+      static_cast<double>(converted.first.min_corner().y()),
+      static_cast<double>(converted.first.max_corner().x()),
+      static_cast<double>(converted.first.max_corner().y())};
 
   db_.put_feature(box, rocksdb::Slice(converted.second), fs,
                   tile_spec::zoom_level_names());

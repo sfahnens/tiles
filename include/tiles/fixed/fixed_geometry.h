@@ -10,8 +10,7 @@
 #include "boost/geometry/geometries/point_xy.hpp"
 #include "boost/geometry/geometries/polygon.hpp"
 
-#include "geo/webmercator.h"
-#include "tiles/tile_spec.h"
+#include "tiles/constants.h"
 
 namespace tiles {
 
@@ -36,7 +35,7 @@ using fixed_polygon = boost::geometry::model::multi_polygon<
     boost::geometry::model::polygon<fixed_xy>>;
 
 using fixed_geometry =
-std::variant<fixed_null, fixed_point, fixed_polyline, fixed_polygon>;
+    std::variant<fixed_null, fixed_point, fixed_polyline, fixed_polygon>;
 
 using fixed_box = boost::geometry::model::box<fixed_xy>;
 

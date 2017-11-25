@@ -27,7 +27,8 @@ if(TILES_STANDALONE)
   include_directories(SYSTEM external_lib/miniz)
   include_directories(SYSTEM external_lib/net/include)
   include_directories(SYSTEM external_lib/osmium/include)
-  include_directories(SYSTEM external_lib/rocksdb)
+  include_directories(SYSTEM external_lib/lmdb/include)
+  include_directories(SYSTEM external_lib/lmdb/lib)
   include_directories(SYSTEM external_lib/rocksdb/include)
   include_directories(SYSTEM external_lib/rocksdb/external_lib/snappy)
   include_directories(SYSTEM external_lib/sparsehash/src)
@@ -39,7 +40,7 @@ if(TILES_STANDALONE)
   add_subdirectory(external_lib/lua-5.1 EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/lz4 EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/net EXCLUDE_FROM_ALL)
-  add_subdirectory(external_lib/rocksdb EXCLUDE_FROM_ALL)
+  add_subdirectory(external_lib/lmdb EXCLUDE_FROM_ALL)
 endif()
 
 file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc src/tile_database.cc)
@@ -49,21 +50,22 @@ set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
 target_link_libraries(tiles
   ${Boost_LIBRARIES}
   ${ZLIB_LIBRARIES}
-  rocksdb
+  lmdb
   geo
 )
 
 
 if(TILES_STANDALONE)
-  file(GLOB_RECURSE tiles-import-files src/import.cc src/loader/*.cc)
+  file(GLOB_RECURSE tiles-import-files src/osm/*.cc)
+  file(GLOB tiles-import-main-files src/import.cc)
 
-  add_executable(tiles-import ${tiles-import-files})
+  add_executable(tiles-import ${tiles-import-main-files} ${tiles-import-files})
   set_target_properties(tiles-import PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
   target_link_libraries(tiles-import
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
     tiles
-    rocksdb
+    lmdb
     lua
     geo
   )
@@ -76,7 +78,7 @@ if(TILES_STANDALONE)
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
     tiles
-    rocksdb
+    lmdb
     geo
     net-http_server
   )

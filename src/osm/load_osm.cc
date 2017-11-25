@@ -1,4 +1,4 @@
-#include "tiles/loader/loader_2.h"
+#include "tiles/osm/load_osm.h"
 
 // For assembling multipolygons
 #include "osmium/area/assembler.hpp"
@@ -19,7 +19,8 @@
 
 #include "osmium/util/progress_bar.hpp"
 
-#include "tiles/loader/feature_handler.h"
+#include "tiles/osm/feature_handler.h"
+#include "tiles/db/tile_database.h"
 
 namespace tiles {
 
@@ -34,11 +35,13 @@ using index_t =
     osmium::index::map::FlexMem<o::unsigned_object_id_type, o::Location>;
 using location_handler_t = oh::NodeLocationsForWays<index_t>;
 
-void load_2() {
+void load_osm() {
 
-  auto db = make_tile_database("database", false, false, {});
+  tile_database db;
+
+  // auto db = make_tile_database("database", false, false, {});
   // db->prepare_tiles(kMaxZoomLevel);
-  feature_handler handler{*db.get()};
+  feature_handler handler{db};
 
   // oio::File input_file{"/data/osm/hessen-latest.osm.pbf"};
   oio::File input_file{"/data/osm/2017-10-29/hessen-171029.osm.pbf"};

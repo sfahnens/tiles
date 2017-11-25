@@ -3,10 +3,9 @@
 #include <memory>
 #include <string>
 
-#include "rocksdb/slice.h"
-#include "rocksdb/utilities/spatial_db.h"
+#include "geo/tile.h"
 
-#include "tiles/tile_spec.h"
+#include "tiles/feature/feature.h"
 
 namespace tiles {
 
@@ -19,11 +18,10 @@ struct tile_builder {
     bool verbose_ = false;
   };
 
-  explicit tile_builder(tile_spec const&, config const& = {});
+  explicit tile_builder(geo::tile const&, config const& = {});
   ~tile_builder();
 
-  void add_feature(rocksdb::spatial::FeatureSet const& meta,
-                   rocksdb::Slice const& geo);
+  void add_feature(feature const&);
 
   std::string finish();
 

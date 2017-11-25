@@ -13,6 +13,7 @@ namespace tiles {
 // following directly:
 // https://github.com/mapbox/vector-tile-spec/blob/master/2.1/vector_tile.proto
 namespace tags {
+namespace mvt {
 
 enum GeomType : int {
   UNKNOWN = 0,
@@ -51,5 +52,6 @@ enum class Tile : protozero::pbf_tag_type {
   repeated_Layer_layers = 3
 };
 
+} // namespace mvt
 } // namespace tags
 } // namespace tiles

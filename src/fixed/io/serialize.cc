@@ -14,6 +14,10 @@ namespace pz = protozero;
 
 namespace tiles {
 
+std::string serialize(fixed_null const&) {
+  verify(false, "tries to serialize null geometry!");
+}
+
 template <typename SW, typename Points>
 void serialize_points(SW& sw, delta_encoder& x_enc, delta_encoder& y_enc,
                       Points const& points) {
@@ -31,7 +35,7 @@ std::string serialize(fixed_point const& point) {
   pb.add_enum(tags::FixedGeometry::required_FixedGeometryType_type,
               tags::FixedGeometryType::POINT);
 
-   {
+  {
     pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
                 tags::FixedGeometry::packed_sint64_geometry)};
@@ -44,7 +48,6 @@ std::string serialize(fixed_point const& point) {
   }
   return buffer;
 }
-
 
 std::string serialize(fixed_polyline const& polyline) {
   std::string buffer;
@@ -93,12 +96,16 @@ std::string serialize(fixed_polygon const& multi_polygon) {
 
       sw.add_element(
           boost::numeric_cast<fixed_delta_t>(polygon.inners().size()));
-      for(auto const& inner : polygon.inners()) {
+      for (auto const& inner : polygon.inners()) {
         serialize_points(sw, x_encoder, y_encoder, inner);
       }
     }
   }
   return buffer;
+}
+
+std::string serialize(fixed_geometry const& in) {
+  return std::visit([&](auto const& arg) { return serialize(arg); }, in);
 }
 
 }  // namespace tiles

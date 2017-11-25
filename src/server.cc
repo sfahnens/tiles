@@ -4,45 +4,18 @@
 
 #include "boost/filesystem.hpp"
 
-#include "rocksdb/utilities/spatial_db.h"
-
 #include "net/http/server/enable_cors.hpp"
 #include "net/http/server/query_router.hpp"
 #include "net/http/server/server.hpp"
 #include "net/http/server/shutdown_handler.hpp"
 
-#include "tiles/mvt/builder.h"
-#include "tiles/tile_spec.h"
-#include "tiles/util.h"
+#include "tiles/db/render_tile.h"
+#include "tiles/db/tile_database.h"
 
-using namespace tiles;
 using namespace net::http::server;
-using namespace rocksdb;
-using namespace rocksdb::spatial;
-
-inline rocksdb::spatial::BoundingBox<double> bbox(geo::pixel_bounds const& b) {
-  return {static_cast<double>(b.minx_), static_cast<double>(b.miny_),
-          static_cast<double>(b.maxx_), static_cast<double>(b.maxy_)};
-}
-
-constexpr char kDatabasePath[] = "database";
-
-void checked(Status&& status) {
-  if (!status.ok()) {
-    std::cout << "error: " << status.ToString() << std::endl;
-    std::exit(1);
-  }
-}
 
 int main() {
-  if (!boost::filesystem::is_directory(kDatabasePath)) {
-    std::cout << "database missing!" << std::endl;
-    return 1;
-  }
-
-  SpatialDB* db;
-  checked(SpatialDB::Open(SpatialDBOptions(), kDatabasePath, &db, {}, nullptr,
-                          true));
+  tiles::tile_database db;
 
   boost::asio::io_service ios;
   server server{ios};
@@ -55,37 +28,27 @@ int main() {
   });
 
   // z, x, y
-  router.route("GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$", [&](auto const& req,
-                                                               auto cb) {
-    try {
-      std::cout << "received a request: " << req.uri << std::endl;
+  router.route("GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$",
+               [&](auto const& req, auto cb) {
+                 try {
+                   std::cout << "received a request: " << req.uri << std::endl;
 
-      auto const spec =
-          tile_spec{static_cast<uint32_t>(std::stoul(req.path_params[1])),
-                    static_cast<uint32_t>(std::stoul(req.path_params[2])),
-                    static_cast<uint32_t>(std::stoul(req.path_params[0]))};
-      tile_builder tb{spec};
+                   auto const tile = geo::tile{
+                       static_cast<uint32_t>(std::stoul(req.path_params[1])),
+                       static_cast<uint32_t>(std::stoul(req.path_params[2])),
+                       static_cast<uint32_t>(std::stoul(req.path_params[0]))};
 
-      Cursor* cur = db->Query(ReadOptions(), spec.bbox(), spec.z_str());
-      while (cur->Valid()) {
-        std::cout << "found feature" << std::endl;
-        tb.add_feature(cur->feature_set(), cur->blob());
-        cur->Next();
-        // break;
-      }
+                   reply rep = reply::stock_reply(reply::ok);
+                   rep.content = tiles::render_tile(db, tile);
+                   add_cors_headers(rep);
+                   cb(rep);
+                 } catch (std::exception const& e) {
+                   std::cout << "unhandled error: " << e.what() << std::endl;
+                 } catch (...) {
+                   std::cout << "unhandled unknown error" << std::endl;
+                 }
 
-      reply rep = reply::stock_reply(reply::ok);
-      rep.content = tb.finish();
-      // rep.content = make_tile();
-      add_cors_headers(rep);
-      cb(rep);
-    } catch (std::exception const& e) {
-      std::cout << "unhandled error: " << e.what() << std::endl;
-    } catch (...) {
-      std::cout << "unhandled unknown error" << std::endl;
-    }
-
-  });
+               });
 
   server.listen("0.0.0.0", "8888", router);
 

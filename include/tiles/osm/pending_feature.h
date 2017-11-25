@@ -6,8 +6,6 @@
 
 #include "sol.hpp"
 
-#include "tiles/tile_spec.h"
-
 namespace tiles {
 
 struct pending_feature {

@@ -1,4 +1,4 @@
-#include "tiles/mvt/encoder.h"
+#include "tiles/mvt/encode_geometry.h"
 
 #include <iostream>
 
@@ -9,9 +9,9 @@
 #include "tiles/util.h"
 
 using namespace geo;
-using namespace rocksdb;
 using namespace protozero;
 namespace pz = protozero;
+namespace ttm = tiles::tags::mvt;
 
 namespace tiles {
 
@@ -22,18 +22,23 @@ uint32_t encode_command(command cmd, uint32_t count) {
 }
 
 constexpr auto geometry_tag =
-    static_cast<pz::pbf_tag_type>(tags::Feature::packed_uint32_geometry);
+    static_cast<pz::pbf_tag_type>(ttm::Feature::packed_uint32_geometry);
 
-void encode(pz::pbf_builder<tags::Feature>&, fixed_null const&,
+std::pair<delta_encoder, delta_encoder> delta_encoders(fixed_box const& box) {
+  return {delta_encoder{static_cast<fixed_coord_t>(box.min_corner().x())},
+          delta_encoder{static_cast<fixed_coord_t>(box.min_corner().y())}
+
+  };
+}
+
+void encode(pz::pbf_builder<ttm::Feature>&, fixed_null const&,
             tile_spec const&) {}
 
-void encode(pz::pbf_builder<tags::Feature>& pb, fixed_point const& point,
+void encode(pz::pbf_builder<ttm::Feature>& pb, fixed_point const& point,
             tile_spec const& spec) {
-  pb.add_enum(tags::Feature::optional_GeomType_type, tags::GeomType::POINT);
+  pb.add_enum(ttm::Feature::optional_GeomType_type, ttm::GeomType::POINT);
 
-  delta_encoder x_enc{static_cast<fixed_coord_t>(spec.pixel_bounds_.minx_)};
-  delta_encoder y_enc{static_cast<fixed_coord_t>(spec.pixel_bounds_.miny_)};
-
+  auto [x_enc, y_enc] = delta_encoders(spec.px_bounds_);
   {
     pz::packed_field_uint32 sw{pb, geometry_tag};
     sw.add_element(encode_command(MOVE_TO, point.size()));
@@ -60,14 +65,11 @@ void encode_path(pz::packed_field_uint32& sw, delta_encoder& x_enc,
   }
 }
 
-void encode(pz::pbf_builder<tags::Feature>& pb,
+void encode(pz::pbf_builder<ttm::Feature>& pb,
             fixed_polyline const& multi_polyline, tile_spec const& spec) {
-  pb.add_enum(tags::Feature::optional_GeomType_type,
-              tags::GeomType::LINESTRING);
+  pb.add_enum(ttm::Feature::optional_GeomType_type, ttm::GeomType::LINESTRING);
 
-  delta_encoder x_enc{static_cast<fixed_coord_t>(spec.pixel_bounds_.minx_)};
-  delta_encoder y_enc{static_cast<fixed_coord_t>(spec.pixel_bounds_.miny_)};
-
+  auto [x_enc, y_enc] = delta_encoders(spec.px_bounds_);
   {
     pz::packed_field_uint32 sw{pb, geometry_tag};
 
@@ -77,14 +79,12 @@ void encode(pz::pbf_builder<tags::Feature>& pb,
   }
 }
 
-void encode(pz::pbf_builder<tags::Feature>& pb,
+void encode(pz::pbf_builder<ttm::Feature>& pb,
             fixed_polygon const& multi_polygon, tile_spec const& spec) {
-  pb.add_enum(tags::Feature::optional_GeomType_type, tags::GeomType::POLYGON);
-
-  delta_encoder x_enc{static_cast<fixed_coord_t>(spec.pixel_bounds_.minx_)};
-  delta_encoder y_enc{static_cast<fixed_coord_t>(spec.pixel_bounds_.miny_)};
-
+  pb.add_enum(ttm::Feature::optional_GeomType_type, ttm::GeomType::POLYGON);
   verify(!multi_polygon.empty(), "multi_polygon empty");
+
+  auto [x_enc, y_enc] = delta_encoders(spec.px_bounds_);
   {
     pz::packed_field_uint32 sw{pb, geometry_tag};
 
@@ -100,7 +100,7 @@ void encode(pz::pbf_builder<tags::Feature>& pb,
   }
 }
 
-void encode_geometry(pz::pbf_builder<tags::Feature>& pb,
+void encode_geometry(pz::pbf_builder<ttm::Feature>& pb,
                      fixed_geometry const& geometry, tile_spec const& spec) {
   std::visit([&](auto const& arg) { encode(pb, arg, spec); }, geometry);
 }

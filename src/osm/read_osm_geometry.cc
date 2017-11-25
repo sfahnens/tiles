@@ -1,23 +1,17 @@
-#include "tiles/loader/convert_osm_geometry.h"
+#include "tiles/osm/read_osm_geometry.h"
 
 #include "osmium/osm.hpp"
 
 #include "utl/to_vec.h"
 
-#include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/convert.h"
-#include "tiles/fixed/io/serialize.h"
+#include "tiles/util.h"
 
 namespace tiles {
 
-std::pair<fixed_box, std::string> convert_osm_geometry(
-    osmium::Node const& node) {
-  auto const loc =
-      latlng_to_fixed({node.location().lat(), node.location().lon()});
-
-  fixed_point point{{loc}};
-
-  return {bounding_box(point), serialize(point)};
+fixed_geometry read_osm_geometry(osmium::Node const& node) {
+  return fixed_point{
+      {latlng_to_fixed({node.location().lat(), node.location().lon()})}};
 }
 
 template <typename In, typename Out>
@@ -29,18 +23,17 @@ void nodes_to_fixed(In const& in, Out& out) {
   }
 }
 
-std::pair<fixed_box, std::string> convert_osm_geometry(osmium::Way const& way) {
+fixed_geometry read_osm_geometry(osmium::Way const& way) {
   // TODO verify that distances fit into int32_t (or clipping will not
   // work)
   fixed_polyline polyline;
   polyline.emplace_back();
   nodes_to_fixed(way.nodes(), polyline.back());
 
-  return {bounding_box(polyline), serialize(polyline)};
+  return polyline;
 }
 
-std::pair<fixed_box, std::string> convert_osm_geometry(
-    osmium::Area const& area) {
+fixed_geometry read_osm_geometry(osmium::Area const& area) {
   fixed_polygon polygon;
 
   // TODO check first is not last!
@@ -63,7 +56,7 @@ std::pair<fixed_box, std::string> convert_osm_geometry(
     }
   }
 
-  return {bounding_box(polygon), serialize(polygon)};
+  return polygon;
 }
 
 }  // namespace tiles

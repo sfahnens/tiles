@@ -4,7 +4,7 @@
 
 #include "osmium/handler.hpp"
 
-#include "tiles/tile_database.h"
+#include "tiles/db/tile_database.h"
 
 namespace tiles {
 

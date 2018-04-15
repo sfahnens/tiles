@@ -47,7 +47,7 @@ int main() {
                  } catch (...) {
                    std::cout << "unhandled unknown error" << std::endl;
                  }
-
+                  std::cout << "done:" << req.uri << std::endl;
                });
 
   server.listen("0.0.0.0", "8888", router);

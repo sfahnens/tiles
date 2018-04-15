@@ -103,13 +103,13 @@ fixed_geometry deserialize(std::string const& str) {
   auto type = static_cast<tags::FixedGeometryType>(msg.get_enum());
   switch (type) {
     case tags::FixedGeometryType::POINT:
-      std::cout << "point" << std::endl;
+      // std::cout << "point" << std::endl;
       return deserialize_point(std::move(msg));
     case tags::FixedGeometryType::POLYLINE:
-      std::cout << "polyline" << std::endl;
+      // std::cout << "polyline" << std::endl;
       return deserialize_polyline(std::move(msg));
     case tags::FixedGeometryType::POLYGON:
-      std::cout << "polygon" << std::endl;
+      // std::cout << "polygon" << std::endl;
       return deserialize_polygon(std::move(msg));
     default: verify(false, "unknown geometry");
   }

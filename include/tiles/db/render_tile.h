@@ -10,8 +10,6 @@ namespace tiles {
 std::string render_tile(tile_database& db, geo::tile const& tile) {
   tile_builder builder{tile};
   query_features(db, tile, [&](auto const& str) {
-    ++feature_count;
-
     auto const feature = deserialize_feature(str);
     builder.add_feature(feature);
   });

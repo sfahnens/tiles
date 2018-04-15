@@ -19,24 +19,11 @@ void insert_feature(tile_database& tdb, feature const& f) {
 
   auto const value = serialize_feature(f);
 
-  // std::cout << value.size() << std::endl;
-
-  // auto a = fixed_to_latlng(box.min_corner());
-  // auto b = fixed_to_latlng(box.max_corner());
-
-  // std::cout.precision(11);
-  // std::cout << a.lng_ << ", " << a.lat_ << std::endl;
-  // std::cout << b.lng_ << ", " << b.lat_ << std::endl;
-
-
   uint32_t z = 10;  // whatever
   for (auto const& tile : make_tile_range(box, z)) {
-    auto key = tile_to_key(tile);
+    auto const idx = tdb.fill_state_[{tile.x_, tile.y_}]++;
 
-    // std::cout << tile.x_ << ", " << tile.y_ << ", " << tile.z_ << std::endl;
-
-    std::cout << std::to_string(key).size() << " " << value.size() << std::endl;
-
+    auto key = make_feature_key(tile, idx);
     txn.put(db, std::to_string(key), value);
   }
   txn.commit();

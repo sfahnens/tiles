@@ -9,7 +9,8 @@
 namespace tiles {
 
 struct pending_feature {
-  pending_feature(osmium::OSMObject const& obj) : obj_(obj), is_approved_() {}
+  pending_feature(osmium::OSMObject const& obj)
+      : obj_(obj), is_approved_(false) {}
 
   int64_t get_id() { return obj_.id(); }
 
@@ -26,21 +27,30 @@ struct pending_feature {
         [&actual_value](auto const& value) { return actual_value == value; });
   }
 
-
-    bool has_any_tag2(std::string const& key, sol::variadic_args va) {
-    auto const actual_value = obj_.get_value_by_key(key.c_str(), "");
-    return std::any_of(
-        std::begin(va), std::end(va),
-        [&actual_value](std::string const& value) { return actual_value == value; });
+  bool has_any_tag2(std::string const& key, sol::variadic_args va) {
+    if(std::distance(va.begin(), va.end()) == 0) {
+      return obj_.get_value_by_key(key.c_str()) != nullptr;
+    } else {
+      auto const actual_value = obj_.get_value_by_key(key.c_str(), "");
+      return std::any_of(std::begin(va), std::end(va),
+                         [&actual_value](std::string const& value) {
+                           return actual_value == value;
+                         });
+    }
   }
 
-  // void set_approved(bool value = true) { is_approved_ = value; }
+  void set_approved_min(uint32_t min) {
+    set_approved(min, (kMaxZoomLevel + 1));
+  }
 
-  void set_approved(size_t min = 0, size_t max = (kMaxZoomLevel + 1)) {
-    // bounds checking!
-    for (auto i = min; i <= max; ++i) {
-      is_approved_[i] = true;
-    }
+  void set_approved_full() {
+    set_approved(0, (kMaxZoomLevel + 1));
+  }
+
+  // default parameters do not work with lua stuff
+  void set_approved(uint32_t min = 0, uint32_t max = (kMaxZoomLevel + 1)) {
+    is_approved_ = true;
+    zoom_levels_ = {min, max};
   }
 
   void set_target_layer(std::string target_layer) {
@@ -53,9 +63,10 @@ struct pending_feature {
 
   osmium::OSMObject const& obj_;
 
-  std::array<bool, kMaxZoomLevel + 1> is_approved_;
-  std::string target_layer_;
+  bool is_approved_;
+  std::pair<uint32_t, uint32_t> zoom_levels_;
 
+  std::string target_layer_;
   std::vector<std::string> tag_as_metadata_;
 };
 

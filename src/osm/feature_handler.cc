@@ -22,6 +22,8 @@ struct feature_handler::script_runner {
         "has_tag", &pending_feature::has_tag,  //
         "has_any_tag", &pending_feature::has_any_tag,  //
         "has_any_tag2", &pending_feature::has_any_tag2,  //
+        "set_approved_min", &pending_feature::set_approved_min,  //
+        "set_approved_full", &pending_feature::set_approved_full,  //
         "set_approved", &pending_feature::set_approved,  //
         "set_target_layer", &pending_feature::set_target_layer,  //
         "add_tag_as_metadata", &pending_feature::add_tag_as_metadata);
@@ -42,9 +44,9 @@ feature_handler::feature_handler(tile_database& db)
     : runner_(std::make_unique<feature_handler::script_runner>()), db_(db) {}
 feature_handler::~feature_handler() = default;
 
-template <typename Object>
+template <typename OSMObject>
 std::map<std::string, std::string> make_meta(pending_feature const& f,
-                                             Object const& o) {
+                                             OSMObject const& o) {
   std::map<std::string, std::string> meta;
 
   meta["layer"] = f.target_layer_;
@@ -56,46 +58,28 @@ std::map<std::string, std::string> make_meta(pending_feature const& f,
   return meta;
 }
 
-// XXX this is some heavy code duplication
+template <typename OSMObject>
+void handle_feature(tile_database& db, sol::function const& process,
+                      OSMObject const& obj) {
+  auto pf = pending_feature{obj};
+  process(pf);
 
-void feature_handler::node(osmium::Node const& node) {
-  auto pf = pending_feature{node};
-  runner_->process_node_(pf);
-
-  if (!pf.is_approved_[0]) {  // XXX
+  if (!pf.is_approved_) {
     return;
   }
 
-  // std::cout << "node " << node.id() << " approved and added" << std::endl;
-  insert_feature(db_, feature{make_meta(pf, node), read_osm_geometry(node)});
+  insert_feature(
+      db, feature{pf.zoom_levels_, make_meta(pf, obj), read_osm_geometry(obj)});
 }
 
-void feature_handler::way(osmium::Way const& way) {
-  auto pf = pending_feature{way};
-  if (way.nodes().size() < 2) {
-    return;  // XXX
-  }
-
-  runner_->process_way_(pf);
-
-  if (!pf.is_approved_[0]) {  // XXX
-    return;
-  }
-
-  // std::cout << "way " << way.id() << " approved and added" << std::endl;
-  insert_feature(db_, feature{make_meta(pf, way), read_osm_geometry(way)});
+void feature_handler::node(osmium::Node const& n) {
+  handle_feature(db_, runner_->process_node_, n);
 }
-
-void feature_handler::area(osmium::Area const& area) {
-  auto pf = pending_feature{area};
-  runner_->process_area_(pf);
-
-  if (!pf.is_approved_[0]) {  // XXX
-    return;
-  }
-
-  // std::cout << "area " << area.id() << " approved and added" << std::endl;
-  insert_feature(db_, feature{make_meta(pf, area), read_osm_geometry(area)});
+void feature_handler::way(osmium::Way const& w) {
+  handle_feature(db_, runner_->process_way_, w);
+}
+void feature_handler::area(osmium::Area const& a) {
+  handle_feature(db_, runner_->process_area_, a);
 }
 
 }  // namespace tiles

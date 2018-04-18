@@ -8,7 +8,7 @@ namespace tiles {
 
 struct tile_database {
   tile_database() : env_{} {
-    env_.set_mapsize(10 * 1024 * 1024);
+    env_.set_mapsize(1024 * 1024 * 1024);
     env_.open("./");
   }
 

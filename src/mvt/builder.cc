@@ -26,7 +26,7 @@ using namespace protozero;
 namespace tiles {
 
 struct variant_less {
-  bool operator()(Variant const& a, Variant const& b) {
+  bool operator()(Variant const& a, Variant const& b) const {
     if (a.type() != b.type()) {
       return a.type() < b.type();
     }

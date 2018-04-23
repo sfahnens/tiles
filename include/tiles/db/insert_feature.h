@@ -10,23 +10,17 @@
 
 namespace tiles {
 
-void insert_feature(tile_database& tdb, feature const& f) {
+void insert_feature(feature_inserter& inserter, feature const& f) {
   auto const box = bounding_box(f.geometry_);
-
-  auto txn = lmdb::txn{tdb.env_};
-  // auto db = txn.dbi_open(lmdb::dbi_flags::DUPSORT);
-  auto db = txn.dbi_open();
-
   auto const value = serialize_feature(f);
 
   uint32_t z = 10;  // whatever
   for (auto const& tile : make_tile_range(box, z)) {
-    auto const idx = tdb.fill_state_[{tile.x_, tile.y_}]++;
+    auto const idx = inserter.fill_state_[{tile.x_, tile.y_}]++;
 
     auto key = make_feature_key(tile, idx);
-    txn.put(db, std::to_string(key), value);
+    inserter.insert(std::to_string(key), value);
   }
-  txn.commit();
 }
 
 }  // namespace tiles

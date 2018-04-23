@@ -10,7 +10,7 @@ namespace tiles {
 template <typename Fn>
 void query_features(tile_database& db, geo::tile const& tile, Fn&& fn) {
   auto txn = lmdb::txn{db.env_};
-  auto dbi = txn.dbi_open();
+  auto dbi = txn.dbi_open(kDefaultTiles);
   auto c = lmdb::cursor{txn, dbi};
 
   constexpr uint32_t z = 10;

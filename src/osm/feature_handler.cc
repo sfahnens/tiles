@@ -40,8 +40,9 @@ struct feature_handler::script_runner {
   sol::function process_area_;
 };
 
-feature_handler::feature_handler(tile_database& db)
-    : runner_(std::make_unique<feature_handler::script_runner>()), db_(db) {}
+feature_handler::feature_handler(feature_inserter& inserter)
+    : runner_(std::make_unique<feature_handler::script_runner>()),
+      inserter_(inserter) {}
 feature_handler::~feature_handler() = default;
 
 template <typename OSMObject>
@@ -59,8 +60,8 @@ std::map<std::string, std::string> make_meta(pending_feature const& f,
 }
 
 template <typename OSMObject>
-void handle_feature(tile_database& db, sol::function const& process,
-                      OSMObject const& obj) {
+void handle_feature(feature_inserter& inserter, sol::function const& process,
+                    OSMObject const& obj) {
   auto pf = pending_feature{obj};
   process(pf);
 
@@ -68,18 +69,18 @@ void handle_feature(tile_database& db, sol::function const& process,
     return;
   }
 
-  insert_feature(
-      db, feature{pf.zoom_levels_, make_meta(pf, obj), read_osm_geometry(obj)});
+  insert_feature(inserter, feature{pf.zoom_levels_, make_meta(pf, obj),
+                                   read_osm_geometry(obj)});
 }
 
 void feature_handler::node(osmium::Node const& n) {
-  handle_feature(db_, runner_->process_node_, n);
+  handle_feature(inserter_, runner_->process_node_, n);
 }
 void feature_handler::way(osmium::Way const& w) {
-  handle_feature(db_, runner_->process_way_, w);
+  handle_feature(inserter_, runner_->process_way_, w);
 }
 void feature_handler::area(osmium::Area const& a) {
-  handle_feature(db_, runner_->process_area_, a);
+  handle_feature(inserter_, runner_->process_area_, a);
 }
 
 }  // namespace tiles

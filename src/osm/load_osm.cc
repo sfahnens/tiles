@@ -38,10 +38,11 @@ using location_handler_t = oh::NodeLocationsForWays<index_t>;
 void load_osm() {
 
   tile_database db;
+  feature_inserter inserter{db.env_, kDefaultTiles};
 
   // auto db = make_tile_database("database", false, false, {});
   // db->prepare_tiles(kMaxZoomLevel);
-  feature_handler handler{db};
+  feature_handler handler{inserter};
 
   // oio::File input_file{"/data/osm/hessen-latest.osm.pbf"};
   oio::File input_file{"/data/osm/2017-10-29/hessen-171029.osm.pbf"};

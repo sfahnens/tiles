@@ -2,6 +2,6 @@
 
 namespace tiles {
 
-void load();
+void load_osm();
 
 }  // namespace tiles

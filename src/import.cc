@@ -1,19 +1,8 @@
-#include "boost/filesystem.hpp"
+#include <iostream>
 
-#include "tiles/database.h"
-#include "tiles/loader/loader.h"
-
-using namespace tiles;
+#include "tiles/osm/load_osm.h"
 
 int main() {
-  // loader l{"/data/osm/hessen-lates.osm.pbf"};
-  // l.load();
-
-  if (!boost::filesystem::is_directory(kDatabasePath)) {
-    init_spatial_db(kDatabasePath);
-  }
-
-  load();
-
-  std::cout << "exit" << std::endl;
+  tiles::load_osm();
+  std::cout << "import done!" << std::endl;
 }

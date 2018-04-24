@@ -1,0 +1,30 @@
+[submodule "external_lib/geo"]
+	path = external_lib/geo
+	url = git@git.motis-project.de:lib/geo.git
+[submodule "external_lib/osmium"]
+	path = external_lib/osmium
+	url = git@git.motis-project.de:lib/osmium.git
+[submodule "external_lib/net"]
+	path = external_lib/net
+	url = git@git.motis-project.de:lib/net.git
+[submodule "external_lib/sparsehash"]
+	path = external_lib/sparsehash
+	url = git@git.motis-project.de:lib/sparsehash.git
+[submodule "external_lib/lua-5.1"]
+	path = external_lib/lua-5.1
+	url = git@git.motis-project.de:lib/lua.git
+[submodule "external_lib/sol2"]
+	path = external_lib/sol2
+	url = git@github.com:skyborla/sol2.git
+[submodule "external_lib/conf"]
+	path = external_lib/conf
+	url = git@git.motis-project.de:lib/conf.git
+[submodule "external_lib/lz4"]
+	path = external_lib/lz4
+	url = git@git.motis-project.de:lib/lz4.git
+[submodule "external_lib/utl"]
+	path = external_lib/utl
+	url = git@git.motis-project.de:lib/utl.git
+[submodule "external_lib/lmdb"]
+	path = external_lib/lmdb
+	url = git@git.motis-project.de:lib/lmdb.git

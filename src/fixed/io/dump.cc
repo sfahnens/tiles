@@ -2,22 +2,22 @@
 
 namespace tiles {
 
-void dump(fixed_null_geometry const&) {
+void dump(fixed_null const&) {
   std::cout << "null geometry" << std::endl;
 }
 
-void dump(fixed_xy const& point) {
+void dump(fixed_point const&) {
   std::cout << "point geometry\n";
-  std::cout << "  " << point.x_ << ", " << point.y_ << "\n";
+  // std::cout << "  " << point.x_ << ", " << point.y_ << "\n";
 }
 
-void dump(fixed_polyline const& polyline) {
-  std::cout << "polyline geometry: " << polyline.geometry_.size() << "\n";
-  for (auto i = 0u; i < polyline.geometry_.size(); ++i) {
-    for (auto& point : polyline.geometry_[i]) {
-      std::cout << "  " << i << "\t" << point.x_ << ", " << point.y_ << "\n";
-    }
-  }
+void dump(fixed_polyline const&) {
+  std::cout << "polyline geometry\n"; // << polyline.geometry_.size() << "\n";
+  // for (auto i = 0u; i < polyline.geometry_.size(); ++i) {
+  //   for (auto& point : polyline.geometry_[i]) {
+  //     std::cout << "  " << i << "\t" << point.x_ << ", " << point.y_ << "\n";
+  //   }
+  // }
 }
 
 void dump(fixed_polygon const&) {
@@ -26,7 +26,7 @@ void dump(fixed_polygon const&) {
 }
 
 void dump(fixed_geometry const& geometry) {
-  boost::apply_visitor([](auto& unpacked) { dump(unpacked); }, geometry);
+  std::visit([](auto& arg) { dump(arg); }, geometry);
 }
 
 }  // namespace tiles

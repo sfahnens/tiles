@@ -9,13 +9,13 @@
 #include "net/http/server/server.hpp"
 #include "net/http/server/shutdown_handler.hpp"
 
-#include "tiles/db/render_tile.h"
+#include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
 
 using namespace net::http::server;
 
 int main() {
-  tiles::tile_database db;
+  lmdb::env db_env = tiles::make_tile_database("./");
 
   boost::asio::io_service ios;
   server server{ios};
@@ -39,7 +39,7 @@ int main() {
                        static_cast<uint32_t>(std::stoul(req.path_params[0]))};
 
                    reply rep = reply::stock_reply(reply::ok);
-                   rep.content = tiles::render_tile(db, tile);
+                   rep.content = tiles::get_tile(db_env, tile);
                    add_cors_headers(rep);
                    cb(rep);
                  } catch (std::exception const& e) {
@@ -47,7 +47,7 @@ int main() {
                  } catch (...) {
                    std::cout << "unhandled unknown error" << std::endl;
                  }
-                  std::cout << "done:" << req.uri << std::endl;
+                 std::cout << "done:" << req.uri << std::endl;
                });
 
   server.listen("0.0.0.0", "8888", router);

@@ -19,7 +19,7 @@ void insert_feature(feature_inserter& inserter, feature const& f) {
     auto const idx = inserter.fill_state_[{tile.x_, tile.y_}]++;
 
     auto key = make_feature_key(tile, idx);
-    inserter.insert(std::to_string(key), value);
+    inserter.insert(key, value);
   }
 }
 

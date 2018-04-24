@@ -40,8 +40,40 @@ inline tile_index_t make_feature_key(uint32_t const x, uint32_t const y,
   return key;
 }
 
+inline geo::tile feature_key_to_tile(tile_index_t key, uint32_t z) {
+  auto const coord_bits = z;
+  auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * z;
+
+  auto const coord_mask = (static_cast<tile_index_t>(1) << z) - 1;
+
+  return geo::tile{
+      static_cast<uint32_t>((key >> (coord_bits + idx_bits)) & coord_mask),
+      static_cast<uint32_t>((key >> idx_bits) & coord_mask),  //
+      z};
+}
+
 inline tile_index_t make_feature_key(geo::tile const& t, size_t const idx) {
   return make_feature_key(t.x_, t.y_, t.z_, idx);
+}
+
+inline tile_index_t make_tile_key(geo::tile const& t) {
+  constexpr tile_index_t kCoordBits = 24;
+  constexpr tile_index_t kZLvlBits =
+      std::numeric_limits<tile_index_t>::digits - 2 * kCoordBits;
+
+  auto const coord_mask = (static_cast<tile_index_t>(1) << kCoordBits) - 1;
+  auto const z_lvl_mask = (static_cast<tile_index_t>(1) << kZLvlBits) - 1;
+
+  assert((t.x_ & coord_mask) == t.x_);
+  assert((t.y_ & coord_mask) == t.y_);
+  assert((t.z_ & z_lvl_mask) == t.z_);
+
+  tile_index_t key = 0;
+  key |= (t.z_ & z_lvl_mask) << (2 * kCoordBits);
+  key |= (t.x_ & coord_mask) << kCoordBits;
+  key |= (t.y_ & coord_mask);
+
+  return key;
 }
 
 }  // namespace tiles

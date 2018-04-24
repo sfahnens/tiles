@@ -7,24 +7,41 @@
 
 namespace tiles {
 
-template <typename Fn>
-void query_features(tile_database& db, geo::tile const& tile, Fn&& fn) {
-  auto txn = lmdb::txn{db.env_};
-  auto dbi = txn.dbi_open(kDefaultTiles);
-  auto c = lmdb::cursor{txn, dbi};
+std::pair<geo::tile, geo::tile> get_feature_range(lmdb::cursor& c) {
+  auto const first = c.get<tile_index_t>(lmdb::cursor_op::FIRST);
+  auto const last = c.get<tile_index_t>(lmdb::cursor_op::LAST);
+  assert(first && last);
 
+  constexpr uint32_t z = 10;
+  return {feature_key_to_tile(first->first, z),
+          feature_key_to_tile(last->first, z)};
+}
+
+template <typename Fn>
+void query_features(lmdb::cursor& c, geo::tile const& tile, Fn&& fn) {
   constexpr uint32_t z = 10;
 
   auto const bounds = tile.bounds_on_z(z);  // maybe some more indices :)
   for (auto y = bounds.miny_; y < bounds.maxy_; ++y) {
-    auto const key_begin = std::to_string(make_feature_key(bounds.minx_, y, z));
-    auto const key_end = std::to_string(make_feature_key(bounds.maxx_, y, z));
+    auto const key_begin = make_feature_key(bounds.minx_, y, z);
+    auto const key_end = make_feature_key(bounds.maxx_, y, z);
 
     for (auto el = c.get(lmdb::cursor_op::SET_RANGE, key_begin);
-         el && el->first < key_end; el = c.get(lmdb::cursor_op::NEXT)) {
+         el && el->first < key_end;
+         el = c.get<decltype(key_begin)>(lmdb::cursor_op::NEXT)) {
       fn(el->second);
     }
   }
+}
+
+template <typename Fn>
+void query_features(lmdb::env& db_env, geo::tile const& tile,
+                    char const* dbi_name, Fn&& fn) {
+  auto txn = lmdb::txn{db_env};
+  auto dbi = txn.dbi_open(dbi_name, lmdb::dbi_flags::INTEGERKEY);
+  auto c = lmdb::cursor{txn, dbi};
+
+  query_features(c, tile, fn);
 }
 
 }  // namespace tiles

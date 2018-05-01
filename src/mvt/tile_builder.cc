@@ -210,7 +210,7 @@ namespace tiles {
 
 struct layer_builder {
   layer_builder(std::string const& name, tile_spec const& spec,
-                tile_builder::config const& cfg)
+                tile_builder::config cfg)
       : spec_(spec), config_(cfg), has_geometry_(false), buf_(), pb_(buf_) {
     pb_.add_uint32(ttm::Layer::required_uint32_version, 2);
     pb_.add_string(ttm::Layer::required_string_name, name);
@@ -337,19 +337,17 @@ struct tile_builder::impl {
   }
 
   tile_spec spec_;
-  tile_builder::config const& config_;
+  tile_builder::config config_;
 
   std::map<std::string, std::unique_ptr<layer_builder>> builders_;
 };
 
-tile_builder::tile_builder(geo::tile const& tile, config const& cfg)
+tile_builder::tile_builder(geo::tile const& tile, config cfg)
     : impl_(std::make_unique<impl>(tile, cfg)) {}
 
 tile_builder::~tile_builder() = default;
 
-void tile_builder::add_feature(feature const& f) {
-  impl_->add_feature(f);
-}
+void tile_builder::add_feature(feature const& f) { impl_->add_feature(f); }
 
 std::string tile_builder::finish() { return impl_->finish(); }
 

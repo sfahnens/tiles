@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "geo/tile.h"
+
 #include "tiles/db/render_tile.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
@@ -83,9 +85,9 @@ void prepare_tiles_sparse(lmdb::env& db_env, uint32_t max_zoomlevel,
   auto c = lmdb::cursor{inserter.txn_, feature_dbi};
 
   prepare_stats stats;
-  auto const tile_range = get_feature_range(c);
+  auto const base_range = get_feature_range(c);
   for (auto z = 0u; z <= max_zoomlevel; ++z) {
-    for (auto const& tile : geo::tile_range_on_z(range, z)) {
+    for (auto const& tile : geo::tile_range_on_z(base_range, z)) {
       stats.update(tile);
 
       auto const rendered_tile = render_tile(c, tile);

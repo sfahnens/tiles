@@ -7,14 +7,22 @@
 
 namespace tiles {
 
-std::pair<geo::tile, geo::tile> get_feature_range(lmdb::cursor& c) {
-  auto const first = c.get<tile_index_t>(lmdb::cursor_op::FIRST);
-  auto const last = c.get<tile_index_t>(lmdb::cursor_op::LAST);
-  assert(first && last);
+geo::tile_range get_feature_range(lmdb::cursor& c) {
+  auto minx = std::numeric_limits<uint32_t>::max();
+  auto miny = std::numeric_limits<uint32_t>::max();
+  auto maxx = std::numeric_limits<uint32_t>::min();
+  auto maxy = std::numeric_limits<uint32_t>::min();
 
   constexpr uint32_t z = 10;
-  return {feature_key_to_tile(first->first, z),
-          feature_key_to_tile(last->first, z)};
+  for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
+       el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
+    auto const tile = feature_key_to_tile(el->first, z);
+    minx = std::min(minx, tile.x_);
+    miny = std::min(miny, tile.y_);
+    maxx = std::max(maxx, tile.x_);
+    maxy = std::max(maxy, tile.y_);
+  }
+  return geo::make_tile_range(minx, miny, maxx, maxy, z);
 }
 
 template <typename Fn>

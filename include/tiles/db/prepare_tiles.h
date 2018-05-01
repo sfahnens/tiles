@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "geo/tile.h"
+
 #include "tiles/db/render_tile.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
@@ -15,18 +17,23 @@ struct prepare_stats {
       return;
     }
 
-    using namespace std::chrono;
-    auto const now = steady_clock::now();
-
-    std::cout << "rendered level " << prev_z_ << " (total: " << render_total_
-              << " empty: " << render_empty_ << ")  in "
-              << duration_cast<microseconds>(now - start_).count() / 1000.0
-              << "ms\n";
+    print_info();
 
     prev_z_ = t.z_;
     render_total_ = 1;
     render_empty_ = 0;
-    start_ = now;
+
+    using namespace std::chrono;
+    start_ = steady_clock::now();
+  }
+
+  void print_info() const {
+    using namespace std::chrono;
+    auto const now = steady_clock::now();
+    std::cout << "rendered level " << prev_z_ << " (total: " << render_total_
+              << " empty: " << render_empty_ << ")  in "
+              << duration_cast<microseconds>(now - start_).count() / 1000.0
+              << "ms\n";
   }
 
   uint32_t prev_z_ = 0;
@@ -77,16 +84,10 @@ void prepare_tiles_sparse(lmdb::env& db_env, uint32_t max_zoomlevel,
       inserter.txn_.dbi_open(feature_dbi_name, lmdb::dbi_flags::INTEGERKEY);
   auto c = lmdb::cursor{inserter.txn_, feature_dbi};
 
-  auto const db_tiles = get_feature_range(c);
-
   prepare_stats stats;
-
-  // TODO make tile range on db leven and shift it to actual level
+  auto const base_range = get_feature_range(c);
   for (auto z = 0u; z <= max_zoomlevel; ++z) {
-    for (auto const& tile : geo::tile_range{
-             db_tiles.first.range_on_z(z).begin_,
-             db_tiles.second.range_on_z(z).end_,
-         }) {
+    for (auto const& tile : geo::tile_range_on_z(base_range, z)) {
       stats.update(tile);
 
       auto const rendered_tile = render_tile(c, tile);
@@ -98,6 +99,7 @@ void prepare_tiles_sparse(lmdb::env& db_env, uint32_t max_zoomlevel,
       inserter.insert(make_tile_key(tile), rendered_tile);
     }
   }
+  stats.print_info();
 }
 
 }  // namespace tiles

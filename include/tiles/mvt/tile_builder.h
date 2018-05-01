@@ -11,14 +11,14 @@ namespace tiles {
 
 struct tile_builder {
   struct config {
-    config() {}
+    config() : simplify_{false}, render_debug_info_{false}, verbose_{false} {}
 
-    bool simplify_ = false;
-    bool render_debug_info_ = false;
-    bool verbose_ = false;
+    bool simplify_;
+    bool render_debug_info_;
+    bool verbose_;
   };
 
-  explicit tile_builder(geo::tile const&, config const& = {});
+  explicit tile_builder(geo::tile const&, config c = config());
   ~tile_builder();
 
   void add_feature(feature const&);

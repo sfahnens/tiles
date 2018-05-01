@@ -13,6 +13,7 @@ geo::tile_range get_feature_range(lmdb::cursor& c) {
   auto maxx = std::numeric_limits<uint32_t>::min();
   auto maxy = std::numeric_limits<uint32_t>::min();
 
+  constexpr uint32_t z = 10;
   for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
        el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
     auto const tile = feature_key_to_tile(el->first, z);
@@ -21,9 +22,7 @@ geo::tile_range get_feature_range(lmdb::cursor& c) {
     maxx = std::max(maxx, tile.x_);
     maxy = std::max(maxy, tile.y_);
   }
-
-  constexpr uint32_t z = 10;
-  return make_tile_range(minx, miny, maxx, maxy, z);
+  return geo::make_tile_range(minx, miny, maxx, maxy, z);
 }
 
 template <typename Fn>

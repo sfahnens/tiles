@@ -87,22 +87,15 @@ var custom = {
     "sources": {
         "osm": {
             "type": "vector",
-            // "tiles": ["http://localhost:8080/path/tiles/{z}/{x}/{y}.mvt"]
             "tiles": ["http://localhost:8888/{z}/{x}/{y}.mvt"],
             "maxzoom": 20
-        },
-        "raster": {
-            "type": "raster",
-            "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
-            "tileSize": 256,
-            "maxzoom": 18
         }
     },
     "layers": [
         {
-            "id": "raster",
-            "type": "raster",
-            "source": "raster"
+            "id": "background",
+            "type": "background",
+            "paint": { "background-color": "#dddddd" }
         }, {
             "id": "cities",
             "type": "circle",
@@ -120,12 +113,13 @@ var custom = {
                     "industrial", "#eadfce",
                     "residential", "#edebd5",
                     "retail", "#f2dae7",
-                    // "construction", "#aaa69d",
+                    "construction", "#aaa69d",
 
                     "nature_light", "#d7f2e1",
                     "nature_heavy", "#c0dbbe",
                     "park", "#e6f4d4",
                     "cemetery", "#bedbd1",
+                    "beach", "#fffcd3",
 
                     "#ff0000"]
             }
@@ -164,14 +158,73 @@ var custom = {
             "source-layer": "rail",
             "paint": {
                 "line-color": rail,
-                "line-dasharray": [2, 2]
+                "line-dasharray": [1, 1]
             }
         },{
+            "id": "road_back",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "road",
+            "filter": [
+              "!in",
+              "highway",
+              "footway", "track", "steps", "cycleway", "path", "unclassified"
+            ],
+            "layout": {
+              "line-cap": "round",
+            },
+            "paint": {
+              "line-color": "#a5a5a5",
+              "line-opacity": 0.5,
+              "line-width": [
+                "let",
+                "base", ["match", ["get", "highway"],
+                  "motorway", 4,
+                  ["trunk", "motorway_link"], 3.5,
+                  ["primary", "secondary", "aeroway", "trunk_link"], 3,
+                  ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
+                  "residential", 1.5,
+                0.75],
+                ["interpolate", ["linear"], ["zoom"],
+                  5,  ["+", ["*", ["var", "base"], 0.1], 1],
+                  9,  ["+", ["*", ["var", "base"], 0.4], 1],
+                  12, ["+", ["*", ["var", "base"], 1], 1],
+                  16, ["+", ["*", ["var", "base"], 4], 1],
+                  20, ["+", ["*", ["var", "base"], 8], 1]
+                ]
+              ]
+            }
+        }, {
             "id": "road",
             "type": "line",
             "source": "osm",
-            "source-layer": "road"
-            // "source-layer": "motis"
+            "source-layer": "road",
+            "layout": {
+              "line-cap": "round",
+            },
+            "paint": {
+              "line-color": "#ffffff",
+              "line-opacity": ["match", ["get", "highway"],
+                ["footway", "track", "steps", "cycleway", "path", "unclassified"], 0.66,
+                1],
+              "line-width": [
+                "let",
+                "base", ["match", ["get", "highway"],
+                  "motorway", 4,
+                  ["trunk", "motorway_link"], 3.5,
+                  ["primary", "secondary", "aeroway", "trunk_link"], 3,
+                  ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
+                  "residential", 1.5,
+                0.75],
+                ["interpolate", ["linear"], ["zoom"],
+                  5,  ["*", ["var", "base"], 0.1],
+                  9,  ["*", ["var", "base"], 0.4],
+                  12, ["*", ["var", "base"], 1],
+                  16, ["*", ["var", "base"], 4],
+                  20, ["*", ["var", "base"], 8]
+                ]
+              ]
+            }
         }, {
             "id": "building",
             "type": "fill",

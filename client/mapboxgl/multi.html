@@ -1,22 +1,73 @@
 <!DOCTYPE html>
-    <title>tiles / mapbox</title>
-    <script src="mapbox-gl.js"></script>
-    <link href="mapbox-gl.css" rel="stylesheet" />
-    <style>
-    head, body, #map {
-      padding: 0px; 
-      margin:0px; 
-      position: absolute; 
-      height: 100%;
-      width: 100%;
-    }</style>
+<title>tiles / mapbox</title>
+<script src="mapbox-gl.js"></script>
+<link href="mapbox-gl.css" rel="stylesheet">
+<style>
+  head, body, #container {
+    padding: 0px;
+    margin:0px;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
+  #container {
+    display: flex;
+    align-items: stretch;
+    align-content: stretch;
+  }
+  #container > div {
+    flex-grow: 1;
+    border-collapse: collapse;
+    border-left: 5px solid white;
+  }
+  #container > div:first-of-type {
+    border-left: 0px;
+  }
+</style>
 </head>
 <body>
+<div id="container">
+    <div id="map_1"></div>
+    <div id="map_2"></div>
+    <div id="map_3"></div>
+</div>
 
-<div id='map'></div>
 <script>
-// mapboxgl.accessToken = '<your access token here>';
+var simple = {
+  "version": 8,
+  "sources": {
+    "raster": {
+      "type": "raster",
+      "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
+      "tileSize": 256,
+      "maxzoom": 18
+    }
+  },
+  "layers": [{
+      "id": "raster",
+      "type": "raster",
+      "source": "raster"
+  }]
+};
 
+var official = {
+  "version": 8,
+  "sources": {
+    "raster": {
+      "type": "raster",
+      "tiles": ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "maxzoom": 18
+    }
+  },
+  "layers": [{
+      "id": "raster",
+      "type": "raster",
+      "source": "raster"
+  }]
+};
 
 const water = "#bbd3f9";
 const rail = "#5b5b5b";
@@ -31,7 +82,7 @@ const building = "#d8d8d8";
 const building_outline = "#c1c1c1";
 
 
-var simple = {
+var custom = {
     "version": 8,
     "sources": {
         "osm": {
@@ -134,27 +185,44 @@ var simple = {
     ]
 };
 
-var map = new mapboxgl.Map({
-    container: 'map',
-    style: simple,
-    // zoom: 1,
-    // center: [-14, 35]
-    zoom: 14,
-    center: [8.6671065, 49.8747541]
-});
 
-// map.addControl(new mapboxgl.Navigation());
+const locationStr = location.hash.substr(1) || "[14, [8.6671065, 49.8747541]]";
+let [zoom, center] = JSON.parse(locationStr);
+center = mapboxgl.LngLat.convert(center);
 
+const updateHash = () => {
+  location.hash =  JSON.stringify([zoom, center.toArray()]);
+};
+updateHash();
 
-map.on('style.load', () => {
-    map.getStyle().layers.forEach(layer => {
-        map.on('click', layer.id, e => {
-            console.log(e);
-        });
+let maps = [];
+const addMap = (container, style) => {
+  let map = new mapboxgl.Map({container, style, zoom, center, dragRotate:false});
+  map.on('move', e => {
+    if(e.proj === true) return;
+    center = map.getCenter();
+    maps.forEach(m => {
+      if(m === map) return;
+      m.setCenter(center, {proj: true});
     });
-})
+    updateHash();
+  });
+  map.on('zoom', e => {
+    if(e.proj === true) return;
+    zoom = map.getZoom();
+    maps.forEach(m => {
+      if(m === map) return;
+      m.setZoom(zoom, {proj: true});
+    });
+    updateHash();
+  });
+  maps.push(map);
+  return map;
+};
 
-
+addMap('map_1', simple);
+addMap('map_2', custom);
+addMap('map_3', official);
 </script>
 
 </body>

@@ -1,5 +1,3 @@
-
-
 function process_node(node)
   if node:has_tag("place", "city") then
     node:set_target_layer("cities")
@@ -9,15 +7,9 @@ function process_node(node)
 end
 
 function process_way(way)
-  -- if not way:has_tag("railway", "rail") or
-  --    way:has_any_tag("usage", {"industrial", "military", "test", "tourism"}) or
-  --    way:has_any_tag("service", {"yard", "spur"}) or
-  --    way:has_tag("railway:preserved", "yes") then
-  --   return
-  -- end
-
-  if way:has_any_tag2("highway") then
+  if way:has_any_tag("highway") then
     way:set_target_layer("road")
+    way:add_tag_as_metadata("highway")
 
     if way:has_tag("highway", "motorway") or
        way:has_tag("highway", "trunk") then
@@ -27,49 +19,144 @@ function process_way(way)
            way:has_tag("highway", "trunk_link") or
            way:has_tag("highway", "primary") or
            way:has_tag("highway", "secondary") or
-           way:has_tag("highway", "tertiary") then
+           way:has_tag("highway", "tertiary") or
+           way:has_tag("highway", "aeroway") then
       way:set_approved_min(9)
+
+    elseif way:has_tag("highway", "residential") or
+           way:has_tag("highway", "living_street") or
+           way:has_tag("highway", "primary_link") or
+           way:has_tag("highway", "secondary_link") or
+           way:has_tag("highway", "tertiary_link") or
+           way:has_tag("highway", "unclassified") or
+           way:has_tag("highway", "service") or
+           way:has_tag("highway", "footway") or
+           way:has_tag("highway", "track") or
+           way:has_tag("highway", "steps") or
+           way:has_tag("highway", "cycleway") or
+           way:has_tag("highway", "path") then
+      way:set_approved_min(12)
+
     end
 
-  elseif way:has_tag("railway", "rail") then
-    if way:has_tag("usage", "industrial") or
-       way:has_tag("usage", "military") or
-       way:has_tag("usage", "test") or
-       way:has_tag("usage", "tourism") or
-       way:has_tag("service", "yard") or
-       way:has_tag("service", "spur") or
-       way:has_tag("railway:preserved", "yes") then
-      return
-    end
+  elseif way:has_tag("railway", "rail", "tram") then
+    -- if way:has_tag("usage", "industrial") or
+    --    way:has_tag("usage", "military") or
+    --    way:has_tag("usage", "test") or
+    --    way:has_tag("usage", "tourism") or
+    --    way:has_tag("service", "yard") or
+    --    way:has_tag("service", "spur") or
+    --    way:has_tag("railway:preserved", "yes") then
+    --   return
+    -- end
 
     way:set_target_layer("rail")
     way:set_approved_full()
+
+  elseif way:has_any_tag("waterway") then
+    way:set_target_layer("waterway")
+
+    if way:has_tag("waterway", "river") or
+       way:has_tag("waterway", "canal") then
+       way:set_approved_min(8)
+    elseif way:has_tag("waterway", "stream") then
+      way:set_approved_min(13)
+    elseif way:has_tag("waterway", "ditch") or
+           way:has_tag("waterway", "drain") then
+      way:set_approved_min(15)
+    end
   end
 end
 
 
 function process_area(area)
-  -- if area:has_any_tag2("landuse",
-  --   "residential", "retail", "industrial", "forest", "farmland", "commercial") then
-  --   area:set_target_layer("landuse")
-  --   area:add_tag_as_metadata("landuse")
-  --   area:set_approved()
-  --   return
-  -- end
+  if area:has_any_tag("building") then
+    area:set_target_layer("building")
+    area:set_approved_min(14)
 
-   if area:has_any_tag2("landuse", "residential") then
+  elseif area:has_any_tag("landuse", "residential", "retail", "industrial", "commercial") then
     area:set_target_layer("landuse")
     area:add_tag_as_metadata("landuse")
     area:set_approved_full()
-    return
+
+  elseif area:has_any_tag("landuse", "quarry", "farmyard", "railway") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "industrial")
+    area:set_approved_full()
+
+  elseif area:has_tag("leisure", "sports_centre") or
+         area:has_tag("amenity", "hospital") or
+         area:has_tag("amenity", "police") or
+         area:has_tag("amenity", "fire_station") or
+         area:has_tag("amenity", "kindergarten") or
+         area:has_tag("amenity", "school") or
+         area:has_tag("amenity", "place_of_worship") or
+         area:has_tag("amenity", "university") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "complex")
+    area:set_approved_full()
+
+  elseif area:has_tag("landuse", "forest") or
+         area:has_tag("natural", "wood") or
+         area:has_tag("natural", "oarchard") or
+         area:has_tag("natural", "scrub") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "nature_heavy")
+    area:set_approved_full()
+
+  elseif area:has_tag("landuse", "farmland") or
+         area:has_tag("landuse", "vineyard") or
+         area:has_tag("landuse", "plant_nursery") or
+         area:has_tag("landuse", "meadow") or
+         area:has_tag("natural", "grassland") or
+         area:has_tag("landuse", "grass") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "nature_light")
+    area:set_approved_full()
+
+  elseif area:has_tag("leisure", "park") or
+         area:has_tag("leisure", "garden") or
+         area:has_tag("leisure", "playground") or
+         area:has_tag("leisure", "stadium") or
+         area:has_tag("landuse", "recreation_ground") or
+         area:has_tag("landuse", "greenhouse_horticulture") or
+         area:has_tag("landuse", "allotments") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "park")
+    area:set_approved_full()
+
+  elseif area:has_tag("landuse", "cemetery") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "cemetery")
+    area:set_approved_full()
+
+  elseif area:has_tag("landuse", "brownfield") or
+         area:has_tag("landuse", "greenfield") or
+         area:has_tag("landuse", "construction") then
+    area:set_target_layer("construction")
+    area:set_approved_full()
+
+  elseif area:has_tag("natural", "water") or
+         area:has_tag("waterway", "riverbank") or
+         area:has_tag("waterway", "basin") or
+         area:has_tag("waterway", "pond") or
+         area:has_tag("leisure", "swimming_pool") then
+    area:set_target_layer("water")
+    area:set_approved_full()
+
+  elseif area:has_tag("natural", "beach") then
+    area:set_target_layer("landuse")
+    area:add_metadata("landuse", "beach")
+    area:set_approved_full()
+
+  elseif area:has_tag("highway", "pedestrian") or
+         area:has_tag("highway", "service") or
+         area:has_tag("amenity", "parking") then
+    area:set_target_layer("pedestrian")
+    area:set_approved_full()
+
+  elseif area:has_tag("leisure", "pitch") then
+    area:set_target_layer("sport")
+    area:set_approved_min(14)
   end
-
-
-  -- if not area:has_tag("building", "yes") or
-  --    area:has_tag("building", "residential") then
-  --   return
-  -- end
-
-  -- area:set_target_layer("building")
-  -- area:set_approved()
 end

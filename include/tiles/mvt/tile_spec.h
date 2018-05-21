@@ -8,7 +8,8 @@
 
 namespace tiles {
 
-constexpr auto kOverdraw = 128;
+constexpr auto kOverdraw = 4096;
+// constexpr auto kOverdraw = 128;
 
 struct tile_spec {
   tile_spec(geo::tile tile) : tile_(std::move(tile)) {

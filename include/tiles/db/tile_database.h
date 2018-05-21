@@ -6,6 +6,7 @@
 
 namespace tiles {
 
+constexpr auto kDefaultMeta = "default_meta";
 constexpr auto kDefaultFeatures = "default_features";
 constexpr auto kDefaultTiles = "default_tiles";
 
@@ -19,7 +20,47 @@ inline lmdb::env make_tile_database(
   return e;
 }
 
+struct tile_db_handle {
+  explicit tile_db_handle(lmdb::env& env,
+                          char const* dbi_name_meta = kDefaultMeta,
+                          char const* dbi_name_features = kDefaultFeatures,
+                          char const* dbi_name_tiles = kDefaultTiles)
+      : env_{env},
+        dbi_name_meta_{dbi_name_meta},
+        dbi_name_features_{dbi_name_features},
+        dbi_name_tiles_{dbi_name_tiles} {}
+
+  lmdb::txn::dbi meta_dbi(lmdb::txn& txn,
+                          lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) {
+    return txn.dbi_open(dbi_name_meta_, flags);
+  }
+
+  lmdb::txn::dbi features_dbi(lmdb::txn& txn,
+                              lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) {
+    return txn.dbi_open(dbi_name_features_,
+                        flags | lmdb::dbi_flags::INTEGERKEY);
+  }
+
+  lmdb::txn::dbi tiles_dbi(lmdb::txn& txn,
+                           lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) {
+    return txn.dbi_open(dbi_name_tiles_, flags | lmdb::dbi_flags::INTEGERKEY);
+  }
+
+  lmdb::env& env_;
+  char const* dbi_name_meta_;
+  char const* dbi_name_features_;
+  char const* dbi_name_tiles_;
+};
+
 struct batch_inserter {
+  batch_inserter(tile_db_handle& handle,
+                 lmdb::txn::dbi (tile_db_handle::*dbi_opener)(lmdb::txn&,
+                                                              lmdb::dbi_flags),
+                 lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
+      : txn_{handle.env_},
+        dbi_{(handle.*dbi_opener)(txn_, flags)},
+        done_{false} {}
+
   batch_inserter(lmdb::env& env, char const* dbname,
                  lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
       : txn_{env}, dbi_{txn_.dbi_open(dbname, flags)}, done_{false} {}
@@ -42,6 +83,12 @@ struct batch_inserter {
 };
 
 struct feature_inserter : public batch_inserter {
+  feature_inserter(
+      tile_db_handle& handle,
+      lmdb::txn::dbi (tile_db_handle::*dbi_opener)(lmdb::txn&, lmdb::dbi_flags),
+      lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
+      : batch_inserter(handle, dbi_opener, flags) {}
+
   feature_inserter(lmdb::env& env, char const* dbname, lmdb::dbi_flags flags)
       : batch_inserter(env, dbname, flags) {}
 

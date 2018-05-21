@@ -21,12 +21,13 @@ struct feature_handler::script_runner {
         "get_id", &pending_feature::get_id,  //
         "has_tag", &pending_feature::has_tag,  //
         "has_any_tag", &pending_feature::has_any_tag,  //
-        "has_any_tag2", &pending_feature::has_any_tag2,  //
+        "has_any_tag", &pending_feature::has_any_tag,  //
         "set_approved_min", &pending_feature::set_approved_min,  //
         "set_approved_full", &pending_feature::set_approved_full,  //
         "set_approved", &pending_feature::set_approved,  //
         "set_target_layer", &pending_feature::set_target_layer,  //
-        "add_tag_as_metadata", &pending_feature::add_tag_as_metadata);
+        "add_tag_as_metadata", &pending_feature::add_tag_as_metadata,  //
+        "add_metadata", &pending_feature::add_metadata);
 
     process_node_ = lua_["process_node"];
     process_way_ = lua_["process_way"];
@@ -49,11 +50,14 @@ template <typename OSMObject>
 std::map<std::string, std::string> make_meta(pending_feature const& f,
                                              OSMObject const& o) {
   std::map<std::string, std::string> meta;
-
   meta["layer"] = f.target_layer_;
 
   for (auto const& tag : f.tag_as_metadata_) {
     meta[tag] = std::string{o.get_value_by_key(tag.c_str(), "")};
+  }
+
+  for (auto const& pair : f.metadata_) {
+    meta[pair.first] = pair.second;
   }
 
   return meta;
@@ -69,8 +73,15 @@ void handle_feature(feature_inserter& inserter, sol::function const& process,
     return;
   }
 
-  insert_feature(inserter, feature{pf.zoom_levels_, make_meta(pf, obj),
-                                   read_osm_geometry(obj)});
+  auto geometry = read_osm_geometry(obj);
+
+  if (std::holds_alternative<fixed_null>(geometry)) {
+    return;
+  }
+
+  insert_feature(inserter,
+                 feature{static_cast<uint64_t>(pf.get_id()), pf.zoom_levels_,
+                         make_meta(pf, obj), std::move(geometry)});
 }
 
 void feature_handler::node(osmium::Node const& n) {

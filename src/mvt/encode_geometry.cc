@@ -2,10 +2,10 @@
 
 #include <iostream>
 
-#include "tiles/mvt/tags.h"
+#include "boost/geometry.hpp"
 
 #include "tiles/fixed/algo/delta.h"
-
+#include "tiles/mvt/tags.h"
 #include "tiles/util.h"
 
 using namespace geo;
@@ -26,9 +26,7 @@ constexpr auto geometry_tag =
 
 std::pair<delta_encoder, delta_encoder> delta_encoders(fixed_box const& box) {
   return {delta_encoder{static_cast<fixed_coord_t>(box.min_corner().x())},
-          delta_encoder{static_cast<fixed_coord_t>(box.min_corner().y())}
-
-  };
+          delta_encoder{static_cast<fixed_coord_t>(box.min_corner().y())}};
 }
 
 void encode(pz::pbf_builder<ttm::Feature>&, fixed_null const&,
@@ -49,7 +47,7 @@ void encode(pz::pbf_builder<ttm::Feature>& pb, fixed_point const& point,
   }
 }
 
-template <typename Container>
+template <bool ClosePath, typename Container>
 void encode_path(pz::packed_field_uint32& sw, delta_encoder& x_enc,
                  delta_encoder& y_enc, Container const& c) {
   verify(c.size() > 1, "container polyline");
@@ -58,10 +56,15 @@ void encode_path(pz::packed_field_uint32& sw, delta_encoder& x_enc,
   sw.add_element(encode_zigzag32(x_enc.encode(c.front().x())));
   sw.add_element(encode_zigzag32(y_enc.encode(c.front().y())));
 
-  sw.add_element(encode_command(LINE_TO, c.size() - 1));
-  for (auto i = 1u; i < c.size(); ++i) {
+  auto const limit = ClosePath ? c.size() - 2 : c.size() - 1;
+  sw.add_element(encode_command(LINE_TO, limit));
+  for (auto i = 1u; i <= limit; ++i) {
     sw.add_element(encode_zigzag32(x_enc.encode(c[i].x())));
     sw.add_element(encode_zigzag32(y_enc.encode(c[i].y())));
+  }
+
+  if (ClosePath) {
+    sw.add_element(encode_command(CLOSE_PATH, 1));
   }
 }
 
@@ -74,7 +77,7 @@ void encode(pz::pbf_builder<ttm::Feature>& pb,
     pz::packed_field_uint32 sw{pb, geometry_tag};
 
     for (auto const& polyline : multi_polyline) {
-      encode_path(sw, x_enc, y_enc, polyline);
+      encode_path<false>(sw, x_enc, y_enc, polyline);
     }
   }
 }
@@ -89,12 +92,9 @@ void encode(pz::pbf_builder<ttm::Feature>& pb,
     pz::packed_field_uint32 sw{pb, geometry_tag};
 
     for (auto const& polygon : multi_polygon) {
-      encode_path(sw, x_enc, y_enc, polygon.outer());
-      sw.add_element(encode_command(CLOSE_PATH, 1));
-
+      encode_path<true>(sw, x_enc, y_enc, polygon.outer());
       for (auto const& inner : polygon.inners()) {
-        encode_path(sw, x_enc, y_enc, inner);
-        sw.add_element(encode_command(CLOSE_PATH, 1));
+        encode_path<true>(sw, x_enc, y_enc, inner);
       }
     }
   }

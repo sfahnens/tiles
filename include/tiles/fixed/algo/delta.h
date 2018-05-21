@@ -7,7 +7,7 @@
 namespace tiles {
 
 struct delta_encoder {
-  delta_encoder(fixed_coord_t init) : curr_(init) {}
+  explicit delta_encoder(fixed_coord_t init) : curr_(init) {}
 
   fixed_delta_t encode(fixed_coord_t val) {
     // implementation defined: works as expected in clang and gcc
@@ -20,7 +20,7 @@ struct delta_encoder {
 };
 
 struct delta_decoder {
-  delta_decoder(fixed_coord_t init) : curr_(init) {}
+  explicit delta_decoder(fixed_coord_t init) : curr_(init) {}
 
   fixed_coord_t decode(fixed_delta_t val) {
     curr_ += val;

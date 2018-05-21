@@ -29,6 +29,7 @@ template <typename Fn>
 void query_features(lmdb::cursor& c, geo::tile const& tile, Fn&& fn) {
   constexpr uint32_t z = 10;
 
+  // XXX not working on zoom level zero "whole database" ?!
   auto const bounds = tile.bounds_on_z(z);  // maybe some more indices :)
   for (auto y = bounds.miny_; y < bounds.maxy_; ++y) {
     auto const key_begin = make_feature_key(bounds.minx_, y, z);

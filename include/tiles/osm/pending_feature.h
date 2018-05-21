@@ -12,23 +12,15 @@ struct pending_feature {
   pending_feature(osmium::OSMObject const& obj)
       : obj_(obj), is_approved_(false) {}
 
-  int64_t get_id() { return obj_.id(); }
+  int64_t get_id() const { return obj_.id(); }
 
   bool has_tag(std::string const& key, std::string const& value) {
     // TODO call .tags() and cache the result
     return value == obj_.get_value_by_key(key.c_str(), "");
   }
 
-  bool has_any_tag(std::string const& key,
-                   std::vector<std::string> const values) {
-    auto const actual_value = obj_.get_value_by_key(key.c_str(), "");
-    return std::any_of(
-        begin(values), end(values),
-        [&actual_value](auto const& value) { return actual_value == value; });
-  }
-
-  bool has_any_tag2(std::string const& key, sol::variadic_args va) {
-    if(std::distance(va.begin(), va.end()) == 0) {
+  bool has_any_tag(std::string const& key, sol::variadic_args va) {
+    if (std::distance(va.begin(), va.end()) == 0) {
       return obj_.get_value_by_key(key.c_str()) != nullptr;
     } else {
       auto const actual_value = obj_.get_value_by_key(key.c_str(), "");
@@ -43,9 +35,7 @@ struct pending_feature {
     set_approved(min, (kMaxZoomLevel + 1));
   }
 
-  void set_approved_full() {
-    set_approved(0, (kMaxZoomLevel + 1));
-  }
+  void set_approved_full() { set_approved(0, (kMaxZoomLevel + 1)); }
 
   // default parameters do not work with lua stuff
   void set_approved(uint32_t min = 0, uint32_t max = (kMaxZoomLevel + 1)) {
@@ -61,6 +51,10 @@ struct pending_feature {
     tag_as_metadata_.emplace_back(tag);
   }
 
+  void add_metadata(std::string key, std::string value) {
+    metadata_.emplace_back(std::move(key), std::move(value));
+  }
+
   osmium::OSMObject const& obj_;
 
   bool is_approved_;
@@ -68,6 +62,7 @@ struct pending_feature {
 
   std::string target_layer_;
   std::vector<std::string> tag_as_metadata_;
+  std::vector<std::pair<std::string, std::string>> metadata_;
 };
 
 struct pending_node : public pending_feature {

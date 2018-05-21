@@ -43,15 +43,10 @@ struct prepare_stats {
       std::chrono::steady_clock::now();
 };
 
-void prepare_tiles(lmdb::env& db_env, uint32_t max_zoomlevel,
-                   char const* feature_dbi_name = kDefaultFeatures,
-                   char const* tiles_dbi_name = kDefaultTiles) {
-  batch_inserter inserter{
-      db_env, tiles_dbi_name,
-      lmdb::dbi_flags::CREATE | lmdb::dbi_flags::INTEGERKEY};
+void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
+  batch_inserter inserter{handle, &tile_db_handle::tiles_dbi};
 
-  auto feature_dbi =
-      inserter.txn_.dbi_open(feature_dbi_name, lmdb::dbi_flags::INTEGERKEY);
+  auto feature_dbi = handle.features_dbi(inserter.txn_);
   auto c = lmdb::cursor{inserter.txn_, feature_dbi};
 
   prepare_stats stats;
@@ -73,15 +68,10 @@ void prepare_tiles(lmdb::env& db_env, uint32_t max_zoomlevel,
   }
 }
 
-void prepare_tiles_sparse(lmdb::env& db_env, uint32_t max_zoomlevel,
-                          char const* feature_dbi_name = kDefaultFeatures,
-                          char const* tiles_dbi_name = kDefaultTiles) {
-  batch_inserter inserter{
-      db_env, tiles_dbi_name,
-      lmdb::dbi_flags::CREATE | lmdb::dbi_flags::INTEGERKEY};
+void prepare_tiles_sparse(tile_db_handle& handle, uint32_t max_zoomlevel) {
+  batch_inserter inserter{handle, &tile_db_handle::tiles_dbi};
 
-  auto feature_dbi =
-      inserter.txn_.dbi_open(feature_dbi_name, lmdb::dbi_flags::INTEGERKEY);
+  auto feature_dbi = handle.features_dbi(inserter.txn_);
   auto c = lmdb::cursor{inserter.txn_, feature_dbi};
 
   prepare_stats stats;
@@ -99,6 +89,7 @@ void prepare_tiles_sparse(lmdb::env& db_env, uint32_t max_zoomlevel,
       inserter.insert(make_tile_key(tile), rendered_tile);
     }
   }
+
   stats.print_info();
 }
 

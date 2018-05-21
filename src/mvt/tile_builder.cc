@@ -122,34 +122,6 @@ namespace tiles {
 //     end(t));
 //   }
 
-//   void render_debug_info() {
-//     throw std::runtime_error("FIX ME");
-//     // fixed_polyline box;
-//     // box.geometry_.emplace_back();
-//     // box.geometry_.back().emplace_back(spec_.bounds_.minx_,
-//     // spec_.bounds_.miny_);
-//     // box.geometry_.back().emplace_back(spec_.bounds_.minx_,
-//     // spec_.bounds_.maxy_);
-//     // box.geometry_.back().emplace_back(spec_.bounds_.maxx_,
-//     // spec_.bounds_.maxy_);
-//     // box.geometry_.back().emplace_back(spec_.bounds_.maxx_,
-//     // spec_.bounds_.miny_);
-//     // box.geometry_.back().emplace_back(spec_.bounds_.minx_,
-//     // spec_.bounds_.miny_);
-
-//     // fixed_geometry geometry{box};
-
-//     // shift(geometry, spec_.z_);
-//     // {
-//     //   std::string feature_buf;
-//     //   pbf_builder<ttm::Feature> feature_pb(feature_buf);
-
-//     //   encode_geometry(feature_pb, geometry, spec_);
-//     //   pb_.add_message(ttm::Layer::repeated_Feature_features,
-//     feature_buf);
-//     // }
-//   }
-
 //   std::string finish() {
 //     std::vector<std::string const*> keys(meta_key_cache_.size());
 //     for (auto const& pair : meta_key_cache_) {
@@ -221,16 +193,13 @@ struct layer_builder {
     std::string feature_buf;
     pbf_builder<ttm::Feature> feature_pb(feature_buf);
 
-    if (in_z_range(f.meta_) && write_geometry(feature_pb, f.geometry_)) {
+    if (write_geometry(feature_pb, f.geometry_)) {
       has_geometry_ = true;
 
+      feature_pb.add_uint64(ttm::Feature::optional_uint64_id, f.id_);
       write_metadata(feature_pb, f.meta_);
       pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
     }
-  }
-
-  bool in_z_range(std::map<std::string, std::string> const&) const {
-    return true;  // TODO
   }
 
   bool write_geometry(pbf_builder<ttm::Feature>& pb,
@@ -261,6 +230,23 @@ struct layer_builder {
     }
 
     pb.add_packed_uint32(ttm::Feature::packed_uint32_tags, begin(t), end(t));
+  }
+
+  void render_debug_info() {
+    auto const& min = spec_.px_bounds_.min_corner();
+    auto const& max = spec_.px_bounds_.max_corner();
+    fixed_geometry line = fixed_polyline{{{min.x(), min.y()},
+                                          {min.x(), max.y()},
+                                          {max.x(), max.y()},
+                                          {max.x(), min.y()},
+                                          {min.x(), min.y()}}};
+    {
+      std::string feature_buf;
+      pbf_builder<ttm::Feature> feature_pb(feature_buf);
+
+      encode_geometry(feature_pb, line, spec_);
+      pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
+    }
   }
 
   std::string finish() {
@@ -326,9 +312,9 @@ struct tile_builder::impl {
         continue;
       }
 
-      // if (config_.render_debug_info_) {
-      //   pair.second->render_debug_info();
-      // }
+      if (config_.render_debug_info_) {
+        pair.second->render_debug_info();
+      }
 
       pb.add_message(ttm::Tile::repeated_Layer_layers, pair.second->finish());
     }

@@ -1,9 +1,10 @@
 #include "tiles/fixed/algo/simplify.h"
 
-// #include "boost/geometry/algorithms/simplify.hpp"
-// #include "boost/geometry/strategies/cartesian/distance_pythagoras.hpp"
-
 #include "boost/geometry.hpp"
+
+#include "utl/erase_if.h"
+
+#include "tiles/util.h"
 
 namespace tiles {
 
@@ -20,7 +21,23 @@ fixed_geometry simplify(fixed_polyline const& in, uint32_t const d) {
 fixed_geometry simplify(fixed_polygon const& in, uint32_t const d) {
   fixed_polygon output;
   boost::geometry::simplify(in, output, d);
-  return output;  // XXX check if still valid
+
+  // triangle + closing point -> 4
+  utl::erase_if(output, [](auto& poly) {
+    utl::erase_if(poly.inners(),
+                  [](auto const& inner) { return inner.size() < 4; });
+
+    return poly.outer().size() < 4;
+  });
+
+  if (output.empty()) {
+    return fixed_null{};
+  } else if (!boost::geometry::is_valid(output)) {
+    // no simplification is inefficient ...
+    // ... but since boost::geometry::dissolve is broken
+    return in;
+  }
+  return output;
 }
 
 fixed_geometry simplify(fixed_geometry const& in, uint32_t const z) {

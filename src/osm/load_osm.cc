@@ -38,13 +38,10 @@ using location_handler_t = oh::NodeLocationsForWays<index_t>;
 
 void load_osm() {
   lmdb::env db_env = make_tile_database("./");
-  {
-    feature_inserter inserter{
-        db_env, kDefaultFeatures,
-        lmdb::dbi_flags::CREATE | lmdb::dbi_flags::INTEGERKEY};
+  tile_db_handle handle{db_env};
 
-    // auto db = make_tile_database("database", false, false, {});
-    // db->prepare_tiles(kMaxZoomLevel);
+  {
+    feature_inserter inserter{handle, &tile_db_handle::features_dbi};
     feature_handler handler{inserter};
 
     // oio::File input_file{"/data/osm/hessen-latest.osm.pbf"};
@@ -82,35 +79,28 @@ void load_osm() {
     // relations have been cleaned up.
     std::cerr << "Memory:\n";
     orel::print_used_memory(std::cerr, mp_manager.used_memory());
-
-    // If there were multipolgyon relations in the input, but some of their
-    // members are not in the input file (which often happens for extracts)
-    // this will write the IDs of the incomplete relations to stderr.
-    // std::vector<osmium::object_id_type> incomplete_relations_ids;
-    // mp_manager.for_each_incomplete_relation([&](const orel::RelationHandle&
-    // handle){
-    //     incomplete_relations_ids.push_back(handle->id());
-    // });
-    // if (!incomplete_relations_ids.empty()) {
-    //     std::cerr << "Warning! Some member ways missing for these
-    //     multipolygon
-    //     relations:";
-    //     for (const auto id : incomplete_relations_ids) {
-    //         std::cerr << " " << id;
-    //     }
-    //     std::cerr << "\n";
-    // }
-
-    // std::cout << handler.count_ << std::endl;
   }
 
   std::cerr << "Sync...\n";
   db_env.sync();
   std::cerr << "Sync Done\n";
 
+  {
+    auto txn = lmdb::txn{handle.env_};
+    auto dbi = txn.dbi_open(kDefaultFeatures, lmdb::dbi_flags::INTEGERKEY);
+    auto c = lmdb::cursor{txn, dbi};
+
+    size_t count = 0;
+    for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
+         el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
+      ++count;
+    }
+
+    std::cout << count << " entries in db" << std::endl;
+  }
+
   std::cerr << "Finalize...\n";
-  // prepare_tiles(db_env, 8, kDefaultFeatures, kDefaultTiles);
-  prepare_tiles_sparse(db_env, 12, kDefaultFeatures, kDefaultTiles);
+  prepare_tiles_sparse(handle, 12);
   std::cerr << "Finalize done\n";
 }
 

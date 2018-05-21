@@ -56,6 +56,10 @@ fixed_geometry read_osm_geometry(osmium::Area const& area) {
     }
   }
 
+  if(polygon.empty()) {
+    return fixed_null{};
+  }
+
   return polygon;
 }
 

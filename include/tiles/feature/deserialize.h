@@ -15,6 +15,7 @@ feature deserialize_feature(
 
   pz::pbf_message<tags::Feature> msg{str.data(), str.size()};
 
+  uint64_t id = 0;
   std::pair<uint32_t, uint32_t> zoom_levels{kInvalidZoomLevel,
                                             kInvalidZoomLevel};
 
@@ -29,16 +30,17 @@ feature deserialize_feature(
         zoom_levels.first = msg.get_uint32();
         if (zoom_level_hint != kInvalidZoomLevel &&
             zoom_levels.first > zoom_level_hint) {
-          return feature{{kInvalidZoomLevel, kInvalidZoomLevel}, {}, {}};
+          return feature{0, {kInvalidZoomLevel, kInvalidZoomLevel}, {}, {}};
         }
         break;
       case tags::Feature::required_uint32_maxzoomlevel:
         zoom_levels.second = msg.get_uint32();
         if (zoom_level_hint != kInvalidZoomLevel &&
             zoom_levels.second < zoom_level_hint) {
-          return feature{{kInvalidZoomLevel, kInvalidZoomLevel}, {}, {}};
+          return feature{0, {kInvalidZoomLevel, kInvalidZoomLevel}, {}, {}};
         }
         break;
+      case tags::Feature::required_uint64_id: id = msg.get_uint64(); break;
       case tags::Feature::repeated_string_keys:
         meta.emplace_back(msg.get_string(), "");
         break;
@@ -55,7 +57,7 @@ feature deserialize_feature(
 
   verify(meta_fill == meta.size(), "meta data imbalance! (b)");
 
-  return feature{zoom_levels,
+  return feature{id, zoom_levels,
                  std::map<std::string, std::string>{begin(meta), end(meta)},
                  std::move(geometry)};
 }

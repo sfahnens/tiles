@@ -10,6 +10,8 @@ constexpr auto kDefaultMeta = "default_meta";
 constexpr auto kDefaultFeatures = "default_features";
 constexpr auto kDefaultTiles = "default_tiles";
 
+constexpr auto kMetaKeyMaxPreparedZoomLevel = "max-prepared-zoomlevel";
+
 inline lmdb::env make_tile_database(
     char const* path, lmdb::env_open_flags flags = lmdb::env_open_flags::NONE) {
   lmdb::env e;

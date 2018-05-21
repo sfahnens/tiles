@@ -66,6 +66,10 @@ void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
 
     inserter.insert(make_tile_key(tile), rendered_tile);
   }
+
+  auto meta_dbi = handle.meta_dbi(inserter.txn_);
+  inserter.txn_.put(meta_dbi, kMetaKeyMaxPreparedZoomLevel,
+                    std::to_string(max_zoomlevel));
 }
 
 void prepare_tiles_sparse(tile_db_handle& handle, uint32_t max_zoomlevel) {
@@ -89,6 +93,10 @@ void prepare_tiles_sparse(tile_db_handle& handle, uint32_t max_zoomlevel) {
       inserter.insert(make_tile_key(tile), rendered_tile);
     }
   }
+
+  auto meta_dbi = handle.meta_dbi(inserter.txn_, lmdb::dbi_flags::CREATE);
+  inserter.txn_.put(meta_dbi, kMetaKeyMaxPreparedZoomLevel,
+                    std::to_string(max_zoomlevel));
 
   stats.print_info();
 }

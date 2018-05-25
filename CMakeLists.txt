@@ -3,7 +3,7 @@ project(tiles)
 
 include_directories(include)
 
-find_package(Boost COMPONENTS system filesystem thread REQUIRED)
+find_package(Boost COMPONENTS system filesystem thread iostreams REQUIRED)
 find_package(Threads)
 
 include_directories(include)
@@ -43,7 +43,12 @@ if(TILES_STANDALONE)
   add_subdirectory(external_lib/lmdb EXCLUDE_FROM_ALL)
 endif()
 
-file(GLOB_RECURSE tiles-files src/fixed/*.cc src/mvt/*.cc src/tile_database.cc)
+file(GLOB_RECURSE tiles-files
+  src/fixed/*.cc
+  src/mvt/*.cc
+  src/tile_database.cc
+  src/util.cc
+)
 
 add_library(tiles ${tiles-files})
 set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})

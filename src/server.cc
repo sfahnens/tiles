@@ -29,32 +29,40 @@ int main() {
   });
 
   // z, x, y
-  router.route("GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$",
-               [&](auto const& req, auto cb) {
-                 try {
-                   std::cout << "received a request: " << req.uri << std::endl;
+  router.route("GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$", [&](auto const& req,
+                                                               auto cb) {
+    if (std::find_if(begin(req.headers), end(req.headers), [](auto const& h) {
+          return h.name == "Accept-Encoding" &&
+                 h.value.find("gzip") != std::string::npos;
+        }) == end(req.headers)) {
+      return cb(reply::stock_reply(reply::not_implemented));
+    }
 
-                   auto const tile = geo::tile{
-                       static_cast<uint32_t>(std::stoul(req.path_params[1])),
-                       static_cast<uint32_t>(std::stoul(req.path_params[2])),
-                       static_cast<uint32_t>(std::stoul(req.path_params[0]))};
+    try {
+      std::cout << "received a request: " << req.uri << std::endl;
 
-                   reply rep = reply::stock_reply(reply::ok);
-                   rep.content = tiles::get_tile(handle, tile);
+      auto const tile =
+          geo::tile{static_cast<uint32_t>(std::stoul(req.path_params[1])),
+                    static_cast<uint32_t>(std::stoul(req.path_params[2])),
+                    static_cast<uint32_t>(std::stoul(req.path_params[0]))};
 
-                   if(rep.content.empty()) {
-                    rep.status = reply::no_content;
-                   }
+      reply rep = reply::stock_reply(reply::ok);
+      rep.content = tiles::get_tile(handle, tile);
 
-                   add_cors_headers(rep);
-                   cb(rep);
-                 } catch (std::exception const& e) {
-                   std::cout << "unhandled error: " << e.what() << std::endl;
-                 } catch (...) {
-                   std::cout << "unhandled unknown error" << std::endl;
-                 }
-                 std::cout << "done:" << req.uri << std::endl;
-               });
+      if (rep.content.empty()) {
+        rep.status = reply::no_content;
+      } else {
+        rep.headers.emplace_back("Content-Encoding", "gzip");
+      }
+
+      add_cors_headers(rep);
+      return cb(rep);
+    } catch (std::exception const& e) {
+      std::cout << "unhandled error: " << e.what() << std::endl;
+    } catch (...) {
+      std::cout << "unhandled unknown error" << std::endl;
+    }
+  });
 
   server.listen("0.0.0.0", "8888", router);
 

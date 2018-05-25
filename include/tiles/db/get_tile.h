@@ -28,7 +28,7 @@ std::string get_tile(tile_db_handle& handle, geo::tile const& t) {
 
   auto features_dbi = handle.features_dbi(txn);
   auto c = lmdb::cursor{txn, features_dbi};
-  return render_tile(c, t);
+  return compress_gzip(render_tile(c, t));
 }
 
 }  // namespace tiles

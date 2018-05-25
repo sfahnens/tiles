@@ -36,10 +36,28 @@ using index_t =
     osmium::index::map::FlexMem<o::unsigned_object_id_type, o::Location>;
 using location_handler_t = oh::NodeLocationsForWays<index_t>;
 
-void load_osm() {
+void clear_db() {
   lmdb::env db_env = make_tile_database("./");
   tile_db_handle handle{db_env};
 
+  lmdb::txn txn{handle.env_};
+  auto meta_dbi = handle.meta_dbi(txn, lmdb::dbi_flags::CREATE);
+  meta_dbi.clear();
+
+  auto features_dbi = handle.features_dbi(txn, lmdb::dbi_flags::CREATE);
+  features_dbi.clear();
+
+  auto tiles_dbi = handle.tiles_dbi(txn, lmdb::dbi_flags::CREATE);
+  tiles_dbi.clear();
+
+  txn.commit();
+}
+
+void load_osm() {
+  clear_db();
+
+  lmdb::env db_env = make_tile_database("./");
+  tile_db_handle handle{db_env};
   {
     feature_inserter inserter{handle, &tile_db_handle::features_dbi};
     feature_handler handler{inserter};
@@ -100,7 +118,7 @@ void load_osm() {
   }
 
   std::cerr << "Finalize...\n";
-  prepare_tiles_sparse(handle, 12);
+  prepare_tiles_sparse(handle, 11);
   std::cerr << "Finalize done\n";
 }
 

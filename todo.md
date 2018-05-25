@@ -1,11 +1,11 @@
 - render: metadata completed zoom levels DONE
 - profile: zoomlevel depends on area DONE
+- db: store gzipped tiles DONE
+- auto clean database DONE
 
 - db: compact tile metaformat
-- db: store gzipped tiles
 
 - coastline shapefile
-- auto clean database
 - profile: warning if layer ist not set?!
 - render: fast bounding box check in deserialize (same as zoomlevel)
 
@@ -29,5 +29,7 @@
 - profile: location names
 - profile: woog steeg = building
 
-
-- profile
+- database: variant for metadata
+- geometry: custom block allocator for geometry stuff
+- render: parallelize
+- import: parallelize

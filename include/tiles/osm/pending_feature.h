@@ -6,11 +6,18 @@
 
 #include "sol.hpp"
 
+#include "tiles/fixed/algo/area.h"
+#include "tiles/osm/read_osm_geometry.h"
+#include "tiles/util.h"
+
 namespace tiles {
 
 struct pending_feature {
-  pending_feature(osmium::OSMObject const& obj)
-      : obj_(obj), is_approved_(false) {}
+  pending_feature(osmium::OSMObject const& obj,
+                  std::function<fixed_geometry()> read_geometry)
+      : obj_{obj},
+        is_approved_{false},
+        read_geometry_{std::move(read_geometry)} {}
 
   int64_t get_id() const { return obj_.id(); }
 
@@ -37,7 +44,29 @@ struct pending_feature {
 
   void set_approved_full() { set_approved(0, (kMaxZoomLevel + 1)); }
 
-  // default parameters do not work with lua stuff
+  // earth radius = 6371000 meters
+  // map size @ zoom 20 = 4096 << 20 = 4294967296 pixel
+  // 1 m = 674.14 px -> 1 m^2 = 454000 px^2
+  // pairwise growing area, lower zoom_level:
+  // >> max_area_1, zoom_level_1, max_area_2, zoom_level_2, ...
+  void set_approved_min_by_area(sol::variadic_args va) {
+    verify(std::distance(va.begin(), va.end()) % 2 == 0,
+           "set_approved_by_area input size not even!");
+
+    if (!geometry_) {
+      geometry_ = read_geometry_();
+    }
+    auto const area = tiles::area(*geometry_);
+
+    for (auto it = va.begin(); it != va.end(); it += 2) {
+      auto const limit = static_cast<fixed_coord_t>(*(it + 1));
+      if (limit == -1 || area < limit) {
+        set_approved_min(*it);
+        break;
+      }
+    }
+  }
+
   void set_approved(uint32_t min = 0, uint32_t max = (kMaxZoomLevel + 1)) {
     is_approved_ = true;
     zoom_levels_ = {min, max};
@@ -63,16 +92,9 @@ struct pending_feature {
   std::string target_layer_;
   std::vector<std::string> tag_as_metadata_;
   std::vector<std::pair<std::string, std::string>> metadata_;
-};
 
-struct pending_node : public pending_feature {
-  pending_node(osmium::Node const& node) : pending_feature(node) {}
+  std::function<fixed_geometry()> read_geometry_;
+  std::optional<fixed_geometry> geometry_;
 };
-
-struct pending_way : public pending_feature {
-  pending_way(osmium::Way const& way) : pending_feature(way) {}
-};
-
-struct pending_relation {};
 
 }  // namespace tiles

@@ -23,8 +23,8 @@ struct feature_handler::script_runner {
         "has_any_tag", &pending_feature::has_any_tag,  //
         "has_any_tag", &pending_feature::has_any_tag,  //
         "set_approved_min", &pending_feature::set_approved_min,  //
+        "set_approved_min_by_area", &pending_feature::set_approved_min_by_area,
         "set_approved_full", &pending_feature::set_approved_full,  //
-        "set_approved", &pending_feature::set_approved,  //
         "set_target_layer", &pending_feature::set_target_layer,  //
         "add_tag_as_metadata", &pending_feature::add_tag_as_metadata,  //
         "add_metadata", &pending_feature::add_metadata);
@@ -66,22 +66,23 @@ std::map<std::string, std::string> make_meta(pending_feature const& f,
 template <typename OSMObject>
 void handle_feature(feature_inserter& inserter, sol::function const& process,
                     OSMObject const& obj) {
-  auto pf = pending_feature{obj};
+  auto pf = pending_feature{obj, [&obj] { return read_osm_geometry(obj); }};
   process(pf);
 
   if (!pf.is_approved_) {
     return;
   }
 
-  auto geometry = read_osm_geometry(obj);
-
-  if (std::holds_alternative<fixed_null>(geometry)) {
+  if (!pf.geometry_) {
+    pf.geometry_ = read_osm_geometry(obj);
+  }
+  if (std::holds_alternative<fixed_null>(*pf.geometry_)) {
     return;
   }
 
   insert_feature(inserter,
                  feature{static_cast<uint64_t>(pf.get_id()), pf.zoom_levels_,
-                         make_meta(pf, obj), std::move(geometry)});
+                         make_meta(pf, obj), std::move(*pf.geometry_)});
 }
 
 void feature_handler::node(osmium::Node const& n) {

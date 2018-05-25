@@ -1,3 +1,9 @@
+- render: metadata completed zoom levels DONE
+- profile: zoomlevel depends on area DONE
+
+- db: compact tile metaformat
+- db: store gzipped tiles
+
 - coastline shapefile
 - auto clean database
 - profile: warning if layer ist not set?!
@@ -5,10 +11,7 @@
 
 - optimize: merge nearby shapes with equal properties
 
-- render: metadata completed zoom levels
-
 - render: order shapes by area
-- profile: zoomlevel depends on area
 - profile: respect Key:layer
 - profile: road names
 - profile: road oneway direction

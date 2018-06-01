@@ -40,3 +40,18 @@ using fixed_geometry =
 using fixed_box = boost::geometry::model::box<fixed_xy>;
 
 }  // namespace tiles
+
+namespace boost {
+namespace geometry {
+namespace model {
+namespace d2 {
+
+inline bool operator==(point_xy<tiles::fixed_coord_t> const& lhs,
+                       point_xy<tiles::fixed_coord_t> const& rhs) {
+  return std::tie(lhs.x(), lhs.y()) == std::tie(rhs.x(), rhs.y());
+}
+
+}  // namespace d2
+}  // namespace model
+}  // namespace geometry
+}  // namespace boost

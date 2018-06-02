@@ -26,7 +26,7 @@ inline tile_index_t make_feature_key(tile_index_t const x,  //
                                      tile_index_t const z,  //
                                      tile_index_t const idx = 0) {
   auto const coord_bits = z + 1;
-  auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * z;
+  auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * coord_bits;
 
   auto const coord_mask = (static_cast<tile_index_t>(1) << coord_bits) - 1;
   auto const idx_mask = (static_cast<tile_index_t>(1) << idx_bits) - 1;
@@ -44,7 +44,7 @@ inline tile_index_t make_feature_key(tile_index_t const x,  //
 
 inline geo::tile feature_key_to_tile(tile_index_t key, uint32_t z) {
   auto const coord_bits = z + 1;
-  auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * z;
+  auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * coord_bits;
 
   auto const coord_mask = (static_cast<tile_index_t>(1) << coord_bits) - 1;
 

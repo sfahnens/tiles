@@ -6,6 +6,11 @@
 - db: compact tile metaformat
 
 - coastline shapefile
+- improve performance / parallel
+- feature wraparound 180/-180
+- iterate -> zoom level 0: 2tiles?!
+- iterate -> coastline: south america missing?!
+
 - profile: warning if layer ist not set?!
 - render: fast bounding box check in deserialize (same as zoomlevel)
 
@@ -28,6 +33,7 @@
 - profile: poi traffic lights
 - profile: location names
 - profile: woog steeg = building
+- profile: foreign names?!
 
 - database: variant for metadata
 - geometry: custom block allocator for geometry stuff

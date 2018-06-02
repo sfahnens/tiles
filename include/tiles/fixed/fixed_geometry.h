@@ -18,6 +18,9 @@ using fixed_coord_t = int64_t;
 
 using fixed_xy = boost::geometry::model::d2::point_xy<fixed_coord_t>;
 
+using fixed_simple_polygon = boost::geometry::model::polygon<fixed_xy>;
+using fixed_box = boost::geometry::model::box<fixed_xy>;
+
 constexpr fixed_coord_t kFixedCoordMin = 0;
 constexpr fixed_coord_t kFixedCoordMax = proj::map_size(kMaxZoomLevel);
 constexpr fixed_coord_t kFixedCoordMagicOffset = kFixedCoordMax / 2ul;
@@ -31,13 +34,11 @@ using fixed_null = std::monostate;
 using fixed_point = boost::geometry::model::multi_point<fixed_xy>;
 using fixed_polyline = boost::geometry::model::multi_linestring<
     boost::geometry::model::linestring<fixed_xy>>;
-using fixed_polygon = boost::geometry::model::multi_polygon<
-    boost::geometry::model::polygon<fixed_xy>>;
+using fixed_polygon =
+    boost::geometry::model::multi_polygon<fixed_simple_polygon>;
 
 using fixed_geometry =
     std::variant<fixed_null, fixed_point, fixed_polyline, fixed_polygon>;
-
-using fixed_box = boost::geometry::model::box<fixed_xy>;
 
 }  // namespace tiles
 

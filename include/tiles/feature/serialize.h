@@ -7,7 +7,7 @@
 
 namespace tiles {
 
-std::string serialize_feature(feature const& f) {
+inline std::string serialize_feature(feature const& f) {
   std::string buf;
   protozero::pbf_builder<tags::Feature> pb(buf);
 

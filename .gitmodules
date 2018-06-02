@@ -28,3 +28,6 @@
 [submodule "external_lib/lmdb"]
 	path = external_lib/lmdb
 	url = git@git.motis-project.de:lib/lmdb.git
+[submodule "external_lib/miniz"]
+	path = external_lib/miniz
+	url = git@git.motis-project.de:lib/miniz

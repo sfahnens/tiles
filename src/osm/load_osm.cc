@@ -19,9 +19,11 @@
 
 #include "osmium/util/progress_bar.hpp"
 
+#include "tiles/db/insert_feature.h"
 #include "tiles/db/prepare_tiles.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/osm/feature_handler.h"
+#include "tiles/osm/load_shapefile.h"
 
 namespace tiles {
 
@@ -62,41 +64,64 @@ void load_osm() {
     feature_inserter inserter{handle, &tile_db_handle::features_dbi};
     feature_handler handler{inserter};
 
-    // oio::File input_file{"/data/osm/hessen-latest.osm.pbf"};
-    oio::File input_file{"/data/osm/2017-10-29/hessen-171029.osm.pbf"};
+    auto coastlines = load_shapefile(
+        "/home/sebastian/Downloads/land-polygons-complete-4326.zip");
 
-    oa::Assembler::config_type assembler_config;
-    oa::MultipolygonManager<oa::Assembler> mp_manager{assembler_config};
+    std::cout << "loaded " << coastlines.size() << " coastlines" << std::endl;
 
-    std::cerr << "Pass 1...\n";
-    orel::read_relations(input_file, mp_manager);
-    std::cerr << "Pass 1 done\n";
+    size_t count = 0;
 
-    std::cerr << "Memory:\n";
-    orel::print_used_memory(std::cerr, mp_manager.used_memory());
+    for (auto& coastline : coastlines) {
 
-    index_t index;
-    location_handler_t location_handler{index};
-    location_handler.ignore_errors();
+      if (count % 100 == 0) {
+        std::cout << "insert coastline: " << count << "\n";
+      }
+      ++count;
 
-    // On the second pass we read all objects and run them first through the
-    // node location handler and then the multipolygon collector. The collector
-    // will put the areas it has created into the "buffer" which are then
-    // fed through our "handler".
-    std::cerr << "Pass 2...\n";
-    oio::Reader reader{input_file};
-    // o::ProgressBar progress{reader.file_size(), ou::isatty(2)};
+      insert_recursive_clipped_feature(
+          inserter, feature{0ul,
+                            std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
+                            {{"layer", "coastline"}},
+                            std::move(coastline)});
+    }
 
-    o::apply(reader, location_handler, handler,
-             mp_manager.handler(
-                 [&handler](auto&& buffer) { o::apply(buffer, handler); }));
-    reader.close();
-    std::cerr << "Pass 2 done\n";
+    // // oio::File input_file{"/data/osm/hessen-latest.osm.pbf"};
+    // oio::File input_file{"/data/osm/2017-10-29/hessen-171029.osm.pbf"};
 
-    // Output the amount of main memory used so far. All complete multipolygon
-    // relations have been cleaned up.
-    std::cerr << "Memory:\n";
-    orel::print_used_memory(std::cerr, mp_manager.used_memory());
+    // oa::Assembler::config_type assembler_config;
+    // oa::MultipolygonManager<oa::Assembler> mp_manager{assembler_config};
+
+    // std::cerr << "Pass 1...\n";
+    // orel::read_relations(input_file, mp_manager);
+    // std::cerr << "Pass 1 done\n";
+
+    // std::cerr << "Memory:\n";
+    // orel::print_used_memory(std::cerr, mp_manager.used_memory());
+
+    // index_t index;
+    // location_handler_t location_handler{index};
+    // location_handler.ignore_errors();
+
+    // // On the second pass we read all objects and run them first through the
+    // // node location handler and then the multipolygon collector. The
+    // collector
+    // // will put the areas it has created into the "buffer" which are then
+    // // fed through our "handler".
+    // std::cerr << "Pass 2...\n";
+    // oio::Reader reader{input_file};
+    // // o::ProgressBar progress{reader.file_size(), ou::isatty(2)};
+
+    // o::apply(reader, location_handler, handler,
+    //          mp_manager.handler(
+    //              [&handler](auto&& buffer) { o::apply(buffer, handler); }));
+    // reader.close();
+    // std::cerr << "Pass 2 done\n";
+
+    // // Output the amount of main memory used so far. All complete
+    // multipolygon
+    // // relations have been cleaned up.
+    // std::cerr << "Memory:\n";
+    // orel::print_used_memory(std::cerr, mp_manager.used_memory());
   }
 
   std::cerr << "Sync...\n";
@@ -118,7 +143,7 @@ void load_osm() {
   }
 
   std::cerr << "Finalize...\n";
-  prepare_tiles_sparse(handle, 11);
+  prepare_tiles_sparse(handle, 5);
   std::cerr << "Finalize done\n";
 }
 

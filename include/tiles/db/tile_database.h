@@ -13,12 +13,12 @@ constexpr auto kDefaultTiles = "default_tiles";
 constexpr auto kMetaKeyMaxPreparedZoomLevel = "max-prepared-zoomlevel";
 
 inline lmdb::env make_tile_database(
-    char const* path, lmdb::env_open_flags flags = lmdb::env_open_flags::NONE) {
+    char const* db_fname,
+    lmdb::env_open_flags flags = lmdb::env_open_flags::NOSUBDIR) {
   lmdb::env e;
-  e.set_mapsize(1024ul* 1024 * 1024 * 1024);
+  e.set_mapsize(1024ul * 1024 * 1024 * 1024);
   e.set_maxdbs(8);
-  e.open(path, flags);
-
+  e.open(db_fname, flags);
   return e;
 }
 

@@ -69,6 +69,7 @@ if(TILES_STANDALONE)
   target_link_libraries(tiles-import
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    conf
     tiles
     lmdb
     lua

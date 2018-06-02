@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
   tiles::tile_db_handle handle{db_env};
 
   if (opt.has_any_task({"coastlines"})) {
-    std::cout << "|> load coastlines\n";
+    tiles::scoped_timer t{"load coastlines"};
     tiles::load_coastlines(handle, opt.coastlines_fname_);
     std::cout << "|> sync db\n";
     db_env.sync();
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 
   if (opt.has_any_task({"tiles"})) {
     std::cout << "|> prepare tiles\n";
-    tiles::prepare_tiles_sparse(handle, 5);
+    tiles::prepare_tiles(handle, 5);
   }
 
   std::cout << "|> import done!\n";

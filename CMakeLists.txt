@@ -20,6 +20,7 @@ set(TILES_CXX_FLAGS "-std=c++17 -Wall -Wextra")
 SET(TILES_STANDALONE ON CACHE BOOL "get dependencies from external_lib")
 
 if(TILES_STANDALONE)
+  include_directories(SYSTEM external_lib/concurrentqueue)
   include_directories(SYSTEM external_lib/conf/include)
   include_directories(SYSTEM external_lib/geo/include)
   include_directories(SYSTEM external_lib/lua-5.1/src)

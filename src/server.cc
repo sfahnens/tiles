@@ -15,7 +15,7 @@
 using namespace net::http::server;
 
 int main() {
-  lmdb::env db_env = tiles::make_tile_database("./");
+  lmdb::env db_env = tiles::make_tile_database("./tiles.mdb");
   tiles::tile_db_handle handle{db_env};
 
   boost::asio::io_service ios;

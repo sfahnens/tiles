@@ -78,35 +78,6 @@ void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
   auto c = lmdb::cursor{inserter.txn_, feature_dbi};
 
   prepare_stats stats;
-
-  for (auto const& tile : geo::make_tile_pyramid()) {
-    stats.update(tile);
-
-    if (tile.z_ > max_zoomlevel) {
-      break;
-    }
-
-    auto const rendered_tile = render_tile(c, tile);
-    if (rendered_tile.empty()) {
-      ++stats.render_empty_;
-      continue;
-    }
-
-    inserter.insert(make_tile_key(tile), rendered_tile);
-  }
-
-  auto meta_dbi = handle.meta_dbi(inserter.txn_);
-  inserter.txn_.put(meta_dbi, kMetaKeyMaxPreparedZoomLevel,
-                    std::to_string(max_zoomlevel));
-}
-
-void prepare_tiles_sparse(tile_db_handle& handle, uint32_t max_zoomlevel) {
-  batch_inserter inserter{handle, &tile_db_handle::tiles_dbi};
-
-  auto feature_dbi = handle.features_dbi(inserter.txn_);
-  auto c = lmdb::cursor{inserter.txn_, feature_dbi};
-
-  prepare_stats stats;
   auto const base_range = get_feature_range(c);
   for (auto z = 0u; z <= max_zoomlevel; ++z) {
     for (auto const& tile : geo::tile_range_on_z(base_range, z)) {

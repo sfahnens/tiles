@@ -8,8 +8,8 @@
 #include "utl/parser/file.h"
 #include "utl/parser/mmap_reader.h"
 
-#include "tiles/fixed/convert.h"
 #include "tiles/fixed/algo/area.h"
+#include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/util.h"
 
@@ -40,25 +40,22 @@ auto emplace_back_ref(Vec& vec) -> decltype(vec.back()) {
   return vec.back();
 }
 
-std::vector<fixed_geometry> read_shapefile(utl::buffer const& buf) {
+void read_shapefile(utl::buffer const& buf,
+                    std::function<void(fixed_simple_polygon)> const& consumer) {
   verify(9994 == read_int_big(buf, 0), "shp: invalid magic number");
   verify(1000 == read_int_little(buf, 28), "shp: invalid file version");
   verify(5 == read_int_little(buf, 32), "shp: only polygons supported (main)");
-
-  std::vector<fixed_geometry> result;
 
   int index = 0;
   size_t rh_offset = 100;
   while (rh_offset < buf.size()) {
     verify(++index == read_int_big(buf, rh_offset), "shp: unexpected index");
 
-    fixed_polygon polygon;
-    auto& simple_polygon = emplace_back_ref(polygon);
-    auto const read_ring = [&buf, &simple_polygon](
+    fixed_simple_polygon polygon;
+    auto const read_ring = [&buf, &polygon](
         auto const pts_offset, auto const idx_lb, auto const idx_ub) {
-      auto& ring = simple_polygon.outer().empty()
-                       ? simple_polygon.outer()
-                       : emplace_back_ref(simple_polygon.inners());
+      auto& ring = polygon.outer().empty() ? polygon.outer()
+                                           : emplace_back_ref(polygon.inners());
 
       auto const count = idx_ub - idx_lb;
       ring.reserve(count);
@@ -73,19 +70,6 @@ std::vector<fixed_geometry> read_shapefile(utl::buffer const& buf) {
     };
 
     auto const rc_offset = rh_offset + 8;
-
-    auto const lng_min = read_double_little(buf, rc_offset + 4);
-    auto const lat_min = read_double_little(buf, rc_offset + 12);
-    auto const lng_max = read_double_little(buf, rc_offset + 20);
-    auto const lat_max = read_double_little(buf, rc_offset + 28);
-
-    // std::cout << "(" << lat_min << ", " << lng_min << ") - (" << lat_max <<
-    // ", "
-    //           << lng_max << ")\n";
-
-    // if (lat_min < 64.1 && lat_max > 64.1 &&  //
-    //     lng_min < -21.5 && lng_max > -21.5) {
-
     verify(5 == read_int_little(buf, rc_offset),
            "shp: only polygons supported");
 
@@ -95,33 +79,23 @@ std::vector<fixed_geometry> read_shapefile(utl::buffer const& buf) {
     verify(num_parts > 0, "shp: need at least one part");
     verify(num_points > 0, "shp: need at least one point");
 
-    if (num_points > 1e6) {
-
-      auto const parts_offset = rc_offset + 44;
-      auto const pts_offset = parts_offset + 4 * num_parts;
-      for (auto i = 0; i < num_parts - 1; ++i) {
-        read_ring(pts_offset,  //
-                  read_int_little(buf, parts_offset + i * 4),
-                  read_int_little(buf, parts_offset + i * 4 + 4));
-      }
+    auto const parts_offset = rc_offset + 44;
+    auto const pts_offset = parts_offset + 4 * num_parts;
+    for (auto i = 0; i < num_parts - 1; ++i) {
       read_ring(pts_offset,  //
-                read_int_little(buf, parts_offset + 4 * (num_parts - 1)),  //
-                num_points);
-
-
-      boost::geometry::correct(polygon);
-
-      std::cout << "area: " << tiles::area(polygon) << std::endl;
-
-      verify(!simple_polygon.outer().empty(), "shp: read polygon is empty?!");
-      result.emplace_back(polygon);
+                read_int_little(buf, parts_offset + i * 4),
+                read_int_little(buf, parts_offset + i * 4 + 4));
     }
+    read_ring(pts_offset,  //
+              read_int_little(buf, parts_offset + 4 * (num_parts - 1)),  //
+              num_points);
+
+    verify(!polygon.outer().empty(), "shp: read polygon is empty?!");
+    consumer(std::move(polygon));
 
     rh_offset += 8 + read_int_big(buf, rh_offset + 4) * 2;
     verify(rh_offset <= buf.size(), "shp: offset limit violation");
   }
-
-  return result;
 }
 
 utl::buffer load_buffer(std::string const& fname) {
@@ -153,15 +127,14 @@ utl::buffer load_buffer(std::string const& fname) {
   verify(false, "shp: .zip file contains no .shp file")
 }
 
-std::vector<fixed_geometry> load_shapefile(std::string const& fname) {
+void load_shapefile(std::string const& fname,
+                    std::function<void(fixed_simple_polygon)> const& consumer) {
   std::cout << "load buffer" << std::endl;
   auto&& buf = load_buffer(fname);
   std::cout << "read_shapefile" << std::endl;
 
-  auto&& geo = read_shapefile(buf);
+  read_shapefile(buf, consumer);
   std::cout << "done." << std::endl;
-
-  return geo;
 }
 
 }  // namespace tiles

@@ -30,9 +30,8 @@ if(TILES_STANDALONE)
   include_directories(SYSTEM external_lib/osmium/include)
   include_directories(SYSTEM external_lib/lmdb/include)
   include_directories(SYSTEM external_lib/lmdb/lib)
-  include_directories(SYSTEM external_lib/rocksdb/include)
-  include_directories(SYSTEM external_lib/rocksdb/external_lib/snappy)
   include_directories(SYSTEM external_lib/sparsehash/src)
+  include_directories(SYSTEM external_lib/clipper/include)
   include_directories(SYSTEM external_lib/sol2)
   include_directories(SYSTEM external_lib/utl/include)
 
@@ -42,6 +41,7 @@ if(TILES_STANDALONE)
   add_subdirectory(external_lib/lz4 EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/net EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/lmdb EXCLUDE_FROM_ALL)
+  add_subdirectory(external_lib/clipper EXCLUDE_FROM_ALL)
 endif()
 
 file(GLOB_RECURSE tiles-files
@@ -58,6 +58,7 @@ target_link_libraries(tiles
   ${ZLIB_LIBRARIES}
   lmdb
   geo
+  clipper
 )
 
 

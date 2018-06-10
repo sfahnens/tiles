@@ -2,14 +2,17 @@
 - profile: zoomlevel depends on area DONE
 - db: store gzipped tiles DONE
 - auto clean database DONE
+- iterate -> zoom level 0: 2tiles?! DONE
+- iterate -> coastline: south america missing?! DONE
 
 - db: compact tile metaformat
 
-- coastline shapefile
-- improve performance / parallel
-- feature wraparound 180/-180
-- iterate -> zoom level 0: 2tiles?!
-- iterate -> coastline: south america missing?!
+- coastline shapefile base
+- coastline shapefile parallel
+- improve performance 
+- proper feature wraparound 180/-180
+
+- prepare tiles with empty database?!
 
 - profile: warning if layer ist not set?!
 - render: fast bounding box check in deserialize (same as zoomlevel)

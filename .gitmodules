@@ -34,3 +34,6 @@
 [submodule "external_lib/concurrentqueue"]
 	path = external_lib/concurrentqueue
 	url = git@github.com:skyborla/concurrentqueue.git
+[submodule "external_lib/clipper"]
+	path = external_lib/clipper
+	url = git@git.motis-project.de:lib/clipper.git

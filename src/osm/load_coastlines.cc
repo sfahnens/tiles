@@ -65,6 +65,30 @@ struct queue_wrapper {
 using geo_queue_t = queue_wrapper<geo_task>;
 using db_queue_t = queue_wrapper<std::pair<geo::tile, std::string>>;
 
+struct coastline_stats {
+  coastline_stats() : progress_{0} {}
+
+  void report_progess(uint32_t z) {
+    auto increment = 1 << (10 - z) * 1 << (10 - z);
+
+    auto post = progress_ += increment;
+    auto pre = post - increment;
+
+    constexpr uint64_t kTotal = (1 << 10) * (1 << 10);
+
+    auto pre_percent = 100. * pre / kTotal;
+    auto post_percent = 100. * post / kTotal;
+
+    if (pre == 0 || post == kTotal || (static_cast<int>(pre_percent) / 5 !=
+                                       static_cast<int>(post_percent) / 5)) {
+      std::cout << "process coastline: "
+                << (static_cast<int>(post_percent) / 5 * 5) << "%\n";
+    }
+  }
+
+  std::atomic_uint64_t progress_;
+};
+
 std::ostream& operator<<(std::ostream& os, fixed_box const& box) {
   return os << "(" << box.min_corner().x() << ", " << box.min_corner().y()
             << ")(" << box.max_corner().x() << ", " << box.max_corner().y()
@@ -172,7 +196,8 @@ std::string finalize_tile(cl::Path const& bounds,
                             std::move(polygon)});
 }
 
-void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q) {
+void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
+                       coastline_stats& stats) {
   for (auto const& child : task.tile_.direct_children()) {
     // scoped_timer t{"clip"};
 
@@ -209,15 +234,18 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q) {
     }
 
     if (fully_dirtside) {
-      std::cout << "found fully dirtside" << std::endl;
+      // std::cout << "found fully dirtside" << std::endl;
+      stats.report_progess(child.z_);
     } else if (matching.empty()) {
-      std::cout << "found fully seaside" << std::endl;
+      // std::cout << "found fully seaside" << std::endl;
+      stats.report_progess(child.z_);
     } else if (child.z_ < 10) {
-      std::cout << "recursive descent" << std::endl;
+      // std::cout << "recursive descent" << std::endl;
       geo_q.enqueue(geo_task{child, std::move(matching)});
     } else {
-      std::cout << "save to database" << std::endl;
+      // std::cout << "save to database" << std::endl;
       db_q.enqueue({child, finalize_tile(clip, matching)});
+      stats.report_progess(child.z_);
     }
   }
 }
@@ -225,6 +253,7 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q) {
 void load_coastlines(tile_db_handle& handle, std::string const& fname) {
   geo_queue_t geo_queue;
   db_queue_t db_queue;
+  coastline_stats stats;
 
   auto convert_path = [](auto const& in) {
     return utl::to_vec(in, [](auto const& pt) {
@@ -264,7 +293,7 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
           continue;
         }
 
-        process_coastline(task, geo_queue, db_queue);
+        process_coastline(task, geo_queue, db_queue, stats);
         geo_queue.finish();
       }
     });

@@ -45,6 +45,7 @@ if(TILES_STANDALONE)
 endif()
 
 file(GLOB_RECURSE tiles-files
+  src/db/*.cc
   src/fixed/*.cc
   src/mvt/*.cc
   src/tile_database.cc

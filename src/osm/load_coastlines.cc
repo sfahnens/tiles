@@ -10,6 +10,7 @@
 
 #include "utl/to_vec.h"
 
+#include "tiles/db/bq_tree.h"
 #include "tiles/db/insert_feature.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/osm/load_shapefile.h"
@@ -66,7 +67,7 @@ using geo_queue_t = queue_wrapper<geo_task>;
 using db_queue_t = queue_wrapper<std::pair<geo::tile, std::string>>;
 
 struct coastline_stats {
-  coastline_stats() : progress_{0} {}
+  coastline_stats() : progress_{0}, fully_dirtside_{0}, fully_seaside_{0} {}
 
   void report_progess(uint32_t z) {
     auto increment = 1 << (10 - z) * 1 << (10 - z);
@@ -86,7 +87,13 @@ struct coastline_stats {
     }
   }
 
+  void summary() {
+    std::cout << "fully seaside: " << fully_seaside_
+              << ", fully dirtside: " << fully_dirtside_ << std::endl;
+  }
+
   std::atomic_uint64_t progress_;
+  std::atomic_uint64_t fully_dirtside_, fully_seaside_;
 };
 
 std::ostream& operator<<(std::ostream& os, fixed_box const& box) {
@@ -197,7 +204,8 @@ std::string finalize_tile(cl::Path const& bounds,
 }
 
 void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
-                       coastline_stats& stats) {
+                       coastline_stats& stats,
+                       std::function<void(geo::tile const&)> seaside_appender) {
   for (auto const& child : task.tile_.direct_children()) {
     // scoped_timer t{"clip"};
 
@@ -235,9 +243,12 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
 
     if (fully_dirtside) {
       // std::cout << "found fully dirtside" << std::endl;
+      ++stats.fully_dirtside_;
       stats.report_progess(child.z_);
     } else if (matching.empty()) {
       // std::cout << "found fully seaside" << std::endl;
+      seaside_appender(child);
+      ++stats.fully_seaside_;
       stats.report_progess(child.z_);
     } else if (child.z_ < 10) {
       // std::cout << "recursive descent" << std::endl;
@@ -282,6 +293,9 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
     }
   }
 
+  std::mutex fully_seaside_mutex;
+  std::vector<geo::tile> fully_seaside;
+
   // auto const num_workers = 1;
   auto const num_workers = std::thread::hardware_concurrency();
   std::vector<std::thread> threads;
@@ -293,7 +307,11 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
           continue;
         }
 
-        process_coastline(task, geo_queue, db_queue, stats);
+        process_coastline(
+            task, geo_queue, db_queue, stats, [&](auto const& tile) {
+              std::lock_guard<std::mutex> lock(fully_seaside_mutex);
+              fully_seaside.push_back(tile);
+            });
         geo_queue.finish();
       }
     });
@@ -320,6 +338,21 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
 
   verify(geo_queue.queue_.size_approx() == 0, "geo_queue not empty");
   verify(db_queue.queue_.size_approx() == 0, "db_queue not empty");
+  stats.summary();
+
+  bq_tree seaside_tree;
+  {
+    scoped_timer t{"seaside_tree"};
+    seaside_tree = make_bq_tree(fully_seaside);
+  }
+  std::cout << "seaside_tree with " << seaside_tree.nodes_.size() << " nodes\n";
+
+  {
+    lmdb::txn txn{handle.env_};
+    auto meta_dbi = handle.meta_dbi(txn, lmdb::dbi_flags::CREATE);
+    txn.put(meta_dbi, kMetaKeyFullySeasideTree, seaside_tree.string_view());
+    txn.commit();
+  }
 }
 
 }  // namespace tiles

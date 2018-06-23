@@ -13,6 +13,7 @@ bq_tree is a binary quad tree following the tile pyramid
  - the root of the tree is tile (0, 0, 0)
  - each leaf is associated with one one bit of data
  - each node stores the values of its children (enumerated 0-3)
+ - enumeration of nodes is consistent with geo::tile_iterator
  - each node is represented as 32 bit integer containing three parts
    - first 4 bits: 1 if child is a TRUE leaf
    - next 4 bits: 1 if child is a FALSE leaf
@@ -35,7 +36,7 @@ constexpr auto const kFullRoot = std::numeric_limits<bq_node_t>::max();
 constexpr auto const kInvalidNode = std::numeric_limits<bq_node_t>::max() - 1;
 
 uint32_t quad_pos(geo::tile const& tile) {
-  return (tile.x_ % 2 << 1) | (tile.y_ % 2);
+  return (tile.y_ % 2 << 1) | (tile.x_ % 2);
 }
 
 bool bit_set(uint32_t val, uint32_t idx) { return (val & (1 << idx)) != 0; }

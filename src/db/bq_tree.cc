@@ -32,6 +32,7 @@ constexpr auto const kOffsetMask =
 
 constexpr auto const kEmptyRoot = std::numeric_limits<bq_node_t>::min();
 constexpr auto const kFullRoot = std::numeric_limits<bq_node_t>::max();
+constexpr auto const kInvalidNode = std::numeric_limits<bq_node_t>::max() - 1;
 
 uint32_t quad_pos(geo::tile const& tile) {
   return (tile.x_ % 2 << 1) | (tile.y_ % 2);
@@ -40,15 +41,24 @@ uint32_t quad_pos(geo::tile const& tile) {
 bool bit_set(uint32_t val, uint32_t idx) { return (val & (1 << idx)) != 0; }
 
 bq_tree::bq_tree() : nodes_{kEmptyRoot} {}
+bq_tree::bq_tree(std::string_view str) {
+  verify(str.size() % sizeof(bq_node_t) == 0, "bq_tree invalid string_view");
 
-bool bq_tree::contains(geo::tile const& query) const {
+  nodes_.resize(str.size() / sizeof(bq_node_t));
+  std::memcpy(nodes_.data(), str.data(), str.size());
+}
+
+std::pair<std::optional<bool>, bq_node_t> bq_tree::find_parent_leaf(
+    geo::tile const& q) const {
   if (nodes_.at(0) == kFullRoot) {
-    return true;
-  } else if (nodes_.at(0) == kEmptyRoot || query == geo::tile{0, 0, 0}) {
-    return false;
+    return {{true}, kInvalidNode};
+  } else if (nodes_.at(0) == kEmptyRoot) {
+    return {{false}, kInvalidNode};
+  } else if (q == geo::tile{0, 0, 0}) {
+    return {std::nullopt, nodes_.at(0)};
   }
 
-  std::vector<geo::tile> trace{query};
+  std::vector<geo::tile> trace{q};
   while (!(trace.back().parent() == geo::tile{0, 0, 0})) {
     trace.push_back(trace.back().parent());
   }
@@ -61,10 +71,10 @@ bool bq_tree::contains(geo::tile const& query) const {
     // printf("%i %08x\n\n", quad_pos(tile), curr);
 
     if (bit_set(curr, quad_pos(tile) + kFalseOffset)) {
-      return false;
+      return {{false}, kInvalidNode};
     }
     if (bit_set(curr, quad_pos(tile) + kTrueOffset)) {
-      return true;
+      return {{true}, kInvalidNode};
     }
 
     auto offset = curr & kOffsetMask;
@@ -77,7 +87,47 @@ bool bq_tree::contains(geo::tile const& query) const {
     curr = nodes_.at(offset);
   }
 
-  return false;
+  return {std::nullopt, curr};
+}
+
+bool bq_tree::contains(geo::tile const& q) const {
+  auto const decision = find_parent_leaf(q).first;
+  return decision.has_value() ? *decision : false;
+}
+
+std::vector<geo::tile> bq_tree::all_leafs(geo::tile const& q) const {
+  auto const parent = find_parent_leaf(q);
+  auto const& decision = parent.first;
+  if (decision.has_value()) {
+    return *decision ? std::vector<geo::tile>{q} : std::vector<geo::tile>{};
+  }
+
+  std::stack<std::pair<geo::tile, bq_node_t>> stack;
+  stack.emplace(q, parent.second);
+
+  std::vector<geo::tile> result;
+  while (!stack.empty()) {
+    auto const[tile, node] = stack.top();  // copy required!
+    stack.pop();
+
+    auto child_tile_it = tile.as_tile_range().begin();
+    auto child_count = 0;
+    for (auto i = 0u; i < 4u; ++i) {
+      auto const& child_tile = *(++child_tile_it);
+
+      if (bit_set(node, quad_pos(child_tile) + kTrueOffset)) {
+        result.push_back(child_tile);
+        continue;
+      }
+      if (bit_set(node, quad_pos(child_tile) + kFalseOffset)) {
+        continue;
+      }
+
+      stack.emplace(child_tile, nodes_.at((node & kOffsetMask) + child_count));
+      ++child_count;
+    }
+  }
+  return result;
 }
 
 std::string_view bq_tree::string_view() const {

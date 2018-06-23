@@ -4,14 +4,13 @@
 - auto clean database DONE
 - iterate -> zoom level 0: 2tiles?! DONE
 - iterate -> coastline: south america missing?! DONE
+- coastline shapefile base DONE
+- coastline shapefile parallel DONE
+- improve performance DONE
 
 - db: compact tile metaformat
 
-- coastline shapefile base
-- coastline shapefile parallel
-- improve performance 
-- proper feature wraparound 180/-180
-
+- proper feature wraparound 180/-180 <-> artifacts on island?!
 - prepare tiles with empty database?!
 
 - profile: warning if layer ist not set?!

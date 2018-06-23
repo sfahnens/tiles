@@ -17,6 +17,7 @@ using namespace net::http::server;
 int main() {
   lmdb::env db_env = tiles::make_tile_database("./tiles.mdb");
   tiles::tile_db_handle handle{db_env};
+  auto const render_ctx = make_render_ctx(handle);
 
   boost::asio::io_service ios;
   server server{ios};
@@ -46,13 +47,14 @@ int main() {
                     static_cast<uint32_t>(std::stoul(req.path_params[2])),
                     static_cast<uint32_t>(std::stoul(req.path_params[0]))};
 
-      reply rep = reply::stock_reply(reply::ok);
-      rep.content = tiles::get_tile(handle, tile);
+      auto rendered_tile = tiles::get_tile(handle, render_ctx, tile);
 
-      if (rep.content.empty()) {
-        rep.status = reply::no_content;
-      } else {
+      reply rep = reply::stock_reply(reply::ok);
+      if (rendered_tile) {
         rep.headers.emplace_back("Content-Encoding", "gzip");
+        rep.content = std::move(*rendered_tile);
+      } else {
+        rep.status = reply::no_content;
       }
 
       add_cors_headers(rep);

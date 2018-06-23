@@ -2,10 +2,11 @@
 
 #include <chrono>
 #include <iomanip>
+#include <numeric>
 
 #include "geo/tile.h"
 
-#include "tiles/db/render_tile.h"
+#include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
 #include "tiles/util.h"
@@ -46,21 +47,13 @@ struct prepare_stats {
       std::cout << std::setw(6) << std::setprecision(4) << dur << "s  ";
     }
 
-    size_t raw_sum = 0;
-    size_t gzip_sum = 0;
-    for (auto const & [ raw_size, gzip_size ] : tile_sizes_) {
-      raw_sum += raw_size;
-      gzip_sum += gzip_size;
-    }
-    std::cout << "| avg. raw: " << std::setw(4)
-              << (raw_sum / tile_sizes_.size() / 1024) << "KB "
-              << " avg. gzip: " << std::setw(4)
+    auto const gzip_sum =
+        std::accumulate(begin(tile_sizes_), end(tile_sizes_), 0ul);
+    std::cout << "| avg. gzip: " << std::setw(4)
               << (gzip_sum / tile_sizes_.size() / 1024) << "KB\n";
   }
 
-  void register_tile_size(size_t raw, size_t gzip) {
-    tile_sizes_.emplace_back(raw, gzip);
-  }
+  void register_tile_size(size_t gzip) { tile_sizes_.emplace_back(gzip); }
 
   uint32_t prev_z_ = 0;
   size_t render_total_ = 0;
@@ -68,10 +61,12 @@ struct prepare_stats {
   std::chrono::time_point<std::chrono::steady_clock> start_ =
       std::chrono::steady_clock::now();
 
-  std::vector<std::pair<size_t, size_t>> tile_sizes_;
+  std::vector<size_t> tile_sizes_;
 };
 
 void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
+  auto render_ctx = make_render_ctx(handle);
+
   batch_inserter inserter{handle, &tile_db_handle::tiles_dbi};
 
   auto feature_dbi = handle.features_dbi(inserter.txn_);
@@ -83,16 +78,14 @@ void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
     for (auto const& tile : geo::tile_range_on_z(base_range, z)) {
       stats.update(tile);
 
-      auto const rendered_tile = render_tile(c, tile);
-      if (rendered_tile.empty()) {
+      auto const rendered_tile =
+          get_tile(handle, inserter.txn_, c, render_ctx, tile);
+      if (!rendered_tile) {
         ++stats.render_empty_;
         continue;
       }
 
-      auto compressed_tile = compress_gzip(rendered_tile);
-      stats.register_tile_size(rendered_tile.size(), compressed_tile.size());
-
-      inserter.insert(make_tile_key(tile), compressed_tile);
+      inserter.insert(make_tile_key(tile), *rendered_tile);
     }
   }
 

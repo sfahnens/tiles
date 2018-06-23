@@ -91,27 +91,6 @@ if(TILES_STANDALONE)
     geo
     net-http_server
   )
-
-  add_executable(luatest src/luatest.cc)
-  set_target_properties(luatest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-  target_link_libraries(luatest ${Boost_LIBRARIES} lua)
-
-  # add_executable(area_test external_lib/osmium/examples/osmium_area_test.cpp)
-  # set_target_properties(area_test PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-  # target_link_libraries(area_test ${Boost_LIBRARIES} ${ZLIB_LIBRARIES})
-
-  add_executable(osmtest src/osmtest.cc)
-  set_target_properties(osmtest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-  target_link_libraries(osmtest
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${Boost_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    geo
-  )
-
-  add_executable(geotest src/geotest.cc)
-  set_target_properties(geotest PROPERTIES COMPILE_FLAGS "-std=c++14 -Wall -Wextra")
-  target_link_libraries(geotest ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} geo)
 endif()
 
 file(GLOB_RECURSE tiles-test-files test/*.cc)

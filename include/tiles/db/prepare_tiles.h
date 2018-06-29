@@ -47,6 +47,11 @@ struct prepare_stats {
       std::cout << std::setw(6) << std::setprecision(4) << dur << "s  ";
     }
 
+    if (tile_sizes_.empty()) {
+      std::cout << "\n";
+      return;
+    }
+
     auto const gzip_sum =
         std::accumulate(begin(tile_sizes_), end(tile_sizes_), 0ul);
     std::cout << "| avg. gzip: " << std::setw(4)
@@ -85,6 +90,7 @@ void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
         continue;
       }
 
+      stats.register_tile_size(rendered_tile->size());
       inserter.insert(make_tile_key(tile), *rendered_tile);
     }
   }

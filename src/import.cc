@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 
   if (opt.has_any_task({"tiles"})) {
     std::cout << "|> prepare tiles\n";
-    tiles::prepare_tiles(handle, 5);
+    tiles::prepare_tiles(handle, 10);
   }
 
   std::cout << "|> import done!\n";

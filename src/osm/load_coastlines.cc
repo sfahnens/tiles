@@ -11,8 +11,8 @@
 #include "utl/to_vec.h"
 
 #include "tiles/db/bq_tree.h"
-#include "tiles/db/insert_feature.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/feature/serialize.h"
 #include "tiles/osm/load_shapefile.h"
 
 #include "tiles/fixed/algo/area.h"
@@ -326,10 +326,7 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
         continue;
       }
 
-      auto const idx = inserter.fill_state_[{data.first.x_, data.first.y_}]++;
-      auto const key = make_feature_key(data.first, idx);
-
-      inserter.insert(key, data.second);
+      inserter.insert(data.first, data.second);
       db_queue.finish();
     }
   }

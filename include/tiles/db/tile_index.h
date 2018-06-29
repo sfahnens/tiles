@@ -9,8 +9,10 @@
 namespace tiles {
 
 using tile_index_t = uint64_t;
+constexpr auto const kTileDefaultIndexZoomLvl = 10;
 
-inline geo::tile_range make_tile_range(fixed_box /*copy*/ box, uint32_t z) {
+inline geo::tile_range make_tile_range(fixed_box /*copy*/ box,
+                                       uint32_t z = kTileDefaultIndexZoomLvl) {
   shift(box, z);
 
   uint32_t const x_1 = box.min_corner().x() / kTileSize;
@@ -42,7 +44,8 @@ inline tile_index_t make_feature_key(tile_index_t const x,  //
   return key;
 }
 
-inline geo::tile feature_key_to_tile(tile_index_t key, uint32_t z) {
+inline geo::tile feature_key_to_tile(tile_index_t key,
+                                     uint32_t z = kTileDefaultIndexZoomLvl) {
   auto const coord_bits = z + 1;
   auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * coord_bits;
 
@@ -52,6 +55,15 @@ inline geo::tile feature_key_to_tile(tile_index_t key, uint32_t z) {
       static_cast<uint32_t>((key >> idx_bits) & coord_mask),  //
       static_cast<uint32_t>((key >> (coord_bits + idx_bits)) & coord_mask),  //
       z};
+}
+
+inline tile_index_t feature_key_to_idx(tile_index_t key,
+                                       uint32_t z = kTileDefaultIndexZoomLvl) {
+  auto const coord_bits = z + 1;
+  auto const idx_bits = sizeof(tile_index_t) * 8 - 2 * coord_bits;
+  auto const idx_mask = (static_cast<tile_index_t>(1) << idx_bits) - 1;
+
+  return key & idx_mask;
 }
 
 inline tile_index_t make_feature_key(geo::tile const& t, size_t const idx) {

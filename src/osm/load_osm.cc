@@ -19,10 +19,8 @@
 
 #include "osmium/util/progress_bar.hpp"
 
-#include "tiles/db/insert_feature.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/osm/feature_handler.h"
-
 
 namespace tiles {
 

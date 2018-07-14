@@ -1,22 +1,73 @@
 <!DOCTYPE html>
-    <title>tiles / mapbox</title>
-    <script src="mapbox-gl.js"></script>
-    <link href="mapbox-gl.css" rel="stylesheet" />
-    <style>
-    head, body, #map {
-      padding: 0px; 
-      margin:0px; 
-      position: absolute; 
-      height: 100%;
-      width: 100%;
-    }</style>
+<title>tiles / mapbox</title>
+<script src="mapbox-gl.js"></script>
+<link href="mapbox-gl.css" rel="stylesheet">
+<style>
+  head, body, #container {
+    padding: 0px;
+    margin:0px;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
+  #container {
+    display: flex;
+    align-items: stretch;
+    align-content: stretch;
+  }
+  #container > div {
+    flex-grow: 1;
+    border-collapse: collapse;
+    border-left: 5px solid white;
+  }
+  #container > div:first-of-type {
+    border-left: 0px;
+  }
+</style>
 </head>
 <body>
+<div id="container">
+    <div id="map_1"></div>
+    <div id="map_2"></div>
+    <div id="map_3"></div>
+</div>
 
-<div id='map'></div>
 <script>
-// mapboxgl.accessToken = '<your access token here>';
+var simple = {
+  "version": 8,
+  "sources": {
+    "raster": {
+      "type": "raster",
+      "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
+      "tileSize": 256,
+      "maxzoom": 18
+    }
+  },
+  "layers": [{
+      "id": "raster",
+      "type": "raster",
+      "source": "raster"
+  }]
+};
 
+var official = {
+  "version": 8,
+  "sources": {
+    "raster": {
+      "type": "raster",
+      "tiles": ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "maxzoom": 18
+    }
+  },
+  "layers": [{
+      "id": "raster",
+      "type": "raster",
+      "source": "raster"
+  }]
+};
 
 const water = "#bbd3f9";
 const rail = "#5b5b5b";
@@ -31,27 +82,26 @@ const building = "#d8d8d8";
 const building_outline = "#c1c1c1";
 
 
-var simple = {
+var custom = {
     "version": 8,
     "sources": {
         "osm": {
             "type": "vector",
-            // "tiles": ["http://localhost:8080/path/tiles/{z}/{x}/{y}.mvt"]
             "tiles": ["http://localhost:8888/{z}/{x}/{y}.mvt"],
             "maxzoom": 20
-        },
-        "raster": {
-            "type": "raster",
-            "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
-            "tileSize": 256,
-            "maxzoom": 18
         }
     },
     "layers": [
         {
-            "id": "raster",
-            "type": "raster",
-            "source": "raster"
+            "id": "background",
+            "type": "background",
+            "paint": { "background-color": "#dddddd" }
+        }, {
+            "id": "coastline",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "coastline",
+            "paint": {"fill-color": "#ff0000"}
         }, {
             "id": "cities",
             "type": "circle",
@@ -69,16 +119,15 @@ var simple = {
                     "industrial", "#eadfce",
                     "residential", "#edebd5",
                     "retail", "#f2dae7",
-                    // "construction", "#aaa69d",
+                    "construction", "#aaa69d",
 
                     "nature_light", "#d7f2e1",
                     "nature_heavy", "#c0dbbe",
                     "park", "#e6f4d4",
                     "cemetery", "#bedbd1",
-                    "beach", "#fffcd3"
+                    "beach", "#fffcd3",
 
-                    "#ff0000"
-                    ]
+                    "#ff0000"]
             }
         }, {
             "id": "water",
@@ -115,14 +164,73 @@ var simple = {
             "source-layer": "rail",
             "paint": {
                 "line-color": rail,
-                "line-dasharray": [2, 2]
+                "line-dasharray": [1, 1]
             }
         },{
+            "id": "road_back",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "road",
+            "filter": [
+              "!in",
+              "highway",
+              "footway", "track", "steps", "cycleway", "path", "unclassified"
+            ],
+            "layout": {
+              "line-cap": "round",
+            },
+            "paint": {
+              "line-color": "#a5a5a5",
+              "line-opacity": 0.5,
+              "line-width": [
+                "let",
+                "base", ["match", ["get", "highway"],
+                  "motorway", 4,
+                  ["trunk", "motorway_link"], 3.5,
+                  ["primary", "secondary", "aeroway", "trunk_link"], 3,
+                  ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
+                  "residential", 1.5,
+                0.75],
+                ["interpolate", ["linear"], ["zoom"],
+                  5,  ["+", ["*", ["var", "base"], 0.1], 1],
+                  9,  ["+", ["*", ["var", "base"], 0.4], 1],
+                  12, ["+", ["*", ["var", "base"], 1], 1],
+                  16, ["+", ["*", ["var", "base"], 4], 1],
+                  20, ["+", ["*", ["var", "base"], 8], 1]
+                ]
+              ]
+            }
+        }, {
             "id": "road",
             "type": "line",
             "source": "osm",
-            "source-layer": "road"
-            // "source-layer": "motis"
+            "source-layer": "road",
+            "layout": {
+              "line-cap": "round",
+            },
+            "paint": {
+              "line-color": "#ffffff",
+              "line-opacity": ["match", ["get", "highway"],
+                ["footway", "track", "steps", "cycleway", "path", "unclassified"], 0.66,
+                1],
+              "line-width": [
+                "let",
+                "base", ["match", ["get", "highway"],
+                  "motorway", 4,
+                  ["trunk", "motorway_link"], 3.5,
+                  ["primary", "secondary", "aeroway", "trunk_link"], 3,
+                  ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
+                  "residential", 1.5,
+                0.75],
+                ["interpolate", ["linear"], ["zoom"],
+                  5,  ["*", ["var", "base"], 0.1],
+                  9,  ["*", ["var", "base"], 0.4],
+                  12, ["*", ["var", "base"], 1],
+                  16, ["*", ["var", "base"], 4],
+                  20, ["*", ["var", "base"], 8]
+                ]
+              ]
+            }
         }, {
             "id": "building",
             "type": "fill",
@@ -136,27 +244,44 @@ var simple = {
     ]
 };
 
-var map = new mapboxgl.Map({
-    container: 'map',
-    style: simple,
-    // zoom: 1,
-    // center: [-14, 35]
-    zoom: 14,
-    center: [8.6671065, 49.8747541]
-});
 
-// map.addControl(new mapboxgl.Navigation());
+const locationStr = location.hash.substr(1) || "[14, [8.6671065, 49.8747541]]";
+let [zoom, center] = JSON.parse(locationStr);
+center = mapboxgl.LngLat.convert(center);
 
+const updateHash = () => {
+  location.hash =  JSON.stringify([zoom, center.toArray()]);
+};
+updateHash();
 
-map.on('style.load', () => {
-    map.getStyle().layers.forEach(layer => {
-        map.on('click', layer.id, e => {
-            console.log(e);
-        });
+let maps = [];
+const addMap = (container, style) => {
+  let map = new mapboxgl.Map({container, style, zoom, center, dragRotate:false});
+  map.on('move', e => {
+    if(e.proj === true) return;
+    center = map.getCenter();
+    maps.forEach(m => {
+      if(m === map) return;
+      m.setCenter(center, {proj: true});
     });
-})
+    updateHash();
+  });
+  map.on('zoom', e => {
+    if(e.proj === true) return;
+    zoom = map.getZoom();
+    maps.forEach(m => {
+      if(m === map) return;
+      m.setZoom(zoom, {proj: true});
+    });
+    updateHash();
+  });
+  maps.push(map);
+  return map;
+};
 
-
+addMap('map_1', simple);
+addMap('map_2', custom);
+addMap('map_3', official);
 </script>
 
 </body>

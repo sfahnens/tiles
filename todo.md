@@ -1,3 +1,4 @@
+== DONE:
 - render: metadata completed zoom levels DONE
 - profile: zoomlevel depends on area DONE
 - db: store gzipped tiles DONE
@@ -7,14 +8,18 @@
 - coastline shapefile base DONE
 - coastline shapefile parallel DONE
 - improve performance DONE
+- render: fast bounding box check in deserialize (same as zoomlevel) DONE
 
+== HIGH PRIO:
+- database disk usage statistics
+
+== LOW PRIO:
 - db: compact tile metaformat
 
 - proper feature wraparound 180/-180 <-> artifacts on island?!
 - prepare tiles with empty database?!
 
 - profile: warning if layer ist not set?!
-- render: fast bounding box check in deserialize (same as zoomlevel)
 
 - optimize: merge nearby shapes with equal properties
 

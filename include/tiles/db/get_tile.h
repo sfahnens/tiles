@@ -8,6 +8,7 @@
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
 #include "tiles/feature/deserialize.h"
+#include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/mvt/tile_builder.h"
 #include "tiles/mvt/tile_spec.h"
 #include "tiles/perf_counter.h"
@@ -63,6 +64,8 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
     stop<perf_task::RENDER_TILE_ADD_SEASIDE>(pc);
   }
 
+  auto const box = tile_spec{tile}.draw_bounds_;  // XXX really with overdraw?
+
   start<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
   query_features(c, tile, [&](auto const& str) {
     stop<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
@@ -70,8 +73,8 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
 
     start<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
     start<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
-    auto const feature = deserialize_feature(str, tile.z_);
-    if (!feature.is_valid()) {
+    auto const feature = deserialize_feature(str, box, tile.z_);
+    if (!feature) {
       stop<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
       start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
       return;
@@ -79,7 +82,7 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
     stop<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
 
     start<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
-    builder.add_feature(feature);
+    builder.add_feature(*feature);
     stop<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
     start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
   });

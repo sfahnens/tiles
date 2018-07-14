@@ -116,10 +116,10 @@ void database_stats(tile_db_handle& handle) {
     tile_sizes.at(tile.z_).emplace_back(el->second.size());
   }
 
-  size_t total = std::accumulate(begin(feature_sizes), end(feature_sizes), 0);
+  auto total = std::accumulate(begin(feature_sizes), end(feature_sizes), 0ull);
   for (auto z = 0u; z < tile_sizes.size(); ++z) {
-    print_sizes(fmt::format("tiles[z={:0>2}]", z), tile_sizes.at(z));
-    total += std::accumulate(begin(tile_sizes.at(z)), end(tile_sizes.at(z)), 0);
+    print_sizes(fmt::format("tiles[z={:0>2}]", z), tile_sizes[z]);
+    total += std::accumulate(begin(tile_sizes[z]), end(tile_sizes[z]), 0ull);
   }
 
   std::cout << "====\n";

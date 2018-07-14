@@ -9,13 +9,13 @@
 - coastline shapefile parallel DONE
 - improve performance DONE
 - render: fast bounding box check in deserialize (same as zoomlevel) DONE
-
-== HIGH PRIO:
 - database disk usage statistics
 
-== LOW PRIO:
-- db: compact tile metaformat
+== HIGH PRIO:
+- fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
+- compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
 
+== LOW PRIO:
 - proper feature wraparound 180/-180 <-> artifacts on island?!
 - prepare tiles with empty database?!
 

@@ -90,4 +90,19 @@ inline tile_index_t make_tile_key(geo::tile const& t) {
   return key;
 }
 
+inline geo::tile tile_key_to_tile(tile_index_t const& key) {
+  constexpr tile_index_t kCoordBits = 24;
+  constexpr tile_index_t kZLvlBits =
+      std::numeric_limits<tile_index_t>::digits - 2 * kCoordBits;
+
+  auto const coord_mask = (static_cast<tile_index_t>(1) << kCoordBits) - 1;
+  auto const z_lvl_mask = (static_cast<tile_index_t>(1) << kZLvlBits) - 1;
+
+  uint32_t z = (key >> 2 * kCoordBits) & z_lvl_mask;
+  uint32_t x = (key >> kCoordBits) & coord_mask;
+  uint32_t y = key & coord_mask;
+
+  return geo::tile{x, y, z};
+}
+
 }  // namespace tiles

@@ -9,6 +9,7 @@
 #include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
+#include "tiles/perf_counter.h"
 #include "tiles/util.h"
 
 namespace tiles {
@@ -78,13 +79,15 @@ void prepare_tiles(tile_db_handle& handle, uint32_t max_zoomlevel) {
   auto c = lmdb::cursor{inserter.txn_, feature_dbi};
 
   prepare_stats stats;
+  null_perf_counter npc;
+
   auto const base_range = get_feature_range(c);
   for (auto z = 0u; z <= max_zoomlevel; ++z) {
     for (auto const& tile : geo::tile_range_on_z(base_range, z)) {
       stats.update(tile);
 
       auto const rendered_tile =
-          get_tile(handle, inserter.txn_, c, render_ctx, tile);
+          get_tile(handle, inserter.txn_, c, render_ctx, tile, npc);
       if (!rendered_tile) {
         ++stats.render_empty_;
         continue;

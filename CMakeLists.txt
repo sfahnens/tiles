@@ -42,6 +42,7 @@ if(TILES_STANDALONE)
   add_subdirectory(external_lib/net EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/lmdb EXCLUDE_FROM_ALL)
   add_subdirectory(external_lib/clipper EXCLUDE_FROM_ALL)
+  add_subdirectory(external_lib/fmt EXCLUDE_FROM_ALL)
 endif()
 
 file(GLOB_RECURSE tiles-files
@@ -49,6 +50,7 @@ file(GLOB_RECURSE tiles-files
   src/fixed/*.cc
   src/mvt/*.cc
   src/tile_database.cc
+  src/perf_counter.cc
   src/util.cc
 )
 
@@ -57,9 +59,10 @@ set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
 target_link_libraries(tiles
   ${Boost_LIBRARIES}
   ${ZLIB_LIBRARIES}
-  lmdb
-  geo
   clipper
+  fmt
+  geo
+  lmdb
 )
 
 
@@ -73,10 +76,10 @@ if(TILES_STANDALONE)
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
     conf
-    tiles
+    geo
     lmdb
     lua
-    geo
+    tiles
   )
 
   file(GLOB_RECURSE tiles-server-files src/server.cc)
@@ -86,10 +89,23 @@ if(TILES_STANDALONE)
   target_link_libraries(tiles-server
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    geo
+    lmdb
+    net-http_server
+    tiles
+  )
+
+
+  file(GLOB_RECURSE tiles-benchmark-files src/benchmark.cc)
+
+  add_executable(tiles-benchmark ${tiles-benchmark-files})
+  set_target_properties(tiles-benchmark PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
+  target_link_libraries(tiles-benchmark
+    ${Boost_LIBRARIES}
+    ${ZLIB_LIBRARIES}
     tiles
     lmdb
     geo
-    net-http_server
   )
 endif()
 

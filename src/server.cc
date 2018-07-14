@@ -11,6 +11,7 @@
 
 #include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/perf_counter.h"
 
 using namespace net::http::server;
 
@@ -47,7 +48,9 @@ int main() {
                     static_cast<uint32_t>(std::stoul(req.path_params[2])),
                     static_cast<uint32_t>(std::stoul(req.path_params[0]))};
 
-      auto rendered_tile = tiles::get_tile(handle, render_ctx, tile);
+      tiles::perf_counter pc;
+      auto rendered_tile = tiles::get_tile(handle, render_ctx, tile, pc);
+      tiles::perf_report_get_tile(pc);
 
       reply rep = reply::stock_reply(reply::ok);
       if (rendered_tile) {

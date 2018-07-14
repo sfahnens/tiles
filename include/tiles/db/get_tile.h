@@ -10,7 +10,7 @@
 #include "tiles/feature/deserialize.h"
 #include "tiles/mvt/tile_builder.h"
 #include "tiles/mvt/tile_spec.h"
-
+#include "tiles/perf_counter.h"
 
 #include "boost/geometry.hpp"
 
@@ -19,6 +19,8 @@ namespace tiles {
 struct render_ctx {
   int max_prepared_zoom_level_ = -1;
   bq_tree seaside_tiles_;
+
+  bool ignore_prepared_ = false;
 };
 
 render_ctx make_render_ctx(tile_db_handle& handle) {
@@ -33,11 +35,16 @@ render_ctx make_render_ctx(tile_db_handle& handle) {
           opt_seaside ? bq_tree{*opt_seaside} : bq_tree{}};
 }
 
+template <typename PerfCounter>
 std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
-                        geo::tile const& tile) {
+                        geo::tile const& tile, PerfCounter& pc) {
   tile_builder builder{tile};
 
-  for (auto const& seaside_tile : ctx.seaside_tiles_.all_leafs(tile)) {
+  start<perf_task::RENDER_TILE_FIND_SEASIDE>(pc);
+  auto const& seaside_tiles = ctx.seaside_tiles_.all_leafs(tile);
+  stop<perf_task::RENDER_TILE_FIND_SEASIDE>(pc);
+
+  for (auto const& seaside_tile : seaside_tiles) {
     auto const bounds = tile_spec{seaside_tile}.draw_bounds_;
 
     fixed_simple_polygon polygon{
@@ -48,51 +55,83 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
          {bounds.min_corner().x(), bounds.min_corner().y()}}};
     boost::geometry::correct(polygon);
 
+    start<perf_task::RENDER_TILE_ADD_SEASIDE>(pc);
     builder.add_feature({0ul,
                          std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
                          {{"layer", "coastline"}},
                          fixed_polygon{std::move(polygon)}});
+    stop<perf_task::RENDER_TILE_ADD_SEASIDE>(pc);
   }
 
+  start<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
   query_features(c, tile, [&](auto const& str) {
+    stop<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
+    stop<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
+
+    start<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
+    start<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
     auto const feature = deserialize_feature(str, tile.z_);
     if (!feature.is_valid()) {
+      stop<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
+      start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
       return;
     }
+    stop<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
+
+    start<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
     builder.add_feature(feature);
+    stop<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
+    start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
   });
+
+  auto finish = scoped_perf_counter<perf_task::RENDER_TILE_FINISH>(pc);
   return builder.finish();
 }
 
-std::optional<std::string> get_tile(tile_db_handle& handle,
-                                    lmdb::txn& txn,
+template <typename PerfCounter>
+std::optional<std::string> get_tile(tile_db_handle& handle, lmdb::txn& txn,
                                     lmdb::cursor& features_cursor,
                                     render_ctx const& ctx,
-                                    geo::tile const& tile) {
-  if (static_cast<int>(tile.z_) <= ctx.max_prepared_zoom_level_) {
+                                    geo::tile const& tile, PerfCounter& pc) {
+  auto total = scoped_perf_counter<perf_task::GET_TILE_TOTAL>(pc);
+
+  if (!ctx.ignore_prepared_ &&
+      static_cast<int>(tile.z_) <= ctx.max_prepared_zoom_level_) {
     auto tiles_dbi = handle.tiles_dbi(txn);
+
+    start<perf_task::GET_TILE_FETCH>(pc);
     auto db_tile = txn.get(tiles_dbi, make_tile_key(tile));
+    stop<perf_task::GET_TILE_FETCH>(pc);
+
     if (!db_tile) {
       return std::nullopt;
     }
     return std::string{*db_tile};
   }
 
-  auto const rendered_tile = render_tile(features_cursor, ctx, tile);
+  start<perf_task::GET_TILE_RENDER>(pc);
+  auto const rendered_tile = render_tile(features_cursor, ctx, tile, pc);
+  stop<perf_task::GET_TILE_RENDER>(pc);
+
   if (rendered_tile.empty()) {
     return std::nullopt;
   }
-  return compress_gzip(rendered_tile);
+  start<perf_task::GET_TILE_COMPRESS>(pc);
+  auto&& compressed = compress_gzip(rendered_tile);
+  stop<perf_task::GET_TILE_COMPRESS>(pc);
+
+  return compressed;
 }
 
+template <typename PerfCounter>
 std::optional<std::string> get_tile(tile_db_handle& handle,
                                     render_ctx const& ctx,
-                                    geo::tile const& tile) {
+                                    geo::tile const& tile, PerfCounter& pc) {
   lmdb::txn txn{handle.env_};
   auto features_dbi = handle.features_dbi(txn);
   auto features_cursor = lmdb::cursor{txn, features_dbi};
 
-  return get_tile(handle, txn, features_cursor, ctx, tile);
+  return get_tile(handle, txn, features_cursor, ctx, tile, pc);
 }
 
 }  // namespace tiles

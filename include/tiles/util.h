@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <string>
 
 #ifndef log_err

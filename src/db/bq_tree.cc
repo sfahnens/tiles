@@ -35,11 +35,9 @@ constexpr auto const kEmptyRoot = std::numeric_limits<bq_node_t>::min();
 constexpr auto const kFullRoot = std::numeric_limits<bq_node_t>::max();
 constexpr auto const kInvalidNode = std::numeric_limits<bq_node_t>::max() - 1;
 
-uint32_t quad_pos(geo::tile const& tile) {
-  return (tile.y_ % 2 << 1) | (tile.x_ % 2);
+inline bool bit_set(uint32_t val, uint32_t idx) {
+  return (val & (1 << idx)) != 0;
 }
-
-bool bit_set(uint32_t val, uint32_t idx) { return (val & (1 << idx)) != 0; }
 
 bq_tree::bq_tree() : nodes_{kEmptyRoot} {}
 bq_tree::bq_tree(std::string_view str) {
@@ -69,17 +67,17 @@ std::pair<std::optional<bool>, bq_node_t> bq_tree::find_parent_leaf(
   auto curr = nodes_.at(0);
   for (auto const& tile : trace) {
     // std::cout << "tile" << tile << std::endl;
-    // printf("%i %08x\n\n", quad_pos(tile), curr);
+    // printf("%i %08x\n\n", tile.quad_pos(), curr);
 
-    if (bit_set(curr, quad_pos(tile) + kFalseOffset)) {
+    if (bit_set(curr, tile.quad_pos() + kFalseOffset)) {
       return {{false}, kInvalidNode};
     }
-    if (bit_set(curr, quad_pos(tile) + kTrueOffset)) {
+    if (bit_set(curr, tile.quad_pos() + kTrueOffset)) {
       return {{true}, kInvalidNode};
     }
 
     auto offset = curr & kOffsetMask;
-    for (auto i = 0u; i < quad_pos(tile); ++i) {
+    for (auto i = 0u; i < tile.quad_pos(); ++i) {
       if (!bit_set(curr, i + kFalseOffset) && !bit_set(curr, i + kTrueOffset)) {
         ++offset;
       }
@@ -116,11 +114,11 @@ std::vector<geo::tile> bq_tree::all_leafs(geo::tile const& q) const {
     for (auto i = 0u; i < 4u; ++i) {
       auto const& child_tile = *(++child_tile_it);
 
-      if (bit_set(node, quad_pos(child_tile) + kTrueOffset)) {
+      if (bit_set(node, child_tile.quad_pos() + kTrueOffset)) {
         result.push_back(child_tile);
         continue;
       }
-      if (bit_set(node, quad_pos(child_tile) + kFalseOffset)) {
+      if (bit_set(node, child_tile.quad_pos() + kFalseOffset)) {
         continue;
       }
 
@@ -199,7 +197,7 @@ bq_tree make_bq_tree(std::vector<geo::tile> const& tiles) {
       auto const& tile = pair.first;
       auto& parent = nodes[z - 1][tile.parent()];
       if (!parent.leaf_) {
-        parent.children_[quad_pos(tile)] = &pair.second;
+        parent.children_[tile.quad_pos()] = &pair.second;
       }
     }
   }

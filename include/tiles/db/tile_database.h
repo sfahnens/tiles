@@ -27,10 +27,10 @@ inline lmdb::env make_tile_database(
 }
 
 struct tile_db_handle {
-  explicit tile_db_handle(lmdb::env& env,
-                          char const* dbi_name_meta = kDefaultMeta,
-                          char const* dbi_name_features = kDefaultFeatures,
-                          char const* dbi_name_tiles = kDefaultTiles)
+  explicit tile_db_handle(
+      lmdb::env& env, char const* dbi_name_meta = kDefaultMeta,
+      char const* dbi_name_features = kDefaultFeatures,
+      char const* dbi_name_tiles = kDefaultTiles)
       : env_{env},
         dbi_name_meta_{dbi_name_meta},
         dbi_name_features_{dbi_name_features},

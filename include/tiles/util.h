@@ -19,6 +19,11 @@
     throw std::runtime_error(M); \
   }
 
+#define verify_silent(A, M, ...) \
+  if (!(A)) {                    \
+    throw std::runtime_error(M); \
+  }
+
 namespace tiles {
 
 std::string compress_gzip(std::string const&);

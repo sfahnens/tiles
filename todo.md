@@ -14,6 +14,7 @@
 == HIGH PRIO:
 - fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
 - compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
+- fix coastline on tiles with features
 
 == LOW PRIO:
 - proper feature wraparound 180/-180 <-> artifacts on island?!
@@ -46,3 +47,6 @@
 - geometry: custom block allocator for geometry stuff
 - render: parallelize
 - import: parallelize
+
+- prepare tiles: investigate: some tiles mising on lower z for full coastlines
+- better live statistics (wait some time to aggregate multiple requests)

@@ -103,7 +103,7 @@ struct feature_inserter : public batch_inserter {
   }
 
   void insert(geo::tile const& tile, std::string const& feature) {
-    auto const idx = fill_state_[{tile.x_, tile.y_}]++;
+    auto const idx = ++fill_state_[{tile.x_, tile.y_}];
     auto const key = make_feature_key(tile, idx);
     txn_.put(dbi_, key, feature);
   }

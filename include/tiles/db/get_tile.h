@@ -4,6 +4,7 @@
 #include "lmdb/lmdb.hpp"
 
 #include "tiles/db/bq_tree.h"
+#include "tiles/db/feature_pack.h"
 #include "tiles/db/query_features.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
@@ -67,23 +68,26 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
   auto const box = tile_spec{tile}.draw_bounds_;  // XXX really with overdraw?
 
   start<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
-  query_features(c, tile, [&](auto const& str) {
+  query_features(c, tile, [&](auto const& db_tile, auto const& pack_str) {
     stop<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
     stop<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
 
-    start<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
-    start<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
-    auto const feature = deserialize_feature(str, box, tile.z_);
-    if (!feature) {
-      stop<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
-      start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
-      return;
-    }
-    stop<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
+    unpack_features(db_tile, pack_str, tile, [&](auto const& feature_str) {
+      start<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
+      start<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
+      auto const feature = deserialize_feature(feature_str, box, tile.z_);
+      if (!feature) {
+        stop<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
+        start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
+        return;
+      }
+      stop<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
 
-    start<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
-    builder.add_feature(*feature);
-    stop<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
+      start<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
+      builder.add_feature(*feature);
+      stop<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
+    });
+
     start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
   });
 

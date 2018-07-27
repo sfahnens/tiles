@@ -37,7 +37,7 @@ void query_features(lmdb::cursor& c, geo::tile const& tile, Fn&& fn) {
     for (auto el = c.get(lmdb::cursor_op::SET_RANGE, key_begin);
          el && el->first < key_end;
          el = c.get<decltype(key_begin)>(lmdb::cursor_op::NEXT)) {
-      fn(el->second);
+      fn(feature_key_to_tile(el->first), el->second);
     }
   }
 }

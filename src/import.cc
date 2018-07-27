@@ -93,6 +93,11 @@ int main(int argc, char** argv) {
     tiles::database_stats(handle);
   }
 
+  if (opt.has_any_task({"pack"})) {
+    std::cout << "|> pack features\n";
+    tiles::pack_features(handle);
+  }
+
   if (opt.has_any_task({"tiles"})) {
     std::cout << "|> prepare tiles\n";
     tiles::prepare_tiles(handle, 10);

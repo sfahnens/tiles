@@ -10,7 +10,7 @@
 
 namespace tiles {
 
-std::optional<feature> deserialize_feature(
+inline std::optional<feature> deserialize_feature(
     std::string_view const& str,  //
     fixed_box const& box_hint = {{kInvalidBoxHint, kInvalidBoxHint},
                                  {kInvalidBoxHint, kInvalidBoxHint}},

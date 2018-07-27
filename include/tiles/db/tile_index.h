@@ -66,7 +66,7 @@ inline tile_index_t feature_key_to_idx(tile_index_t key,
   return key & idx_mask;
 }
 
-inline tile_index_t make_feature_key(geo::tile const& t, size_t const idx) {
+inline tile_index_t make_feature_key(geo::tile const& t, size_t const idx = 0) {
   return make_feature_key(t.x_, t.y_, t.z_, idx);
 }
 

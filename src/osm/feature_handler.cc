@@ -2,7 +2,6 @@
 
 #include "sol.hpp"
 
-#include "tiles/db/insert_feature.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/fixed/io/serialize.h"
@@ -80,9 +79,8 @@ void handle_feature(feature_inserter& inserter, sol::function const& process,
     return;
   }
 
-  insert_feature(inserter,
-                 feature{static_cast<uint64_t>(pf.get_id()), pf.zoom_levels_,
-                         make_meta(pf, obj), std::move(*pf.geometry_)});
+  inserter.insert(feature{static_cast<uint64_t>(pf.get_id()), pf.zoom_levels_,
+                          make_meta(pf, obj), std::move(*pf.geometry_)});
 }
 
 void feature_handler::node(osmium::Node const& n) {

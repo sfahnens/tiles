@@ -11,6 +11,7 @@
 #include "utl/to_vec.h"
 
 #include "tiles/db/bq_tree.h"
+#include "tiles/db/feature_inserter.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/feature/serialize.h"
 #include "tiles/osm/load_shapefile.h"
@@ -318,7 +319,6 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
   }
 
   {
-    // FIXME map must be shared with other features inserter
     feature_inserter inserter{handle, &tile_db_handle::features_dbi};
     while (!geo_queue.finished() || !db_queue.finished()) {
       std::pair<geo::tile, std::string> data;
@@ -326,7 +326,7 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
         continue;
       }
 
-      inserter.insert(data.first, data.second);
+      inserter.insert_unbuffered(data.first, data.second);
       db_queue.finish();
     }
   }

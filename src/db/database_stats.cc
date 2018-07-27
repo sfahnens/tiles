@@ -11,6 +11,7 @@
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
 #include "tiles/util.h"
+#include "tiles/bin_utils.h"
 
 namespace tiles {
 
@@ -89,15 +90,21 @@ void database_stats(tile_db_handle& handle) {
   std::cout << "\n";
 
   std::vector<size_t> feature_sizes;
+  size_t have_quad_tree = 0;
 
   auto fc = lmdb::cursor{txn, features_dbi};
   for (auto el = fc.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
        el = fc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
     feature_sizes.emplace_back(el->second.size());
+
+    if (read_nth<uint32_t>(el->second.data(), 2) != 0) {
+      ++have_quad_tree;
+    }
   }
 
   std::cout << ">> payload stats:\n";
   print_sizes("features", feature_sizes);
+  std::cout << "have quad_tree: " << have_quad_tree << "\n";
 
   auto opt_max_prep = txn.get(meta_dbi, kMetaKeyMaxPreparedZoomLevel);
   if (!opt_max_prep) {

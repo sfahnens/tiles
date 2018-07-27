@@ -27,10 +27,10 @@ inline lmdb::env make_tile_database(
 }
 
 struct tile_db_handle {
-  explicit tile_db_handle(
-      lmdb::env& env, char const* dbi_name_meta = kDefaultMeta,
-      char const* dbi_name_features = kDefaultFeatures,
-      char const* dbi_name_tiles = kDefaultTiles)
+  explicit tile_db_handle(lmdb::env& env,
+                          char const* dbi_name_meta = kDefaultMeta,
+                          char const* dbi_name_features = kDefaultFeatures,
+                          char const* dbi_name_tiles = kDefaultTiles)
       : env_{env},
         dbi_name_meta_{dbi_name_meta},
         dbi_name_features_{dbi_name_features},
@@ -86,40 +86,6 @@ struct batch_inserter {
   lmdb::txn txn_;
   lmdb::txn::dbi dbi_;
   bool done_;
-};
-
-struct feature_inserter : public batch_inserter {
-  feature_inserter(
-      tile_db_handle& handle,
-      lmdb::txn::dbi (tile_db_handle::*dbi_opener)(lmdb::txn&, lmdb::dbi_flags),
-      lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
-      : batch_inserter(handle, dbi_opener, flags) {
-    init_fill_state();
-  }
-
-  feature_inserter(lmdb::env& env, char const* dbname, lmdb::dbi_flags flags)
-      : batch_inserter(env, dbname, flags) {
-    init_fill_state();
-  }
-
-  void insert(geo::tile const& tile, std::string const& feature) {
-    auto const idx = ++fill_state_[{tile.x_, tile.y_}];
-    auto const key = make_feature_key(tile, idx);
-    txn_.put(dbi_, key, feature);
-  }
-
-private:
-  void init_fill_state() {
-    auto c = lmdb::cursor{txn_, dbi_};
-    for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-         el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-      auto const tile = feature_key_to_tile(el->first);
-      fill_state_[{tile.x_, tile.y_}] = feature_key_to_idx(el->first);
-    }
-  }
-
-  // (x, y) -> idx
-  std::map<std::pair<uint32_t, uint32_t>, size_t> fill_state_;
 };
 
 }  // namespace tiles

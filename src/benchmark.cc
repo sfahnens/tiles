@@ -22,7 +22,7 @@ int main() {
   geo::latlng p1{49.83, 8.55};
   geo::latlng p2{50.13, 8.74};
 
-  for (auto z = 9; z < 16; z += 2) {
+  for (auto z = 9; z < 18; z += 2) {
 
     std::vector<geo::tile> tiles;
     for (auto const& tile : geo::make_tile_range(p1, p2, z)) {

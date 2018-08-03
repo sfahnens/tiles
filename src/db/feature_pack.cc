@@ -64,10 +64,10 @@ geo::tile find_best_tile(geo::tile const& root, feature const& feature) {
   auto const& feature_box = bounding_box(feature.geometry_);
 
   geo::tile best = root;
-  while (best.z_ <= kMaxZoomLevel) {
+  while (best.z_ < kMaxZoomLevel) {
     std::optional<geo::tile> next_best;
     for (auto const& child : best.direct_children()) {
-      auto const tile_box = tile_spec{child}.draw_bounds_;
+      auto const tile_box = tile_spec{child}.insert_bounds_;
       if ((feature_box.max_corner().x() < tile_box.min_corner().x() ||
            feature_box.min_corner().x() > tile_box.max_corner().x()) ||
           (feature_box.max_corner().y() < tile_box.min_corner().y() ||

@@ -12,36 +12,51 @@
 namespace tiles {
 
 struct packer {
-  packer() {
-    append<uint32_t>(buf_, 0u);  // reserve space for the feature count
-    append<uint32_t>(buf_, 0u);  // reserve space for the index ptr
-    append<uint32_t>(buf_, 0u);  // reserve space for the quad tree ptr
+  explicit packer(uint32_t feature_count) {
+    tiles::append<uint32_t>(buf_, feature_count);  // write feature count
+    tiles::append<uint32_t>(buf_, 0u);  // reserve space for the index ptr
   }
 
-  void append_feature(std::string const& str) {
-    buf_.append(str);
-    offsets_.push_back(buf_.size());
+  void write_index_offset(uint32_t const offset) {
+    write_nth<uint32_t>(buf_.data(), 1, offset);
   }
 
-  void write_index() {
-    write_nth<uint32_t>(buf_.data(), 0,
-                        offsets_.size());  // write feature_count
-    write_nth<uint32_t>(buf_.data(), 1, buf_.size());  // write index ptr
-    for (auto const& e : offsets_) {
-      append<uint32_t>(buf_, e);
+  template <typename It>
+  uint32_t append_span(It begin, It end) {
+    uint32_t offset = buf_.size();
+
+    for (auto it = begin; it != end; ++it) {
+      verify(it->size() >= 32, "MINI FEATURE?!");
+      protozero::write_varint(std::back_inserter(buf_), it->size());
+      buf_.append(it->data(), it->size());
     }
+    // null terminated list
+    protozero::write_varint(std::back_inserter(buf_), 0ul);
+
+    return offset;
+  }
+
+  uint32_t append_packed(std::vector<uint32_t> const& vec) {
+    uint32_t offset = buf_.size();
+    for (auto const& e : vec) {
+      protozero::write_varint(std::back_inserter(buf_), e);
+    }
+    return offset;
+  }
+
+  template <typename String>
+  uint32_t append(String const& string) {
+    uint32_t offset = buf_.size();
+    buf_.append(string);
+    return offset;
   }
 
   std::string buf_;
-  std::vector<uint32_t> offsets_;
 };
 
 std::string pack_features(std::vector<std::string> const& strings) {
-  packer p;
-  for (auto const& str : strings) {
-    p.append_feature(str);
-  }
-  p.write_index();
+  packer p{static_cast<uint32_t>(strings.size())};
+  p.append_span(begin(strings), end(strings));
   return p.buf_;
 }
 
@@ -90,43 +105,65 @@ std::vector<uint8_t> make_quad_key(geo::tile const& root,
                      [](auto const& t) -> uint8_t { return t.quad_pos(); });
 }
 
+struct packable_feature {
+  packable_feature(std::vector<uint8_t> quad_key, geo::tile best_tile,
+                   std::string const* feature)
+      : quad_key_{std::move(quad_key)},
+        best_tile_{std::move(best_tile)},
+        feature_{feature} {}
+
+  friend bool operator<(packable_feature const& a, packable_feature const& b) {
+    return std::tie(a.quad_key_, a.best_tile_, a.feature_) <
+           std::tie(b.quad_key_, b.best_tile_, b.feature_);
+  }
+
+  char const* data() const { return feature_->data(); }
+  size_t size() const { return feature_->size(); }
+
+  std::vector<uint8_t> quad_key_;
+  geo::tile best_tile_;
+  std::string const* feature_;
+};
+
 std::string pack_features(geo::tile const& tile,
                           std::vector<std::string> const& strings) {
-  packer p;
 
-  std::map<uint32_t, size_t> best_z;
-
-  auto tmp = utl::to_vec(strings, [&](auto const& str) {
+  std::vector<std::vector<packable_feature>> features_by_min_z(kMaxZoomLevel +
+                                                               1 - tile.z_);
+  for (auto const& str : strings) {
     auto const feature = deserialize_feature(str);
     verify(feature, "feature must be valid (!?)");
 
     auto const best_tile = find_best_tile(tile, *feature);
-    ++best_z[best_tile.z_];
+    auto const z = std::max(tile.z_, feature->zoom_levels_.first) - tile.z_;
+    features_by_min_z.at(z).emplace_back(make_quad_key(tile, best_tile),
+                                         best_tile, &str);
+  }
 
-    auto quad_key = make_quad_key(tile, best_tile);
-    return std::make_tuple(quad_key, best_tile, &str);
-  });
+  packer p{static_cast<uint32_t>(strings.size())};
 
-  std::vector<quad_tree_input> quad_tree_input;
-  utl::equal_ranges(tmp,
-                    [](auto const& lhs, auto const& rhs) {
-                      return std::get<0>(lhs) < std::get<0>(rhs);
-                    },
-                    [&](auto const& lb, auto const& ub) {
-                      for (auto it = lb; it != ub; ++it) {
-                        p.append_feature(*std::get<2>(*it));
-                      }
+  std::vector<std::string> quad_trees;
+  for (auto& features : features_by_min_z) {
+    if (features.empty()) {
+      quad_trees.emplace_back();
+      continue;
+    }
 
-                      quad_tree_input.push_back(
-                          {std::get<1>(*lb),
-                           static_cast<uint32_t>(std::distance(begin(tmp), lb)),
-                           static_cast<uint32_t>(std::distance(lb, ub))});
-                    });
-  p.write_index();
+    std::vector<quad_tree_input> quad_tree_input;
+    utl::equal_ranges(
+        features,
+        [](auto const& a, auto const& b) { return a.quad_key_ < b.quad_key_; },
+        [&](auto const& lb, auto const& ub) {
+          quad_tree_input.push_back(
+              {lb->best_tile_, p.append_span(lb, ub), 1u});
+        });
 
-  write_nth<uint32_t>(p.buf_.data(), 2, p.buf_.size());  // quad tree ptr
-  p.buf_.append(make_quad_tree(tile, quad_tree_input));
-
+    quad_trees.emplace_back(make_quad_tree(tile, quad_tree_input));
+  }
+  p.write_index_offset(
+      p.append_packed(utl::to_vec(quad_trees, [&](auto const& quad_tree) {
+        return quad_tree.empty() ? 0u : p.append(quad_tree);
+      })));
   return p.buf_;
 }
 

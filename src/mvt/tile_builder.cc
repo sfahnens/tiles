@@ -283,16 +283,12 @@ struct layer_builder {
 };
 
 struct tile_builder::impl {
-  explicit impl(geo::tile const& tile, tile_builder::config const& cfg)
+  impl(geo::tile const& tile, tile_builder::config const& cfg)
       : spec_{tile}, config_(cfg) {}
 
   void add_feature(feature const& f) {
-    auto it = f.meta_.find("layer");
-    if (it == end(f.meta_)) {
-      std::cout << "skip invalid feature "
-                << (it == end(f.meta_) ? "true" : "false") << std::endl;
-      return;  // invalid feature
-    }
+    auto const it = f.meta_.find("layer");
+    verify(it != end(f.meta_), "invalid feature in db");
 
     utl::get_or_create(builders_, it->second, [&] {
       return std::make_unique<layer_builder>(it->second, spec_, config_);

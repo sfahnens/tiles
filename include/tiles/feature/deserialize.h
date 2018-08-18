@@ -28,6 +28,7 @@ inline std::optional<feature> deserialize_feature(
   size_t meta_fill = 0;
   std::vector<std::pair<std::string, std::string>> meta;
 
+  std::vector<std::string_view> simplify_masks;
   fixed_geometry geometry;
 
   while (msg.next()) {
@@ -78,8 +79,16 @@ inline std::optional<feature> deserialize_feature(
         verify(meta_fill < meta.size(), "meta data imbalance! (a)");
         meta[meta_fill++].second = msg.get_string();
         break;
+      case tags::Feature::repeated_string_simplify_masks:
+        simplify_masks.emplace_back(msg.get_view());
+        break;
       case tags::Feature::required_FixedGeometry_geometry:
-        geometry = deserialize(msg.get_string());
+        if (zoom_level_hint != kInvalidZoomLevel && !simplify_masks.empty()) {
+          geometry = deserialize(msg.get_view(), std::move(simplify_masks),
+                                 zoom_level_hint);
+        } else {
+          geometry = deserialize(msg.get_view());
+        }
         break;
       default: msg.skip();
     }

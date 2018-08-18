@@ -4,6 +4,7 @@
 
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/algo/bounding_box.h"
+#include "tiles/fixed/algo/make_simplify_mask.h"
 #include "tiles/fixed/io/serialize.h"
 
 namespace tiles {
@@ -34,6 +35,10 @@ inline std::string serialize_feature(feature const& f) {
   }
   for (auto const & [ _, v ] : f.meta_) {
     pb.add_string(tags::Feature::repeated_string_values, v);
+  }
+
+  for (auto const& mask : make_simplify_mask(f.geometry_)) {
+    pb.add_string(tags::Feature::repeated_string_simplify_masks, mask);
   }
 
   pb.add_message(tags::Feature::required_FixedGeometry_geometry,

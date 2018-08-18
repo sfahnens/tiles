@@ -19,6 +19,8 @@ set(TILES_CXX_FLAGS "-std=c++17 -Wall -Wextra")
 
 SET(TILES_STANDALONE ON CACHE BOOL "get dependencies from external_lib")
 
+add_definitions(-DPROTOZERO_USE_VIEW=std::string_view)
+
 if(TILES_STANDALONE)
   include_directories(SYSTEM external_lib/concurrentqueue)
   include_directories(SYSTEM external_lib/conf/include)

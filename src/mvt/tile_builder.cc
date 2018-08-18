@@ -193,7 +193,7 @@ struct layer_builder {
     std::string feature_buf;
     pbf_builder<ttm::Feature> feature_pb(feature_buf);
 
-    if (write_geometry(feature_pb, f.geometry_)) {
+    if (write_geometry(feature_pb, f)) {
       has_geometry_ = true;
 
       feature_pb.add_uint64(ttm::Feature::optional_uint64_id, f.id_);
@@ -202,10 +202,8 @@ struct layer_builder {
     }
   }
 
-  bool write_geometry(pbf_builder<ttm::Feature>& pb,
-                      fixed_geometry const& pristine_geometry) {
-    auto geometry = simplify(pristine_geometry, spec_.tile_.z_);
-    geometry = clip(geometry, spec_.draw_bounds_);
+  bool write_geometry(pbf_builder<ttm::Feature>& pb, feature const& f) {
+    auto geometry = clip(f.geometry_, spec_.draw_bounds_);
 
     if (std::holds_alternative<fixed_null>(geometry)) {
       return false;

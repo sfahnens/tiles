@@ -10,11 +10,11 @@
 - improve performance DONE
 - render: fast bounding box check in deserialize (same as zoomlevel) DONE
 - database disk usage statistics
+- fix coastline on tiles with features
+- compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
+- fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
 
 == HIGH PRIO:
-- fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
-- compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
-- fix coastline on tiles with features
 
 == LOW PRIO:
 - proper feature wraparound 180/-180 <-> artifacts on island?!
@@ -50,3 +50,9 @@
 
 - prepare tiles: investigate: some tiles mising on lower z for full coastlines
 - better live statistics (wait some time to aggregate multiple requests)
+
+- skip simplify for simple features (polygon with 4 points -> binary)
+- improve geometry clipping: compute unclipped z-range
+- use clipper for geometry clipping
+- implement custom arena allocator
+- use https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h for compression

@@ -97,7 +97,7 @@ void database_stats(tile_db_handle& handle) {
        el = fc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
     feature_sizes.emplace_back(el->second.size());
 
-    if (read_nth<uint32_t>(el->second.data(), 2) != 0) {
+    if (read_nth<uint32_t>(el->second.data(), 1) != 0) {
       ++have_quad_tree;
     }
   }

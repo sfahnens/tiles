@@ -190,7 +190,6 @@ void pack_features(tile_db_handle& handle) {
 
     if (!(tile == this_tile)) {
       if (!features.empty()) {
-        std::cout << "PACK TILE: " << tile << std::endl;
         c.put(make_feature_key(tile), pack_features(tile, features));
       }
 
@@ -202,7 +201,7 @@ void pack_features(tile_db_handle& handle) {
                       std::make_move_iterator(end(this_features)));
     }
   }
-  c.put(make_feature_key(tile), pack_features(features));
+  c.put(make_feature_key(tile), pack_features(tile, features));
 
   txn.commit();
 }

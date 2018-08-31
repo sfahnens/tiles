@@ -167,43 +167,82 @@ std::string pack_features(geo::tile const& tile,
   return p.buf_;
 }
 
+constexpr auto const kPackBatchThreshold = 64ull * 1024 * 1024;
+
 void pack_features(tile_db_handle& handle) {
-  lmdb::txn txn{handle.env_};
-  auto feature_dbi = handle.features_dbi(txn);
-  lmdb::cursor c{txn, feature_dbi};
+  std::optional<tile_index_t> resume_key;
 
-  geo::tile tile{std::numeric_limits<uint32_t>::max(),
-                 std::numeric_limits<uint32_t>::max(),
-                 std::numeric_limits<uint32_t>::max()};
-  std::vector<std::string> features;
+  do {
+    size_t packed_features_size = 0;
+    std::vector<std::pair<tile_index_t, std::string>> packed_features;
 
-  for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-       el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
+    {  // collect features
+      lmdb::txn txn{handle.env_};
+      auto feature_dbi = handle.features_dbi(txn);
+      lmdb::cursor c{txn, feature_dbi};
 
-    auto const& this_tile = feature_key_to_tile(el->first);
-    std::vector<std::string> this_features;
-    unpack_features(el->second, [&this_features](auto const& view) {
-      this_features.emplace_back(view);
-    });
+      geo::tile tile{std::numeric_limits<uint32_t>::max(),
+                     std::numeric_limits<uint32_t>::max(),
+                     std::numeric_limits<uint32_t>::max()};
+      std::vector<std::string> features;
 
-    c.del();
+      auto el =
+          resume_key
+              ? c.get<tile_index_t>(lmdb::cursor_op::SET_RANGE, *resume_key)
+              : c.get<tile_index_t>(lmdb::cursor_op::FIRST);
+      resume_key = std::nullopt;
 
-    if (!(tile == this_tile)) {
-      if (!features.empty()) {
-        c.put(make_feature_key(tile), pack_features(tile, features));
+      for (; el; el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
+        auto const& this_tile = feature_key_to_tile(el->first);
+        if (!(tile == this_tile) &&
+            packed_features_size >= kPackBatchThreshold) {
+          resume_key = el->first;
+          break;
+        }
+
+        std::vector<std::string> this_features;
+        unpack_features(el->second, [&this_features](auto const& view) {
+          this_features.emplace_back(view);
+        });
+
+        c.del();
+
+        if (!(tile == this_tile)) {
+          if (!features.empty()) {
+            packed_features.emplace_back(make_feature_key(tile),
+                                         pack_features(tile, features));
+            packed_features_size += packed_features.back().second.size();
+          }
+
+          tile = this_tile;
+          features = std::move(this_features);
+        } else {
+          features.insert(end(features),
+                          std::make_move_iterator(begin(this_features)),
+                          std::make_move_iterator(end(this_features)));
+        }
       }
 
-      tile = this_tile;
-      features = std::move(this_features);
-    } else {
-      features.insert(end(features),
-                      std::make_move_iterator(begin(this_features)),
-                      std::make_move_iterator(end(this_features)));
-    }
-  }
-  c.put(make_feature_key(tile), pack_features(tile, features));
+      if (!features.empty()) {
+        packed_features.emplace_back(make_feature_key(tile),
+                                     pack_features(tile, features));
+      }
 
-  txn.commit();
+      txn.commit();
+    }
+
+    handle.env_.sync();
+
+    {  // writeback features
+      lmdb::txn txn{handle.env_};
+      auto feature_dbi = handle.features_dbi(txn);
+      for (auto const & [ key, data ] : packed_features) {
+        txn.put(feature_dbi, key, data);
+      }
+      txn.commit();
+    }
+
+  } while (resume_key);
 }
 
 }  // namespace tiles

@@ -8,10 +8,15 @@
 
 #include "lmdb/lmdb.hpp"
 
+#include "protozero/pbf_message.hpp"
+#include "protozero/varint.hpp"
+
+#include "tiles/bin_utils.h"
+#include "tiles/db/feature_pack.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
+#include "tiles/feature/feature.h"
 #include "tiles/util.h"
-#include "tiles/bin_utils.h"
 
 namespace tiles {
 
@@ -61,7 +66,7 @@ void database_stats(tile_db_handle& handle) {
     auto const sum = std::accumulate(begin(m), end(m), 0.);
     std::sort(begin(m), end(m));
 
-    fmt::print(std::cout, "{:<14} > ", label);
+    fmt::print(std::cout, "{:<16} > ", label);
     format_num(std::cout, "cnt", m.size());
     format_bytes(std::cout, "sum", sum);
 
@@ -89,22 +94,53 @@ void database_stats(tile_db_handle& handle) {
   print_stat(std::cout, " dbi:meta", meta_dbi.stat());
   std::cout << "\n";
 
-  std::vector<size_t> feature_sizes;
-  size_t have_quad_tree = 0;
+  std::vector<size_t> pack_sizes;
+  std::vector<size_t> index_sizes;
+  std::vector<size_t> simplify_mask_sizes;
+  std::vector<size_t> geometry_sizes;
 
   auto fc = lmdb::cursor{txn, features_dbi};
   for (auto el = fc.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
        el = fc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-    feature_sizes.emplace_back(el->second.size());
+    pack_sizes.emplace_back(el->second.size());
 
-    if (read_nth<uint32_t>(el->second.data(), 1) != 0) {
-      ++have_quad_tree;
+    auto const index_offset = read_nth<uint32_t>(el->second.data(), 1);
+    if (index_offset != 0) {
+      auto idx_ptr = el->second.data() + index_offset;
+      auto const end = std::end(el->second);
+      auto tree_offset = 0ull;
+      while (idx_ptr < end && tree_offset == 0) {
+        tree_offset = protozero::decode_varint(&idx_ptr, end);
+      }
+
+      if (tree_offset == 0) {
+        index_sizes.push_back(el->second.size() - index_offset);
+      } else {
+        index_sizes.push_back(el->second.size() - tree_offset);
+      }
     }
+
+    unpack_features(el->second, [&](auto const& str) {
+      protozero::pbf_message<tags::Feature> msg{str};
+      while (msg.next()) {
+        switch (msg.tag()) {
+          case tags::Feature::repeated_string_simplify_masks:
+            simplify_mask_sizes.push_back(msg.get_view().size());
+            break;
+          case tags::Feature::required_FixedGeometry_geometry:
+            geometry_sizes.push_back(msg.get_view().size());
+            break;
+          default: msg.skip();
+        }
+      }
+    });
   }
 
   std::cout << ">> payload stats:\n";
-  print_sizes("features", feature_sizes);
-  std::cout << "have quad_tree: " << have_quad_tree << "\n";
+  print_sizes("pack", pack_sizes);
+  print_sizes("pack: index", index_sizes);
+  print_sizes("feature: masks", simplify_mask_sizes);
+  print_sizes("feature: geo", geometry_sizes);
 
   auto opt_max_prep = txn.get(meta_dbi, kMetaKeyMaxPreparedZoomLevel);
   if (!opt_max_prep) {
@@ -123,7 +159,7 @@ void database_stats(tile_db_handle& handle) {
     tile_sizes.at(tile.z_).emplace_back(el->second.size());
   }
 
-  auto total = std::accumulate(begin(feature_sizes), end(feature_sizes), 0ull);
+  auto total = std::accumulate(begin(pack_sizes), end(pack_sizes), 0ull);
   for (auto z = 0u; z < tile_sizes.size(); ++z) {
     print_sizes(fmt::format("tiles[z={:0>2}]", z), tile_sizes[z]);
     total += std::accumulate(begin(tile_sizes[z]), end(tile_sizes[z]), 0ull);

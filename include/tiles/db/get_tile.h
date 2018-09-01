@@ -6,6 +6,7 @@
 #include "tiles/db/bq_tree.h"
 #include "tiles/db/feature_pack.h"
 #include "tiles/db/query_features.h"
+#include "tiles/db/shared_strings.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
 #include "tiles/feature/deserialize.h"
@@ -22,6 +23,8 @@ struct render_ctx {
   int max_prepared_zoom_level_ = -1;
   bq_tree seaside_tiles_;
 
+  std::vector<std::string> layer_names_;
+
   bool ignore_prepared_ = false;
 };
 
@@ -34,13 +37,14 @@ render_ctx make_render_ctx(tile_db_handle& handle) {
   auto opt_seaside = txn.get(meta_dbi, kMetaKeyFullySeasideTree);
 
   return {opt_max_prep ? std::stoi(std::string{*opt_max_prep}) : -1,
-          opt_seaside ? bq_tree{*opt_seaside} : bq_tree{}};
+          opt_seaside ? bq_tree{*opt_seaside} : bq_tree{},
+          get_layer_names(handle, txn)};
 }
 
 template <typename PerfCounter>
 std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
                         geo::tile const& tile, PerfCounter& pc) {
-  tile_builder builder{tile};
+  tile_builder builder{tile, ctx.layer_names_};
 
   start<perf_task::RENDER_TILE_FIND_SEASIDE>(pc);
   auto const& seaside_tiles = ctx.seaside_tiles_.all_leafs(tile);
@@ -59,6 +63,7 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
 
     start<perf_task::RENDER_TILE_ADD_SEASIDE>(pc);
     builder.add_feature({0ul,
+                         kLayerCoastlineIdx,
                          std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
                          {{"layer", "coastline"}},
                          fixed_polygon{std::move(polygon)}});

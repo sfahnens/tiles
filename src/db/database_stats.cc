@@ -96,6 +96,7 @@ void database_stats(tile_db_handle& handle) {
 
   std::vector<size_t> pack_sizes;
   std::vector<size_t> index_sizes;
+  std::vector<size_t> header_sizes;
   std::vector<size_t> simplify_mask_sizes;
   std::vector<size_t> geometry_sizes;
 
@@ -124,6 +125,12 @@ void database_stats(tile_db_handle& handle) {
       protozero::pbf_message<tags::Feature> msg{str};
       while (msg.next()) {
         switch (msg.tag()) {
+          case tags::Feature::packed_sint64_header: {
+            auto const* pre = msg.m_data;
+            msg.skip();
+            auto const* post = msg.m_data;
+            header_sizes.push_back(std::distance(pre, post));
+          } break;
           case tags::Feature::repeated_string_simplify_masks:
             simplify_mask_sizes.push_back(msg.get_view().size());
             break;
@@ -139,6 +146,7 @@ void database_stats(tile_db_handle& handle) {
   std::cout << ">> payload stats:\n";
   print_sizes("pack", pack_sizes);
   print_sizes("pack: index", index_sizes);
+  print_sizes("feature: header", header_sizes);
   print_sizes("feature: masks", simplify_mask_sizes);
   print_sizes("feature: geo", geometry_sizes);
 

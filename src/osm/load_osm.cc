@@ -37,7 +37,9 @@ using location_handler_t = oh::NodeLocationsForWays<index_t>;
 
 void load_osm(tile_db_handle& handle, std::string const& fname) {
   feature_inserter inserter{handle, &tile_db_handle::features_dbi};
-  feature_handler handler{inserter};
+  layer_names_builder names_builder;
+
+  feature_handler handler{inserter, names_builder};
 
   oio::File input_file{fname};
 
@@ -73,6 +75,8 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
   // relations have been cleaned up.
   std::cerr << "Memory:\n";
   orel::print_used_memory(std::cerr, mp_manager.used_memory());
+
+  names_builder.store(handle, inserter.txn_);
 }
 
 }  // namespace tiles

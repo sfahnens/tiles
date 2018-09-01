@@ -18,7 +18,9 @@ struct tile_builder {
     bool verbose_;
   };
 
-  explicit tile_builder(geo::tile const&, config c = config());
+  explicit tile_builder(geo::tile const&,
+                        std::vector<std::string> const& layer_names,
+                        config c = config());
   ~tile_builder();
 
   void add_feature(feature const&);

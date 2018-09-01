@@ -281,15 +281,15 @@ struct layer_builder {
 };
 
 struct tile_builder::impl {
-  impl(geo::tile const& tile, tile_builder::config const& cfg)
-      : spec_{tile}, config_(cfg) {}
+  impl(geo::tile const& tile, std::vector<std::string> const& layer_names,
+       tile_builder::config const& cfg)
+      : spec_{tile}, layer_names_{layer_names}, config_{cfg} {}
 
   void add_feature(feature const& f) {
-    auto const it = f.meta_.find("layer");
-    verify(it != end(f.meta_), "invalid feature in db");
-
-    utl::get_or_create(builders_, it->second, [&] {
-      return std::make_unique<layer_builder>(it->second, spec_, config_);
+    verify(f.layer_ < layer_names_.size(), "invalid layer in db");
+    utl::get_or_create(builders_, f.layer_, [&] {
+      return std::make_unique<layer_builder>(layer_names_.at(f.layer_), spec_,
+                                             config_);
     })->add_feature(f);
   }
 
@@ -298,10 +298,6 @@ struct tile_builder::impl {
     pbf_builder<ttm::Tile> pb(buf);
 
     for (auto const& pair : builders_) {
-      if (config_.verbose_) {
-        std::cout << "append layer: " << pair.first << std::endl;
-      }
-
       if (!pair.second->has_geometry_) {
         continue;
       }
@@ -317,13 +313,16 @@ struct tile_builder::impl {
   }
 
   tile_spec spec_;
+  std::vector<std::string> const& layer_names_;
   tile_builder::config config_;
 
-  std::map<std::string, std::unique_ptr<layer_builder>> builders_;
+  std::map<size_t, std::unique_ptr<layer_builder>> builders_;
 };
 
-tile_builder::tile_builder(geo::tile const& tile, config cfg)
-    : impl_(std::make_unique<impl>(tile, cfg)) {}
+tile_builder::tile_builder(geo::tile const& tile,
+                           std::vector<std::string> const& layer_names,
+                           config cfg)
+    : impl_(std::make_unique<impl>(tile, layer_names, cfg)) {}
 
 tile_builder::~tile_builder() = default;
 

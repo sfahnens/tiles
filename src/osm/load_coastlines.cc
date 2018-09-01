@@ -12,6 +12,7 @@
 
 #include "tiles/db/bq_tree.h"
 #include "tiles/db/feature_inserter.h"
+#include "tiles/db/shared_strings.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/feature/serialize.h"
 #include "tiles/osm/load_shapefile.h"
@@ -199,8 +200,9 @@ std::string finalize_tile(cl::Path const& bounds,
 
   boost::geometry::correct(polygon);
   return serialize_feature({0ul,
+                            kLayerCoastlineIdx,
                             std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
-                            {{"layer", "coastline"}},
+                            {},
                             std::move(polygon)});
 }
 

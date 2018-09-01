@@ -40,17 +40,17 @@ struct feature_handler::script_runner {
   sol::function process_area_;
 };
 
-feature_handler::feature_handler(feature_inserter& inserter)
-    : runner_(std::make_unique<feature_handler::script_runner>()),
-      inserter_(inserter) {}
+feature_handler::feature_handler(feature_inserter& inserter,
+                                 layer_names_builder& layer_names_builder)
+    : runner_{std::make_unique<feature_handler::script_runner>()},
+      inserter_{inserter},
+      layer_names_builder_{layer_names_builder} {}
 feature_handler::~feature_handler() = default;
 
 template <typename OSMObject>
 std::map<std::string, std::string> make_meta(pending_feature const& f,
                                              OSMObject const& o) {
   std::map<std::string, std::string> meta;
-  meta["layer"] = f.target_layer_;
-
   for (auto const& tag : f.tag_as_metadata_) {
     meta[tag] = std::string{o.get_value_by_key(tag.c_str(), "")};
   }
@@ -63,8 +63,9 @@ std::map<std::string, std::string> make_meta(pending_feature const& f,
 }
 
 template <typename OSMObject>
-void handle_feature(feature_inserter& inserter, sol::function const& process,
-                    OSMObject const& obj) {
+void handle_feature(feature_inserter& inserter,
+                    layer_names_builder& layer_names,
+                    sol::function const& process, OSMObject const& obj) {
   auto pf = pending_feature{obj, [&obj] { return read_osm_geometry(obj); }};
   process(pf);
 
@@ -79,18 +80,20 @@ void handle_feature(feature_inserter& inserter, sol::function const& process,
     return;
   }
 
-  inserter.insert(feature{static_cast<uint64_t>(pf.get_id()), pf.zoom_levels_,
-                          make_meta(pf, obj), std::move(*pf.geometry_)});
+  inserter.insert(feature{static_cast<uint64_t>(pf.get_id()),
+                          layer_names.get_layer_idx(pf.target_layer_),
+                          pf.zoom_levels_, make_meta(pf, obj),
+                          std::move(*pf.geometry_)});
 }
 
 void feature_handler::node(osmium::Node const& n) {
-  handle_feature(inserter_, runner_->process_node_, n);
+  handle_feature(inserter_, layer_names_builder_, runner_->process_node_, n);
 }
 void feature_handler::way(osmium::Way const& w) {
-  handle_feature(inserter_, runner_->process_way_, w);
+  handle_feature(inserter_, layer_names_builder_, runner_->process_way_, w);
 }
 void feature_handler::area(osmium::Area const& a) {
-  handle_feature(inserter_, runner_->process_area_, a);
+  handle_feature(inserter_, layer_names_builder_, runner_->process_area_, a);
 }
 
 }  // namespace tiles

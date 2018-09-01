@@ -4,6 +4,7 @@
 
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/algo/bounding_box.h"
+#include "tiles/fixed/algo/delta.h"
 #include "tiles/fixed/algo/make_simplify_mask.h"
 #include "tiles/fixed/io/serialize.h"
 
@@ -13,20 +14,24 @@ inline std::string serialize_feature(feature const& f) {
   std::string buf;
   protozero::pbf_builder<tags::Feature> pb(buf);
 
-  pb.add_uint32(tags::Feature::required_uint32_minzoomlevel,
-                f.zoom_levels_.first);
-  pb.add_uint32(tags::Feature::required_uint32_maxzoomlevel,
-                f.zoom_levels_.second);
-
   auto const box = bounding_box(f.geometry_);
-  auto const box_mask = (static_cast<uint64_t>(1) << 32) - 1;
 
-  uint64_t box_x = (box.min_corner().x() & box_mask) |
-                   ((box.max_corner().x() & box_mask) << 32);
-  pb.add_uint64(tags::Feature::required_uint64_box_x, box_x);
-  uint64_t box_y = (box.min_corner().y() & box_mask) |
-                   ((box.max_corner().y() & box_mask) << 32);
-  pb.add_uint64(tags::Feature::required_uint64_box_y, box_y);
+  // XXX: maybe tile dependent offsets would be more compact!
+  delta_encoder x_enc{kFixedCoordMagicOffset};
+  delta_encoder y_enc{kFixedCoordMagicOffset};
+
+  std::array<int64_t, 7> header{{
+      f.zoom_levels_.first,  // 0: min zoom level
+      f.zoom_levels_.second,  // 1:  max zoom level
+      x_enc.encode(box.min_corner().x()),  // 2
+      x_enc.encode(box.max_corner().x()),  // 3
+      y_enc.encode(box.min_corner().y()),  // 4
+      y_enc.encode(box.max_corner().y()),  // 5
+      static_cast<int64_t>(f.layer_)  // 6
+  }};
+
+  pb.add_packed_sint64(tags::Feature::packed_sint64_header,  //
+                        begin(header), end(header));
 
   pb.add_uint64(tags::Feature::required_uint64_id, f.id_);
 

@@ -2,6 +2,7 @@
 
 #include "protozero/pbf_builder.hpp"
 
+#include "tiles/db/shared_strings.h"
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/algo/delta.h"
@@ -10,7 +11,9 @@
 
 namespace tiles {
 
-inline std::string serialize_feature(feature const& f) {
+inline std::string serialize_feature(feature const& f,
+                                     meta_coding_map_t const& coding_map = {},
+                                     bool fast = true) {
   std::string buf;
   protozero::pbf_builder<tags::Feature> pb(buf);
 
@@ -31,19 +34,48 @@ inline std::string serialize_feature(feature const& f) {
   }};
 
   pb.add_packed_sint64(tags::Feature::packed_sint64_header,  //
-                        begin(header), end(header));
+                       begin(header), end(header));
 
   pb.add_uint64(tags::Feature::required_uint64_id, f.id_);
 
-  for (auto const & [ k, _ ] : f.meta_) {
-    pb.add_string(tags::Feature::repeated_string_keys, k);
-  }
-  for (auto const & [ _, v ] : f.meta_) {
-    pb.add_string(tags::Feature::repeated_string_values, v);
+  if (!fast) {
+    std::vector<size_t> coded_metas;
+    std::vector<std::string> uncoded_keys, uncoded_values;
+
+    for (auto const& pair : f.meta_) {
+      auto it = coding_map.find(pair);
+      if (it == end(coding_map)) {
+        uncoded_keys.push_back(pair.first);
+        uncoded_values.push_back(pair.second);
+      } else {
+        coded_metas.push_back(it->second);
+      }
+    }
+
+    if (!coded_metas.empty()) {
+      pb.add_packed_uint64(tags::Feature::packed_uint64_meta_pairs,  //
+                           begin(coded_metas), end(coded_metas));
+    }
+    for (auto const& k : uncoded_keys) {
+      pb.add_string(tags::Feature::repeated_string_keys, k);
+    }
+    for (auto const& v : uncoded_values) {
+      pb.add_string(tags::Feature::repeated_string_values, v);
+    }
+
+  } else {
+    for (auto const & [ k, _ ] : f.meta_) {
+      pb.add_string(tags::Feature::repeated_string_keys, k);
+    }
+    for (auto const & [ _, v ] : f.meta_) {
+      pb.add_string(tags::Feature::repeated_string_values, v);
+    }
   }
 
-  for (auto const& mask : make_simplify_mask(f.geometry_)) {
-    pb.add_string(tags::Feature::repeated_string_simplify_masks, mask);
+  if (!fast) {
+    for (auto const& mask : make_simplify_mask(f.geometry_)) {
+      pb.add_string(tags::Feature::repeated_string_simplify_masks, mask);
+    }
   }
 
   pb.add_message(tags::Feature::required_FixedGeometry_geometry,

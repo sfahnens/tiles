@@ -4,7 +4,9 @@
 #include "utl/to_vec.h"
 
 #include "tiles/db/quad_tree.h"
+#include "tiles/db/shared_strings.h"
 #include "tiles/feature/deserialize.h"
+#include "tiles/feature/serialize.h"
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/mvt/tile_spec.h"
@@ -107,37 +109,41 @@ std::vector<uint8_t> make_quad_key(geo::tile const& root,
 
 struct packable_feature {
   packable_feature(std::vector<uint8_t> quad_key, geo::tile best_tile,
-                   std::string const* feature)
+                   std::string feature)
       : quad_key_{std::move(quad_key)},
         best_tile_{std::move(best_tile)},
-        feature_{feature} {}
+        feature_{std::move(feature)} {}
 
   friend bool operator<(packable_feature const& a, packable_feature const& b) {
     return std::tie(a.quad_key_, a.best_tile_, a.feature_) <
            std::tie(b.quad_key_, b.best_tile_, b.feature_);
   }
 
-  char const* data() const { return feature_->data(); }
-  size_t size() const { return feature_->size(); }
+  char const* data() const { return feature_.data(); }
+  size_t size() const { return feature_.size(); }
 
   std::vector<uint8_t> quad_key_;
   geo::tile best_tile_;
-  std::string const* feature_;
+  std::string feature_;
 };
 
 std::string pack_features(geo::tile const& tile,
+                          meta_coding_vec_t const& coding_vec,
+                          meta_coding_map_t const& coding_map,
                           std::vector<std::string> const& strings) {
 
   std::vector<std::vector<packable_feature>> features_by_min_z(kMaxZoomLevel +
                                                                1 - tile.z_);
   for (auto const& str : strings) {
-    auto const feature = deserialize_feature(str);
+    auto const feature = deserialize_feature(str, coding_vec);
     verify(feature, "feature must be valid (!?)");
+
+    auto const str2 = serialize_feature(*feature, coding_map, false);
 
     auto const best_tile = find_best_tile(tile, *feature);
     auto const z = std::max(tile.z_, feature->zoom_levels_.first) - tile.z_;
     features_by_min_z.at(z).emplace_back(make_quad_key(tile, best_tile),
-                                         best_tile, &str);
+                                         best_tile, std::move(str2));
   }
 
   packer p{static_cast<uint32_t>(strings.size())};
@@ -170,8 +176,10 @@ std::string pack_features(geo::tile const& tile,
 constexpr auto const kPackBatchThreshold = 64ull * 1024 * 1024;
 
 void pack_features(tile_db_handle& handle) {
-  std::optional<tile_index_t> resume_key;
+  auto const coding_map = load_meta_coding_map(handle);
+  auto const coding_vec = load_meta_coding_vec(handle);
 
+  std::optional<tile_index_t> resume_key;
   do {
     size_t packed_features_size = 0;
     std::vector<std::pair<tile_index_t, std::string>> packed_features;
@@ -209,8 +217,9 @@ void pack_features(tile_db_handle& handle) {
 
         if (!(tile == this_tile)) {
           if (!features.empty()) {
-            packed_features.emplace_back(make_feature_key(tile),
-                                         pack_features(tile, features));
+            packed_features.emplace_back(
+                make_feature_key(tile),
+                pack_features(tile, coding_vec, coding_map, features));
             packed_features_size += packed_features.back().second.size();
           }
 
@@ -224,8 +233,9 @@ void pack_features(tile_db_handle& handle) {
       }
 
       if (!features.empty()) {
-        packed_features.emplace_back(make_feature_key(tile),
-                                     pack_features(tile, features));
+        packed_features.emplace_back(
+            make_feature_key(tile),
+            pack_features(tile, coding_vec, coding_map, features));
       }
 
       txn.commit();

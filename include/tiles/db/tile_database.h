@@ -16,6 +16,7 @@ constexpr auto kDefaultTiles = "default_tiles";
 constexpr auto kMetaKeyMaxPreparedZoomLevel = "max-prepared-zoomlevel";
 constexpr auto kMetaKeyFullySeasideTree = "fully-seaside-tree";
 constexpr auto kMetaKeyLayerNames = "layer-names";
+constexpr auto kMetaKeyFeatureMetaCoding = "feature-meta-coding";
 
 inline lmdb::env make_tile_database(
     char const* db_fname,

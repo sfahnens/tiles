@@ -6,6 +6,7 @@
 #include "tiles/db/clear_database.h"
 #include "tiles/db/database_stats.h"
 #include "tiles/db/prepare_tiles.h"
+#include "tiles/db/shared_strings.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/osm/load_coastlines.h"
 #include "tiles/osm/load_osm.h"
@@ -94,6 +95,9 @@ int main(int argc, char** argv) {
   }
 
   if (opt.has_any_task({"pack"})) {
+    std::cout << "|> feature meta pair coding\n";
+    tiles::make_meta_coding(handle);
+
     std::cout << "|> pack features\n";
     tiles::pack_features(handle);
   }

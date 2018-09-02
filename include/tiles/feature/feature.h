@@ -28,11 +28,14 @@ enum class Feature : protozero::pbf_tag_type {
   packed_sint64_header = 1,
 
   required_uint64_id = 2,
-  repeated_string_keys = 3,
-  repeated_string_values = 4,
 
-  repeated_string_simplify_masks = 5,
-  required_FixedGeometry_geometry = 6
+  packed_uint64_meta_pairs = 3,
+
+  repeated_string_keys = 4,
+  repeated_string_values = 5,
+
+  repeated_string_simplify_masks = 6,
+  required_FixedGeometry_geometry = 7
 };
 
 }  // namespace tags

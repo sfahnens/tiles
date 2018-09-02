@@ -4,8 +4,9 @@
 
 #include "protozero/pbf_message.hpp"
 
-#include "tiles/fixed/algo/delta.h"
+#include "tiles/db/shared_strings.h"
 #include "tiles/feature/feature.h"
+#include "tiles/fixed/algo/delta.h"
 #include "tiles/fixed/io/deserialize.h"
 #include "tiles/util.h"
 
@@ -13,6 +14,7 @@ namespace tiles {
 
 inline std::optional<feature> deserialize_feature(
     std::string_view const& str,  //
+    meta_coding_vec_t const& meta_coding,
     fixed_box const& box_hint = {{kInvalidBoxHint, kInvalidBoxHint},
                                  {kInvalidBoxHint, kInvalidBoxHint}},
     uint32_t const zoom_level_hint = kInvalidZoomLevel) {
@@ -78,6 +80,13 @@ inline std::optional<feature> deserialize_feature(
 
       case tags::Feature::required_uint64_id: id = msg.get_uint64(); break;
 
+      case tags::Feature::packed_uint64_meta_pairs:
+        verify(meta.empty(), "meta_pairs must come before, meta keys/values!");
+        for (auto const& idx : msg.get_packed_uint64()) {
+          meta.push_back(meta_coding.at(idx));
+        }
+        meta_fill = meta.size();
+        break;
       case tags::Feature::repeated_string_keys:
         meta.emplace_back(msg.get_string(), "");
         break;
@@ -85,6 +94,7 @@ inline std::optional<feature> deserialize_feature(
         verify(meta_fill < meta.size(), "meta data imbalance! (a)");
         meta[meta_fill++].second = msg.get_string();
         break;
+
       case tags::Feature::repeated_string_simplify_masks:
         simplify_masks.emplace_back(msg.get_view());
         break;

@@ -24,6 +24,7 @@ struct render_ctx {
   bq_tree seaside_tiles_;
 
   std::vector<std::string> layer_names_;
+  meta_coding_vec_t meta_coding_;
 
   bool ignore_prepared_ = false;
 };
@@ -38,7 +39,7 @@ render_ctx make_render_ctx(tile_db_handle& handle) {
 
   return {opt_max_prep ? std::stoi(std::string{*opt_max_prep}) : -1,
           opt_seaside ? bq_tree{*opt_seaside} : bq_tree{},
-          get_layer_names(handle, txn)};
+          get_layer_names(handle, txn), load_meta_coding_vec(handle, txn)};
 }
 
 template <typename PerfCounter>
@@ -80,7 +81,8 @@ std::string render_tile(lmdb::cursor& c, render_ctx const& ctx,
     unpack_features(db_tile, pack_str, tile, [&](auto const& feature_str) {
       start<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
       start<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
-      auto const feature = deserialize_feature(feature_str, box, tile.z_);
+      auto const feature =
+          deserialize_feature(feature_str, ctx.meta_coding_, box, tile.z_);
       if (!feature) {
         stop<perf_task::RENDER_TILE_DESER_FEATURE_SKIP>(pc);
         start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);

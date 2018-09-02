@@ -13,8 +13,11 @@
 - fix coastline on tiles with features
 - compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
 - fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
+- feature packing duplicates the used database on disk!
 
 == HIGH PRIO:
+- render bugs: whole tile -> blue with roads and rail (z8 brandenburg)
+
 
 == LOW PRIO:
 - proper feature wraparound 180/-180 <-> artifacts on island?!
@@ -56,3 +59,5 @@
 - use clipper for geometry clipping
 - implement custom arena allocator
 - use https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h for compression
+
+- create index only if there are enough features in an entry

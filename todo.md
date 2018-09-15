@@ -14,10 +14,13 @@
 - compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
 - fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
 - feature packing duplicates the used database on disk!
+- render bugs: whole tile -> blue with roads and rail (z8 brandenburg)
+- use clipper for geometry clipping
 
 == HIGH PRIO:
-- render bugs: whole tile -> blue with roads and rail (z8 brandenburg)
-
+- render: order shapes by area
+- skip simplify for simple features (polygon with 4 points -> binary)
+- improve geometry clipping: compute unclipped z-range
 
 == LOW PRIO:
 - proper feature wraparound 180/-180 <-> artifacts on island?!
@@ -27,7 +30,6 @@
 
 - optimize: merge nearby shapes with equal properties
 
-- render: order shapes by area
 - profile: respect Key:layer
 - profile: road names
 - profile: road oneway direction
@@ -54,9 +56,6 @@
 - prepare tiles: investigate: some tiles mising on lower z for full coastlines
 - better live statistics (wait some time to aggregate multiple requests)
 
-- skip simplify for simple features (polygon with 4 points -> binary)
-- improve geometry clipping: compute unclipped z-range
-- use clipper for geometry clipping
 - implement custom arena allocator
 - use https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h for compression
 

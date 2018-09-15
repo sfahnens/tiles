@@ -6,8 +6,8 @@
 #include "tiles/db/quad_tree.h"
 #include "tiles/db/shared_strings.h"
 #include "tiles/feature/deserialize.h"
-#include "tiles/feature/serialize.h"
 #include "tiles/feature/feature.h"
+#include "tiles/feature/serialize.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/mvt/tile_spec.h"
 

@@ -102,6 +102,9 @@ inline std::optional<feature> deserialize_feature(
         if (zoom_level_hint != kInvalidZoomLevel && !simplify_masks.empty()) {
           geometry = deserialize(msg.get_view(), std::move(simplify_masks),
                                  zoom_level_hint);
+          if (std::holds_alternative<fixed_null>(geometry)) {
+            return std::nullopt;  // killed by mask
+          }
         } else {
           geometry = deserialize(msg.get_view());
         }

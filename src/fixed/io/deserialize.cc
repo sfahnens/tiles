@@ -4,6 +4,8 @@
 
 #include "geo/simplify_mask.h"
 
+#include "utl/erase_if.h"
+
 #include "tiles/fixed/algo/delta.h"
 #include "tiles/fixed/io/tags.h"
 #include "tiles/util.h"
@@ -109,7 +111,7 @@ fixed_polyline deserialize_polyline(Decoder&& decoder) {
 }
 
 template <typename Decoder>
-fixed_polygon deserialize_polygon(Decoder&& decoder) {
+fixed_geometry deserialize_polygon(Decoder&& decoder) {
   auto const count = decoder.get_next();
 
   fixed_polygon polygon;
@@ -123,7 +125,17 @@ fixed_polygon deserialize_polygon(Decoder&& decoder) {
       decoder.deserialize_points(polygon[i].inners()[j]);
     }
   }
-  return polygon;
+
+  utl::erase_if(polygon, [](auto& p) {
+    utl::erase_if(p.inners(), [](auto const& i) { return i.size() < 4; });
+    return p.outer().size() < 4;
+  });
+
+  if (polygon.empty()) {
+    return fixed_null{};
+  } else {
+    return polygon;
+  }
 }
 
 fixed_geometry deserialize(std::string_view geo) {

@@ -10,7 +10,6 @@
 
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
-#include "tiles/fixed/algo/simplify.h"
 #include "tiles/fixed/io/deserialize.h"
 #include "tiles/fixed/io/dump.h"
 

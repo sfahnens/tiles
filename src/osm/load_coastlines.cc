@@ -84,14 +84,12 @@ struct coastline_stats {
 
     if (pre == 0 || post == kTotal || (static_cast<int>(pre_percent) / 5 !=
                                        static_cast<int>(post_percent) / 5)) {
-      std::cout << "process coastline: "
-                << (static_cast<int>(post_percent) / 5 * 5) << "%\n";
+      t_log("process coastline: {}%", static_cast<int>(post_percent) / 5 * 5);
     }
   }
 
   void summary() {
-    std::cout << "fully seaside: " << fully_seaside_
-              << ", fully dirtside: " << fully_dirtside_ << std::endl;
+    t_log("fully:  seaside {}, dirtside {}", fully_seaside_, fully_dirtside_);
   }
 
   std::atomic_uint64_t progress_;
@@ -217,8 +215,6 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
                        coastline_stats& stats,
                        std::function<void(geo::tile const&)> seaside_appender) {
   for (auto const& child : task.tile_.direct_children()) {
-    // scoped_timer t{"clip"};
-
     auto const insert_bounds = tile_spec{child}.insert_bounds_;
     auto const insert_clip = box_to_path(insert_bounds);
 
@@ -256,16 +252,13 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
     }
 
     if (fully_dirtside) {
-      // std::cout << "found fully dirtside" << std::endl;
       ++stats.fully_dirtside_;
       stats.report_progess(child.z_);
     } else if (matching.empty()) {
-      // std::cout << "found fully seaside" << std::endl;
       seaside_appender(child);
       ++stats.fully_seaside_;
       stats.report_progess(child.z_);
     } else if (child.z_ < 10) {
-      // std::cout << "recursive descent" << std::endl;
       geo_q.enqueue(geo_task{child, std::move(matching)});
     } else {
       if (auto str = finalize_tile(draw_clip, insert_clip, matching); str) {
@@ -358,7 +351,7 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
     scoped_timer t{"seaside_tree"};
     seaside_tree = make_bq_tree(fully_seaside);
   }
-  std::cout << "seaside_tree with " << seaside_tree.nodes_.size() << " nodes\n";
+  t_log("seaside_tree with {} nodes", seaside_tree.nodes_.size());
 
   {
     lmdb::txn txn{handle.env_};

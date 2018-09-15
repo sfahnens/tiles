@@ -41,8 +41,7 @@ int main() {
     }
 
     try {
-      std::cout << "received a request: " << req.uri << std::endl;
-
+      tiles::t_log("received a request: {}", req.uri);
       auto const tile =
           geo::tile{static_cast<uint32_t>(std::stoul(req.path_params[1])),
                     static_cast<uint32_t>(std::stoul(req.path_params[2])),
@@ -63,9 +62,9 @@ int main() {
       add_cors_headers(rep);
       return cb(rep);
     } catch (std::exception const& e) {
-      std::cout << "unhandled error: " << e.what() << std::endl;
+      tiles::t_log("unhandled error: {}", e.what());
     } catch (...) {
-      std::cout << "unhandled unknown error" << std::endl;
+      tiles::t_log("unhandled unknown error");
     }
   });
 
@@ -74,15 +73,15 @@ int main() {
   io_service_shutdown shutd(ios);
   shutdown_handler<io_service_shutdown> shutdown(ios, shutd);
 
-  std::cout << ">>> tiles-server up and running!" << std::endl;
+  tiles::t_log(">>> tiles-server up and running!");
   while (true) {
     try {
       ios.run();
       break;
     } catch (std::exception const& e) {
-      std::cout << "unhandled error: " << e.what() << std::endl;
+      tiles::t_log("unhandled error: {}", e.what());
     } catch (...) {
-      std::cout << "unhandled unknown error" << std::endl;
+      tiles::t_log("unhandled unknown error");
     }
   }
 }

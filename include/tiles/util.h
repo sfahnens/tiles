@@ -1,9 +1,31 @@
 #pragma once
 
+#include <time.h>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <string>
+
+#include "fmt/core.h"
+#include "fmt/ostream.h"
+
+namespace tiles {
+template <typename... Args>
+inline void t_log(Args&&... args) {
+  using clock = std::chrono::system_clock;
+  auto const now = clock::to_time_t(clock::now());
+  struct tm tmp;
+#if _MSC_VER >= 1400
+  gmtime_s(&tmp, &now);
+#else
+  gmtime_r(&now, &tmp);
+#endif
+  std::cout << std::put_time(&tmp, "%FT%TZ") << " | ";
+  fmt::print(std::cout, std::forward<Args>(args)...);
+  std::cout << std::endl;
+}
+
+}  // namespace tiles
 
 #ifndef log_err
 #define log_err(M, ...) fprintf(stderr, "[ERR] " M "\n", ##__VA_ARGS__);

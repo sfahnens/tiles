@@ -18,6 +18,8 @@
 - use clipper for geometry clipping
 
 == HIGH PRIO:
+- occasionally: bus error!
+
 - render: order shapes by area
 - skip simplify for simple features (polygon with 4 points -> binary)
 - improve geometry clipping: compute unclipped z-range

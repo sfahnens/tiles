@@ -46,12 +46,12 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
   oa::Assembler::config_type assembler_config;
   oa::MultipolygonManager<oa::Assembler> mp_manager{assembler_config};
 
-  std::cerr << "Pass 1...\n";
+  t_log("Pass 1...");
   orel::read_relations(input_file, mp_manager);
-  std::cerr << "Pass 1 done\n";
+  t_log("Pass 1 done");
 
-  std::cerr << "Memory:\n";
-  orel::print_used_memory(std::cerr, mp_manager.used_memory());
+  t_log("Memory:");
+  orel::print_used_memory(std::cout, mp_manager.used_memory());
 
   index_t index;
   location_handler_t location_handler{index};
@@ -61,20 +61,20 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
   // node location handler and then the multipolygon collector. The collector
   // will put the areas it has created into the "buffer" which are then
   // fed through our "handler".
-  std::cerr << "Pass 2...\n";
+  t_log("Pass 2...");
   oio::Reader reader{input_file};
-  // o::ProgressBar progress{reader.file_size(), ou::isatty(2)};
+  o::ProgressBar progress{reader.file_size(), ou::isatty(2)};
 
   o::apply(reader, location_handler, handler,
            mp_manager.handler(
                [&handler](auto&& buffer) { o::apply(buffer, handler); }));
   reader.close();
-  std::cerr << "Pass 2 done\n";
+  t_log("Pass 2 done");
 
   // Output the amount of main memory used so far. All complete multipolygon
   // relations have been cleaned up.
-  std::cerr << "Memory:\n";
-  orel::print_used_memory(std::cerr, mp_manager.used_memory());
+  t_log("Memory:");
+  orel::print_used_memory(std::cout, mp_manager.used_memory());
 
   names_builder.store(handle, inserter.txn_);
 }

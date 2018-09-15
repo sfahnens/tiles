@@ -117,8 +117,6 @@ utl::buffer load_buffer(std::string const& fname) {
       continue;
     }
 
-    std::cout << stat.m_filename << std::endl;
-
     utl::buffer buf{stat.m_uncomp_size};
     verify(mz_zip_reader_extract_to_mem(&ar, i, buf.data(), buf.size(), 0),
            "shp: error extracting .shp file");
@@ -129,12 +127,11 @@ utl::buffer load_buffer(std::string const& fname) {
 
 void load_shapefile(std::string const& fname,
                     std::function<void(fixed_simple_polygon)> const& consumer) {
-  std::cout << "load buffer" << std::endl;
+  t_log("[load_shapefile] load buffer");
   auto&& buf = load_buffer(fname);
-  std::cout << "read_shapefile" << std::endl;
-
+  t_log("[load_shapefile] read shapefile");
   read_shapefile(buf, consumer);
-  std::cout << "done." << std::endl;
+  t_log("[load_shapefile] done.");
 }
 
 }  // namespace tiles

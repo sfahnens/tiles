@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
   }
 
   if (opt.has_any_task({"coastlines", "features"})) {
-    std::cout << "|> clear database\n";
+    tiles::t_log("clear database");
     tiles::clear_database(opt.db_fname_);
   }
 
@@ -79,14 +79,14 @@ int main(int argc, char** argv) {
   if (opt.has_any_task({"coastlines"})) {
     tiles::scoped_timer t{"load coastlines"};
     tiles::load_coastlines(handle, opt.coastlines_fname_);
-    std::cout << "|> sync db\n";
+    tiles::t_log("sync db");
     db_env.sync();
   }
 
   if (opt.has_any_task({"features"})) {
-    std::cout << "|> load features\n";
+    tiles::t_log("load features");
     tiles::load_osm(handle, opt.osm_fname_);
-    std::cout << "|> sync db\n";
+    tiles::t_log("sync db");
     db_env.sync();
   }
 
@@ -95,17 +95,17 @@ int main(int argc, char** argv) {
   }
 
   if (opt.has_any_task({"pack"})) {
-    std::cout << "|> feature meta pair coding\n";
+    tiles::t_log("feature meta pair coding");
     tiles::make_meta_coding(handle);
 
-    std::cout << "|> pack features\n";
+    tiles::t_log("pack features");
     tiles::pack_features(handle);
   }
 
   if (opt.has_any_task({"tiles"})) {
-    std::cout << "|> prepare tiles\n";
+    tiles::t_log("prepare tiles");
     tiles::prepare_tiles(handle, 10);
   }
 
-  std::cout << "|> import done!\n";
+  tiles::t_log("import done!");
 }

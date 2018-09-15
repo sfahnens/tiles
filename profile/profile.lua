@@ -36,7 +36,6 @@ function process_way(way)
            way:has_tag("highway", "cycleway") or
            way:has_tag("highway", "path") then
       way:set_approved_min(12)
-
     end
 
   elseif way:has_tag("railway", "rail", "tram") then

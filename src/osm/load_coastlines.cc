@@ -183,10 +183,11 @@ void to_fixed_polygon(fixed_polygon& polygon, cl::PolyNodes const& nodes) {
   }
 }
 
-std::string finalize_tile(cl::Path const& bounds,
-                          std::vector<coastline_ptr> const& coastlines) {
+std::optional<std::string> finalize_tile(
+    cl::Path const& draw_clip, cl::Path const& insert_clip,
+    std::vector<coastline_ptr> const& coastlines) {
   cl::Clipper clpr;
-  clpr.AddPath(bounds, cl::ptSubject, true);
+  clpr.AddPath(draw_clip, cl::ptSubject, true);
   for (auto const& coastline : coastlines) {
     clpr.AddPaths(coastline->geo_, cl::ptClip, true);
   }
@@ -194,6 +195,12 @@ std::string finalize_tile(cl::Path const& bounds,
   cl::PolyTree solution;
   clpr.Execute(cl::ctDifference, solution, cl::pftEvenOdd, cl::pftEvenOdd);
   verify(!solution.Childs.empty(), "difference empty!");
+
+  cl::Paths solution_paths;
+  cl::ClosedPathsFromPolyTree(solution, solution_paths);
+  if (intersection(solution_paths, insert_clip).empty()) {
+    return std::nullopt;
+  }
 
   fixed_polygon polygon;
   to_fixed_polygon(polygon, solution.Childs);
@@ -212,29 +219,33 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
   for (auto const& child : task.tile_.direct_children()) {
     // scoped_timer t{"clip"};
 
-    auto const bounds = tile_spec{child}.draw_bounds_;
-    auto const clip = box_to_path(bounds);
+    auto const insert_bounds = tile_spec{child}.insert_bounds_;
+    auto const insert_clip = box_to_path(insert_bounds);
+
+    auto const draw_bounds = tile_spec{child}.draw_bounds_;
+    auto const draw_clip = box_to_path(draw_bounds);
 
     bool fully_dirtside = false;
     std::vector<coastline_ptr> matching;
     for (auto const& coastline : task.coastlines_) {
-      if (!touches(bounds, coastline->box_)) {
+      if (!touches(insert_bounds, coastline->box_)) {
         continue;
       }
 
-      if (within(bounds, coastline->box_)) {
+      if (within(insert_bounds, coastline->box_)) {
         matching.push_back(coastline);
         continue;
       }
 
-      auto geo = intersection(coastline->geo_, clip);
+      auto geo = intersection(coastline->geo_, draw_clip);
       if (geo.empty()) {
         continue;
       }
 
       if (geo.size() == 1 && geo[0].size() == 4 &&
-          std::all_of(begin(geo[0]), end(geo[0]), [&clip](auto const& pt) {
-            return end(clip) != std::find(begin(clip), end(clip), pt);
+          std::all_of(begin(geo[0]), end(geo[0]), [&draw_clip](auto const& pt) {
+            return end(draw_clip) !=
+                   std::find(begin(draw_clip), end(draw_clip), pt);
           })) {
         fully_dirtside = true;
         break;
@@ -257,8 +268,11 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
       // std::cout << "recursive descent" << std::endl;
       geo_q.enqueue(geo_task{child, std::move(matching)});
     } else {
-      // std::cout << "save to database" << std::endl;
-      db_q.enqueue({child, finalize_tile(clip, matching)});
+      if (auto str = finalize_tile(draw_clip, insert_clip, matching); str) {
+        db_q.enqueue({child, std::move(*str)});
+      } else {
+        ++stats.fully_dirtside_;
+      }
       stats.report_progess(child.z_);
     }
   }

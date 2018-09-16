@@ -40,15 +40,52 @@ struct feature_inserter : public batch_inserter {
     auto const value = serialize_feature(f);
 
     for (auto const& tile : make_tile_range(box)) {
+      pending_size_ += value.size();
+
       auto& pending = pending_features_[tile];
-      pending.push_back(value);
-      if (pending.size() > 100000) {
-        persist(tile, pending);
-        auto it = pending_features_.find(tile);
-        verify(it != end(pending_features_), "cannot happen");
-        pending_features_.erase(it);
-      }
+      pending.first = pending_idx_++;
+      pending.second.push_back(value);
     }
+
+    constexpr size_t kCacheThresholdUpper = 64ull * 1024 * 1024;
+    constexpr size_t kCacheThresholdLower = kCacheThresholdUpper / 2;
+
+    if (pending_size_ < kCacheThresholdUpper) {
+      return;
+    }
+
+    auto entries = utl::to_vec(pending_features_, [](auto const& pair) {
+      return std::make_pair(pair.second.first, pair.first);
+    });
+    std::sort(begin(entries), end(entries));
+
+    size_t persisted_packs = 0;
+    size_t persisted_features = 0;
+    size_t persisted_size = 0;
+    for (auto const & [ index, tile ] : entries) {
+      if (pending_size_ < kCacheThresholdLower) {
+        break;
+      }
+
+      auto it = pending_features_.find(tile);
+      verify(it != end(pending_features_), "cannot happen");
+
+      auto const size = std::accumulate(
+          begin(it->second.second), end(it->second.second), 0ull,
+          [](auto const acc, auto const str) { return acc + str.size(); });
+      pending_size_ -= size;
+
+      ++persisted_packs;
+      persisted_features += it->second.second.size();
+      persisted_size += size;
+
+      persist(tile, it->second.second);
+      pending_features_.erase(it);
+    }
+
+    t_log("persisted {} packs with {} features ({})",
+          printable_num{persisted_packs}, printable_num{persisted_features},
+          printable_bytes{persisted_size});
   }
 
   void insert_unbuffered(geo::tile const& tile, std::string const& str) {
@@ -57,7 +94,7 @@ struct feature_inserter : public batch_inserter {
 
   void flush() {
     for (auto const & [ tile, features ] : pending_features_) {
-      persist(tile, features);
+      persist(tile, features.second);
     }
     pending_features_ = {};
   }
@@ -82,8 +119,12 @@ private:
   // (x, y) -> idx
   std::map<geo::tile, size_t> fill_state_;
 
+  size_t pending_idx_{0};
+  size_t pending_size_{0};
+
   // (x, y) -> feature string
-  std::map<geo::tile, std::vector<std::string>> pending_features_;
+  std::map<geo::tile, std::pair<size_t, std::vector<std::string>>>
+      pending_features_;
 };
 
 }  // namespace tiles

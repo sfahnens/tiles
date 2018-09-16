@@ -84,4 +84,70 @@ struct scoped_timer final {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
+struct printable_num {
+  explicit printable_num(double n) : n_{n} {}
+  explicit printable_num(size_t n) : n_{static_cast<double>(n)} {}
+  double n_;
+};
+
+struct printable_bytes {
+  explicit printable_bytes(double n) : n_{n} {}
+  explicit printable_bytes(size_t n) : n_{static_cast<double>(n)} {}
+  double n_;
+};
+
 }  // namespace tiles
+
+namespace fmt {
+
+template <>
+struct formatter<tiles::printable_num> {
+  template <typename ParseContext>
+  constexpr auto parse(ParseContext& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(tiles::printable_num const& num, FormatContext& ctx) {
+    auto const n = num.n_;
+    auto const k = n / 1e3;
+    auto const m = n / 1e6;
+    auto const g = n / 1e9;
+    if (n < 1e3) {
+      return format_to(ctx.begin(), "{:>6}  ", n);
+    } else if (k < 1e3) {
+      return format_to(ctx.begin(), "{:>6.1f}K ", k);
+    } else if (m < 1e3) {
+      return format_to(ctx.begin(), "{:>6.1f}M ", m);
+    } else {
+      return format_to(ctx.begin(), "{:>6.1f}G ", g);
+    }
+  }
+};
+
+template <>
+struct formatter<tiles::printable_bytes> {
+  template <typename ParseContext>
+  constexpr auto parse(ParseContext& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(tiles::printable_bytes const& bytes, FormatContext& ctx) {
+    auto const n = bytes.n_;
+    auto const k = n / 1024;
+    auto const m = n / (1024 * 1024);
+    auto const g = n / (1024 * 1024 * 1024);
+    if (n < 1024) {
+      return format_to(ctx.begin(), "{:>7.2f}B  ", n);
+    } else if (k < 1024) {
+      return format_to(ctx.begin(), "{:>7.2f}KB ", k);
+    } else if (m < 1024) {
+      return format_to(ctx.begin(), "{:>7.2f}MB ", m);
+    } else {
+      return format_to(ctx.begin(), "{:>7.2f}GB ", g);
+    }
+  }
+};
+
+}  // namespace fmt

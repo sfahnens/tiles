@@ -61,23 +61,17 @@ struct raii_helper {
 struct scoped_timer final {
   explicit scoped_timer(std::string label)
       : label_{std::move(label)}, start_{std::chrono::steady_clock::now()} {
-    std::cout << "|> start: " << label_ << "\n";
+    t_log("start: {}", label_);
   }
 
   ~scoped_timer() {
     using namespace std::chrono;
-
     auto const now = steady_clock::now();
     double dur = duration_cast<microseconds>(now - start_).count() / 1000.0;
 
-    std::cout << "|> done: " << label_ << " (";
-    if (dur < 1000) {
-      std::cout << std::setw(6) << std::setprecision(4) << dur << "ms";
-    } else {
-      dur /= 1000;
-      std::cout << std::setw(6) << std::setprecision(4) << dur << "s";
-    }
-    std::cout << ")" << std::endl;
+    tlog("done: {} ({:.3f}{})", label_,  //
+         dur < 1000 ? dur : dur / 1000.,  //
+         dur < 1000 ? "ms" : "s");
   }
 
   std::string label_;

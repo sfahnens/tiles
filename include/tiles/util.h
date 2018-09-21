@@ -69,7 +69,7 @@ struct scoped_timer final {
     auto const now = steady_clock::now();
     double dur = duration_cast<microseconds>(now - start_).count() / 1000.0;
 
-    tlog("done: {} ({:.3f}{})", label_,  //
+    t_log("done: {} ({:.3f}{})", label_,  //
          dur < 1000 ? dur : dur / 1000.,  //
          dur < 1000 ? "ms" : "s");
   }

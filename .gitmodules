@@ -40,3 +40,6 @@
 [submodule "external_lib/fmt"]
 	path = external_lib/fmt
 	url = git@git.motis-project.de:lib/fmt.git
+[submodule "external_lib/protozero"]
+	path = external_lib/protozero
+	url = git@git.motis-project.de:lib/protozero.git

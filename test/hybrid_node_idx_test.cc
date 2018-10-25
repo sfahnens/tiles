@@ -52,21 +52,21 @@ struct hybrid_node_idx {
       roots_.emplace_back(pz::decode_varint(&it, std::end(dat_)),
                           pz::decode_varint(&it, std::end(dat_)));
     }
-
-    root_idx_bits_ = make_root_idx_bits();
-    t_log("reading {} roots ({} bits)", roots_.size(), root_idx_bits_);
+    init_root_idx();
   }
 
   hybrid_node_idx(int idx_fd, int dat_fd, std::vector<fixed_xy> roots)
-      : idx_{idx_fd},
-        dat_{dat_fd},
-        roots_{std::move(roots)},
-        root_idx_bits_{make_root_idx_bits()} {
+      : idx_{idx_fd}, dat_{dat_fd}, roots_{std::move(roots)} {
+    init_root_idx();
     verify(!roots_.empty(), "roots must not be empty");
   }
 
-  uint32_t make_root_idx_bits() const {
-    return std::floor(std::log2(roots_.size()) + 1);
+  void init_root_idx() {
+    root_idx_bits_ = std::floor(std::log2(roots_.size()) + 1);
+    root_idx_mask_ = (static_cast<size_t>(1) << root_idx_bits_) - 1;
+
+    // last element must must be available as tag for empty span
+    verify(roots_.size() <= root_idx_mask_, "root computation mask broken!");
   }
 
   std::optional<fixed_xy> get_coords(osm_id_t const& id) const {
@@ -89,19 +89,22 @@ struct hybrid_node_idx {
 
     while (curr_id <= id && dat_it != std::end(dat_)) {
       auto const header = pz::decode_varint(&dat_it, std::end(dat_));
-      if (header == 0) {
-        break;
-      }
-
       auto const span_size = header >> root_idx_bits_;
+      auto const root_idx = header & root_idx_mask_;
 
-      auto const root_idx_mask = (static_cast<size_t>(1) << root_idx_bits_) - 1;
-      auto const root_idx = header & root_idx_mask;
+      if (root_idx == root_idx_mask_) {
+        if (span_size == 0) {
+          break;  // eof
+        } else {
+          curr_id += span_size;  // empty span
+          continue;
+        }
+      }
 
       delta_decoder x_dec{roots_.at(root_idx).x()};
       delta_decoder y_dec{roots_.at(root_idx).y()};
 
-      for (auto i = 0ul; i < span_size; ++i) {
+      for (auto i = 0ul; i < (span_size + 1); ++i) {
         auto x = x_dec.decode(
             pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat_))));
         auto y = y_dec.decode(
@@ -112,8 +115,6 @@ struct hybrid_node_idx {
         }
         ++curr_id;
       }
-
-      curr_id += pz::decode_varint(&dat_it, std::end(dat_));  // empty span
     }
 
     return std::nullopt;
@@ -123,7 +124,9 @@ struct hybrid_node_idx {
   osmium::detail::mmap_vector_file<char> dat_;
 
   std::vector<fixed_xy> roots_;
-  uint32_t root_idx_bits_;
+
+  size_t root_idx_bits_;
+  size_t root_idx_mask_;
 };
 
 struct hybrid_node_idx_builder {
@@ -137,6 +140,9 @@ struct hybrid_node_idx_builder {
       push_varint(root.x());
       push_varint(root.y());
     }
+
+    t_log("reading {} roots ({} bits)", nodes_.roots_.size(),
+          nodes_.root_idx_bits_);
   }
 
   void push(osm_id_t const id, fixed_xy const& pos) {
@@ -153,10 +159,11 @@ struct hybrid_node_idx_builder {
 
   void finish() {
     push_coord_span();
+    push_empty_span(last_id_ + 1);  // 0 length empty span --> "EOF"
 
-    nodes_.dat_.push_back('\0');  // 0 length empty span
-    nodes_.dat_.push_back('\0');  // 0 length full span -> "EOF"
-    nodes_.dat_.push_back('\1');  // ensure zeros are actually written?!
+    // nodes_.dat_.push_back('\0');  // 0 length empty span
+    // nodes_.dat_.push_back('\0');  // 0 length full span -> "EOF"
+    // nodes_.dat_.push_back('\1');  // ensure zeros are actually written?!
   }
 
   void push_coord_span() {
@@ -170,30 +177,105 @@ struct hybrid_node_idx_builder {
       coords_written_ = 0;
     }
 
-    auto const best_root = get_best_root(span_.front());
-    push_varint(span_.size() << nodes_.root_idx_bits_ | best_root);
+    struct coord_info {
+      int best_root_, restart_saving_;
+    };
 
-    delta_encoder x_enc{nodes_.roots_[best_root].x()};
-    delta_encoder y_enc{nodes_.roots_[best_root].y()};
-    for (auto const& coord : span_) {
-      auto const s0 = nodes_.dat_.size();
-      push_varint(pz::encode_zigzag64(x_enc.encode(coord.x())));
-      auto const s1 = nodes_.dat_.size();
-      push_varint(pz::encode_zigzag64(y_enc.encode(coord.y())));
-      auto const s2 = nodes_.dat_.size();
+    // 1. forward pass - compute best roots and savings per node
+    auto const best_init_root = get_best_root(span_.front());
+    delta_encoder x_enc{nodes_.roots_[best_init_root].x()};
+    delta_encoder y_enc{nodes_.roots_[best_init_root].y()};
+    auto const info = utl::to_vec(span_, [&](auto const& coord) {
+      auto const& best_root_idx = get_best_root(coord);
 
-      auto const sx = s1 - s0;
-      auto const sy = s2 - s1;
-      ++stat_coord_chars_[sx < 10 ? sx : 0];
-      ++stat_coord_chars_[sy < 10 ? sy : 0];
+      auto const restart_cost =
+          byte_distance(nodes_.roots_[best_root_idx], coord);
+      auto const consec_cost =
+          get_varint_size(pz::encode_zigzag64(x_enc.encode(coord.x()))) +
+          get_varint_size(pz::encode_zigzag64(y_enc.encode(coord.y())));
+
+      return coord_info{best_root_idx, consec_cost - restart_cost};
+    });
+
+    // 2. backward pass - find actual restarts / span sizes
+    std::vector<size_t> span_sizes;
+    size_t curr_size = 0;
+    for (int i = span_.size() - 1; i >= 0; --i) {
+      ++curr_size;
+      if (get_varint_size((curr_size - 1) << nodes_.root_idx_bits_) <
+          info[i].restart_saving_) {
+        span_sizes.push_back(curr_size);
+        curr_size = 0;
+      }
     }
+    if (curr_size != 0) {
+      span_sizes.push_back(curr_size);
+    }
+    std::reverse(begin(span_sizes), end(span_sizes));
 
-    stat_nodes_ += span_.size();
-    ++stat_spans_;
+    // 3. write pass - write using computed sizes
+    auto coord_idx = 0;
+    for (auto const& span_size : span_sizes) {
+      auto const& best_root = info[coord_idx].best_root_;
+      push_varint((span_size - 1) << nodes_.root_idx_bits_ | best_root);
 
-    for (auto i = 0u; i < kStatSpanCumSizeLimits.size(); ++i) {
-      if (span_.size() <= kStatSpanCumSizeLimits[i]) {
-        ++stat_span_cum_sizes_[i];
+      x_enc.reset(nodes_.roots_[best_root].x());
+      y_enc.reset(nodes_.roots_[best_root].y());
+      for (auto i = 0u; i < span_size; ++i, ++coord_idx) {
+        auto x0 = x_enc.curr_;
+        auto y0 = y_enc.curr_;
+
+        auto const sx = push_varint_zz(x_enc.encode(span_[coord_idx].x()));
+        auto const sy = push_varint_zz(y_enc.encode(span_[coord_idx].y()));
+
+        if (debug_limit_ < 100 && (sx == 5 || sy == 5)) {
+          auto pos0 = tiles::fixed_to_latlng({x0, y0});
+          auto pos = tiles::fixed_to_latlng(span_[coord_idx]);
+          std::cout << "[[" << pos0.lng_ << ", " << pos0.lat_ << "],";
+          std::cout << "[" << pos.lng_ << ", " << pos.lat_ << "]],\t";
+          std::cout << i << " " << sx << " " << sy << "\n";
+
+          for (auto const& root : nodes_.roots_) {
+            auto const& from = root;
+            auto const& to = span_[coord_idx];
+
+
+          auto pos_r = tiles::fixed_to_latlng(root);
+
+          std::cout << pos_r.lng_ << "," << pos_r.lat_ << "\t ";
+
+          std::cout << from.x() << "," << from.y() << "\t ";
+          std::cout << to.x() << "," << to.y() << "\t ";
+
+            auto x = pz::encode_zigzag64(
+                static_cast<fixed_delta_t>(to.x() - from.x()));
+            auto y = pz::encode_zigzag64(
+                static_cast<fixed_delta_t>(to.y() - from.y()));
+
+            std::cout << static_cast<fixed_delta_t>(to.x() - from.x()) << "|"
+                      << static_cast<fixed_delta_t>(to.y() - from.y()) << " ";
+
+            std::cout << x << "|" << y << " ";
+            std::cout << get_varint_size(x) << "+" << get_varint_size(y)
+                      << "\n";
+          }
+
+          std::cout << "\n";
+
+          ++debug_limit_;
+        }
+
+        ++stat_coord_chars_[sx < 10 ? sx : 0];
+        ++stat_coord_chars_[sy < 10 ? sy : 0];
+      }
+
+      stat_nodes_ += span_size;
+      ++stat_spans_;
+
+      for (auto i = 0u; i < kStatSpanCumSizeLimits.size(); ++i) {
+        if (span_size <= kStatSpanCumSizeLimits[i]) {
+          ++stat_span_cum_sizes_[i];
+        }
       }
     }
 
@@ -201,31 +283,43 @@ struct hybrid_node_idx_builder {
     span_.clear();
   }
 
-  size_t get_best_root(fixed_xy const& coord) {
-    // XXX faster implementation / precomputed decision tree
-    auto dists = utl::to_vec(nodes_.roots_, [&coord](auto const& root) {
-      auto x =
-          pz::encode_zigzag64(static_cast<fixed_delta_t>(coord.x() - root.x()));
-      auto x_bytes = std::max(1., std::ceil(std::floor(std::log2(x) + 1) / 7));
+  int byte_distance(fixed_xy const& from, fixed_xy const& to) {
+    auto x = pz::encode_zigzag64(static_cast<fixed_delta_t>(to.x() - from.x()));
+    auto y = pz::encode_zigzag64(static_cast<fixed_delta_t>(to.y() - from.y()));
+    return get_varint_size(x) + get_varint_size(y);
+  }
 
-      auto y =
-          pz::encode_zigzag64(static_cast<fixed_delta_t>(coord.y() - root.y()));
-      auto y_bytes = std::max(1., std::ceil(std::floor(std::log2(y) + 1) / 7));
-
-      return x_bytes + y_bytes;
+  int get_best_root(fixed_xy const& coord) {
+    auto const dists = utl::to_vec(nodes_.roots_, [&](auto const& root) {
+      return byte_distance(root, coord);
     });
 
     return std::distance(begin(dists),
                          std::min_element(begin(dists), end(dists)));
   }
 
+  static inline int get_varint_size(uint64_t value) {
+    int n = 1;
+    while (value >= 0x80u) {
+      value >>= 7u;
+      ++n;
+    }
+    return n;
+  }
+
   void push_empty_span(osm_id_t const next_id) {
-    push_varint(next_id - last_id_ - 1);
+    push_varint((next_id - last_id_ - 1) << nodes_.root_idx_bits_ |
+                nodes_.root_idx_mask_);
   }
 
   template <typename Integer64>
-  void push_varint(Integer64 v) {
-    pz::write_varint(std::back_inserter(nodes_.dat_), v);
+  int push_varint(Integer64 v) {
+    return pz::write_varint(std::back_inserter(nodes_.dat_), v);
+  }
+
+  template <typename Integer64>
+  int push_varint_zz(Integer64 v) {
+    return push_varint(pz::encode_zigzag64(v));
   }
 
   hybrid_node_idx nodes_;
@@ -243,9 +337,19 @@ struct hybrid_node_idx_builder {
   static constexpr std::array<size_t, 10> kStatSpanCumSizeLimits{
       1, 7, 8, 9, 15, 16, 17, 100, 1000, 10000};
   std::array<size_t, kStatSpanCumSizeLimits.size()> stat_span_cum_sizes_ = {};
+
+  size_t debug_limit_ = 0;
 };
 
 }  // namespace tiles
+
+#define CHECK_EXISTS(nodes, id, pos_x, pos_y) \
+  {                                           \
+    auto const result = nodes.get_coords(id); \
+    REQUIRE(result);                          \
+    CHECK(pos_x == result->x());              \
+    CHECK(pos_y == result->y());              \
+  }
 
 TEST_CASE("hybrid_node_idx") {
   SECTION("empty idx") {
@@ -275,10 +379,7 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_FALSE(nodes.get_coords(0));
     CHECK_FALSE(nodes.get_coords(100));
 
-    auto result = nodes.get_coords(42);
-    REQUIRE(result);
-    CHECK(2 == result->x());
-    CHECK(3 == result->y());
+    CHECK_EXISTS(nodes, 42, 2, 3);
   }
 
   SECTION("entries consecutive") {
@@ -297,20 +398,9 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_FALSE(nodes.get_coords(0));
     CHECK_FALSE(nodes.get_coords(100));
 
-    auto const result42 = nodes.get_coords(42);
-    REQUIRE(result42);
-    CHECK(2 == result42->x());
-    CHECK(3 == result42->y());
-
-    auto const result43 = nodes.get_coords(43);
-    REQUIRE(result43);
-    CHECK(5 == result43->x());
-    CHECK(6 == result43->y());
-
-    auto const result44 = nodes.get_coords(44);
-    REQUIRE(result44);
-    CHECK(8 == result44->x());
-    CHECK(9 == result44->y());
+    CHECK_EXISTS(nodes, 42, 2, 3);
+    CHECK_EXISTS(nodes, 43, 5, 6);
+    CHECK_EXISTS(nodes, 44, 8, 9);
   }
 
   SECTION("entries gap") {
@@ -329,24 +419,13 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_FALSE(nodes.get_coords(0));
     CHECK_FALSE(nodes.get_coords(100));
 
-    auto const result42 = nodes.get_coords(42);
-    REQUIRE(result42);
-    CHECK(2 == result42->x());
-    CHECK(3 == result42->y());
-
+    CHECK_FALSE(nodes.get_coords(41));
     CHECK_FALSE(nodes.get_coords(43));
-
-    auto const result44 = nodes.get_coords(44);
-    REQUIRE(result44);
-    CHECK(8 == result44->x());
-    CHECK(9 == result44->y());
-
-    auto const result45 = nodes.get_coords(45);
-    REQUIRE(result45);
-    CHECK(1 == result45->x());
-    CHECK(2 == result45->y());
-
     CHECK_FALSE(nodes.get_coords(46));
+
+    CHECK_EXISTS(nodes, 42, 2, 3);
+    CHECK_EXISTS(nodes, 44, 8, 9);
+    CHECK_EXISTS(nodes, 45, 1, 2);
   }
 
   SECTION("non-standard root") {
@@ -363,10 +442,7 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_FALSE(nodes.get_coords(0));
     CHECK_FALSE(nodes.get_coords(100));
 
-    auto result = nodes.get_coords(42);
-    REQUIRE(result);
-    CHECK(2 == result->x());
-    CHECK(3 == result->y());
+    CHECK_EXISTS(nodes, 42, 2, 3);
   }
 
   SECTION("multiple roots") {
@@ -385,30 +461,63 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_FALSE(nodes.get_coords(0));
     CHECK_FALSE(nodes.get_coords(100));
 
-    auto const result42 = nodes.get_coords(42);
-    REQUIRE(result42);
-    CHECK(2 == result42->x());
-    CHECK(3 == result42->y());
+    CHECK_EXISTS(nodes, 42, 2, 3);
+    CHECK_EXISTS(nodes, 45, 64, 84);
 
+    CHECK_FALSE(nodes.get_coords(41));
     CHECK_FALSE(nodes.get_coords(43));
     CHECK_FALSE(nodes.get_coords(44));
-
-    auto const result45 = nodes.get_coords(45);
-    REQUIRE(result45);
-    CHECK(64 == result45->x());
-    CHECK(84 == result45->y());
-
     CHECK_FALSE(nodes.get_coords(46));
+  }
+
+  SECTION("artificial splits") {
+    auto const idx_fd = osmium::detail::create_tmp_file();
+    auto const dat_fd = osmium::detail::create_tmp_file();
+
+    {
+      tiles::hybrid_node_idx_builder builder{
+          idx_fd, dat_fd, {{123456, 0}, {0, 123456}, {10, 10}}};
+      builder.push(42, {2, 3});
+      builder.push(43, {2, 7});
+      builder.push(44, {123450, 2});
+      builder.push(45, {123455, 10});
+      builder.push(46, {8, 123450});
+      builder.push(47, {3, 123455});
+      builder.finish();
+
+      CHECK(3 == builder.stat_spans_);
+    }
+
+    tiles::hybrid_node_idx nodes{idx_fd, dat_fd};
+    CHECK_FALSE(nodes.get_coords(0));
+    CHECK_FALSE(nodes.get_coords(100));
+
+    CHECK_FALSE(nodes.get_coords(41));
+    CHECK_FALSE(nodes.get_coords(48));
+
+    CHECK_EXISTS(nodes, 42, 2, 3);
+    CHECK_EXISTS(nodes, 43, 2, 7);
+    CHECK_EXISTS(nodes, 44, 123450, 2);
+    CHECK_EXISTS(nodes, 45, 123455, 10);
+    CHECK_EXISTS(nodes, 46, 8, 123450);
+    CHECK_EXISTS(nodes, 47, 3, 123455);
   }
 }
 
 TEST_CASE("hybrid_node_idx_benchmark", "[!hide]") {
   tiles::t_log("start");
 
-  std::vector<geo::latlng> roots{{-1.93323, 29.0039}, {41.1125, -118.301},
-                                 {23.0797, 118.301},  {-21.1255, -57.832},
-                                 {48.8069, 8.26172},  {54.2652, 38.4961},
-                                 {40.8471, -81.7383}};
+  // std::vector<geo::latlng> roots{{-1.93323, 29.0039}, {41.1125, -118.301},
+  //                                {23.0797, 118.301},  {-21.1255, -57.832},
+  //                                {48.8069, 8.26172},  {54.2652, 38.4961},
+  //                                {40.8471, -81.7383}};
+
+  std::vector<geo::latlng> roots{
+      {22.7559, 87.7148},  {51.9443, 6.15234}, {-22.106, -56.7773},
+      {44.9648, 1.58203},  {-7.1881, 120.762}, {35.6037, 135.527},
+      {47.3983, 38.1445},  {9.27562, 5.09766}, {55.4789, 69.082},
+      {-11.6953, 31.8164}, {60.6732, 23.3789}, {45.4601, -119.004},
+      {42.6824, -75.7617}, {48.1074, 15.293},  {35.3174, -92.9883}};
 
   auto const fixed_roots = utl::to_vec(roots, tiles::latlng_to_fixed);
 

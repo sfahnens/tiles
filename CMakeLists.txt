@@ -112,8 +112,8 @@ if(TILES_STANDALONE)
   )
 endif()
 
-file(GLOB_RECURSE tiles-test-files test/*.cc)
+file(GLOB_RECURSE tiles-test-files test/*.cc src/osm/hybrid_node_idx.cc)
 
 add_executable(tiles-test ${tiles-test-files})
 set_target_properties(tiles-test PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
-target_link_libraries(tiles-test tiles)
+target_link_libraries(tiles-test tiles )

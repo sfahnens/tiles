@@ -26,7 +26,7 @@ void dump(fixed_polygon const&) {
 }
 
 void dump(fixed_geometry const& geometry) {
-  std::visit([](auto& arg) { dump(arg); }, geometry);
+  mpark::visit([](auto& arg) { dump(arg); }, geometry);
 }
 
 }  // namespace tiles

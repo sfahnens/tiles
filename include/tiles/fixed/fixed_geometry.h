@@ -10,6 +10,8 @@
 #include "boost/geometry/geometries/point_xy.hpp"
 #include "boost/geometry/geometries/polygon.hpp"
 
+#include "mpark/variant.hpp"
+
 #include "tiles/constants.h"
 
 namespace tiles {
@@ -35,7 +37,7 @@ using fixed_polygon = boost::geometry::model::multi_polygon<
     boost::geometry::model::polygon<fixed_xy>>;
 
 using fixed_geometry =
-    std::variant<fixed_null, fixed_point, fixed_polyline, fixed_polygon>;
+    mpark::variant<fixed_null, fixed_point, fixed_polyline, fixed_polygon>;
 
 using fixed_box = boost::geometry::model::box<fixed_xy>;
 

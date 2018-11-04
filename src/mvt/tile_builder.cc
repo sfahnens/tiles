@@ -238,7 +238,7 @@ struct layer_builder {
     auto geometry = simplify(pristine_geometry, spec_.tile_.z_);
     geometry = clip(geometry, spec_.draw_bounds_);
 
-    if (std::holds_alternative<fixed_null>(geometry)) {
+    if (mpark::holds_alternative<fixed_null>(geometry)) {
       return false;
     }
 

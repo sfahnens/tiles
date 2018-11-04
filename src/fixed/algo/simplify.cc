@@ -25,7 +25,7 @@ fixed_geometry simplify(fixed_polygon const& in, uint32_t const d) {
 
 fixed_geometry simplify(fixed_geometry const& in, uint32_t const z) {
   uint32_t d = 1 << (20 - z);
-  return std::visit([&](auto const& arg) { return simplify(arg, d); }, in);
+  return mpark::visit([&](auto const& arg) { return simplify(arg, d); }, in);
 }
 
 }  // namespace tiles

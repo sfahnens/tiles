@@ -126,6 +126,40 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_EXISTS(nodes, 44, (1 << 28) + 14, (1 << 28) + 15);
     CHECK_EXISTS(nodes, 45, (1 << 28) + 16, (1 << 28) + 17);
   }
+
+  SECTION("large numbers") {
+    auto const idx_fd = osmium::detail::create_tmp_file();
+    auto const dat_fd = osmium::detail::create_tmp_file();
+
+    {
+      tiles::hybrid_node_idx_builder builder{idx_fd, dat_fd};
+      builder.push(42, {2251065056, 1454559573});
+      builder.finish();
+    }
+
+    tiles::hybrid_node_idx nodes{idx_fd, dat_fd};
+    CHECK_FALSE(get_coords(nodes, 0));
+    CHECK_FALSE(get_coords(nodes, 100));
+
+    CHECK_FALSE(get_coords(nodes, 41));
+    CHECK_EXISTS(nodes, 42, 2251065056, 1454559573);
+    CHECK_FALSE(get_coords(nodes, 43));
+  }
+
+  SECTION("limits") {
+    tiles::hybrid_node_idx nodes;
+    tiles::hybrid_node_idx_builder builder{nodes};
+
+    CHECK_THROWS(builder.push(42, {-2, 3}));
+    CHECK_THROWS(builder.push(42, {2, -3}));
+
+    CHECK_NOTHROW(builder.push(42, {2, 3}));
+
+    CHECK_THROWS(
+        builder.push(43, {1ull + std::numeric_limits<uint32_t>::max(), 3}));
+    CHECK_THROWS(
+        builder.push(43, {2, 1ull + std::numeric_limits<uint32_t>::max()}));
+  }
 }
 
 TEST_CASE("hybrid_node_idx_benchmark", "[!hide]") {
@@ -137,13 +171,7 @@ TEST_CASE("hybrid_node_idx_benchmark", "[!hide]") {
 
   osmium::io::Reader reader("/data/osm/planet-latest.osm.pbf",
                             osmium::osm_entity_bits::node);
-  for (auto it = osmium::io::begin(reader); it != osmium::io::end(reader);
-       ++it) {
-    auto const& node = static_cast<osmium::Node&>(*it);  // NOLINT
-
-    builder.push(node.id(), tiles::latlng_to_fixed({node.location().lat(),
-                                                    node.location().lon()}));
-  }
+  o::apply(reader, builder);
   builder.finish();
 
   builder.dump_stats();

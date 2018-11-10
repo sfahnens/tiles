@@ -3,8 +3,11 @@
 #include <limits>
 #include <tuple>
 
+#include <boost/numeric/conversion/cast.hpp>
+
 #include "osmium/index/detail/mmap_vector_file.hpp"
 #include "osmium/index/detail/tmpfile.hpp"
+#include "osmium/osm/way.hpp"
 
 #include "protozero/varint.hpp"
 
@@ -40,7 +43,7 @@ struct hybrid_node_idx::impl {
 };
 
 uint32_t read_fixed(char const** data) {
-  auto p = reinterpret_cast<const int8_t*>(*data);
+  auto p = reinterpret_cast<const uint8_t*>(*data);
   uint32_t val = 0;
   val |= *p++;
   val |= (*p++) << 8;
@@ -118,6 +121,16 @@ hybrid_node_idx::hybrid_node_idx(int idx_fd, int dat_fd)
     : impl_{std::make_unique<impl>(idx_fd, dat_fd)} {}
 hybrid_node_idx::~hybrid_node_idx() = default;
 
+void hybrid_node_idx::way(osmium::Way& way) const {
+  for (auto& node_ref : way.nodes()) {
+    auto const& coords = get_coords(*this, node_ref.ref());
+    verify(coords, "coords missing!");
+    node_ref.set_location(
+        osmium::Location{static_cast<int32_t>(coords->x() - x_offset),
+                         static_cast<int32_t>(coords->y() - y_offset)});
+  }
+}
+
 struct hybrid_node_idx_builder::impl {
   impl(osmium::detail::mmap_vector_file<id_offset>& idx,
        osmium::detail::mmap_vector_file<char>& dat)
@@ -127,6 +140,12 @@ struct hybrid_node_idx_builder::impl {
       : nodes_{std::move(nodes)}, idx_{nodes_->idx_}, dat_{nodes_->dat_} {}
 
   void push(osm_id_t const id, fixed_xy const& pos) {
+    constexpr auto coord_min = std::numeric_limits<uint32_t>::min();
+    constexpr auto coord_max = std::numeric_limits<uint32_t>::max();
+
+    verify(pos.x() >= coord_min && pos.y() >= coord_min &&
+               pos.x() <= coord_max && pos.y() <= coord_max,
+           "pos not within bounds");
     verify(id > last_id_, "ids not sorted!");
 
     if (last_id_ + 1 != id && !span_.empty()) {
@@ -216,9 +235,8 @@ struct hybrid_node_idx_builder::impl {
   }
 
   void push_fixed(uint32_t v) {
-    auto data = std::back_inserter(dat_);
     for (auto i = 0u; i < sizeof(v); ++i) {
-      *data++ = char(v & 0xffu);
+      dat_.push_back(char(v & 0xffu));
       v >>= 8u;
     }
   }
@@ -261,10 +279,10 @@ struct hybrid_node_idx_builder::impl {
 
   size_t stat_nodes_ = 0;
   size_t stat_spans_ = 0;
-  std::array<size_t, 10> stat_coord_chars_ = {};
+  std::array<size_t, 7> stat_coord_chars_ = {};
 
-  static constexpr std::array<size_t, 10> kStatSpanCumSizeLimits{1, 64, 100,
-                                                                 1000, 10000};
+  static constexpr std::array<size_t, 5> kStatSpanCumSizeLimits{1, 64, 100,
+                                                                1000, 10000};
   std::array<size_t, kStatSpanCumSizeLimits.size()> stat_span_cum_sizes_ = {};
 };
 

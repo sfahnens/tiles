@@ -24,6 +24,8 @@ struct delta_encoder {
 struct delta_decoder {
   explicit delta_decoder(fixed_coord_t init) : curr_(init) {}
 
+  void reset(fixed_coord_t val) { curr_ = val; }
+
   fixed_coord_t decode(fixed_delta_t val) {
     curr_ += val;
     return curr_;

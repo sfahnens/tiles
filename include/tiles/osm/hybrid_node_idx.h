@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "osmium/handler.hpp"
+#include "osmium/memory/buffer.hpp"
 #include "osmium/osm/node.hpp"
 #include "osmium/osm/types.hpp"
 
@@ -30,6 +31,12 @@ struct hybrid_node_idx : public osmium::handler::Handler {
 // TODO not real fixed_xy here
 std::optional<fixed_xy> get_coords(hybrid_node_idx const&,
                                    osmium::object_id_type const&);
+
+void get_coords(
+    hybrid_node_idx const&,
+    std::vector<std::pair<osmium::object_id_type, osmium::Location*>>&);
+
+void update_locations(hybrid_node_idx const&, osmium::memory::Buffer&);
 
 struct hybrid_node_idx_builder : public osmium::handler::Handler {
   hybrid_node_idx_builder(hybrid_node_idx&);

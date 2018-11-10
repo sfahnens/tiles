@@ -8,6 +8,7 @@
 #include "osmium/index/detail/mmap_vector_file.hpp"
 #include "osmium/index/detail/tmpfile.hpp"
 #include "osmium/osm/way.hpp"
+#include "osmium/visitor.hpp"
 
 #include "protozero/varint.hpp"
 
@@ -112,6 +113,138 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
   }
 
   return std::nullopt;
+}
+
+void get_coords(
+    hybrid_node_idx const& nodes,
+    std::vector<std::pair<osmium::object_id_type, osmium::Location*>>& query) {
+  auto const& idx = nodes.impl_->idx_;
+  auto const& dat = nodes.impl_->dat_;
+
+  if (idx.empty()) {
+    return;
+  }
+
+  constexpr auto kReInitDistance = 1024;
+
+  osm_id_t curr_id = std::numeric_limits<osm_id_t>::min();
+  char const* dat_it = nullptr;
+  long span_size = 0;
+  long consumed = 0;
+
+  delta_decoder x_dec{0};
+  delta_decoder y_dec{0};
+  fixed_coord_t curr_x, curr_y;
+
+  std::sort(begin(query), end(query));
+  for (auto query_it = begin(query); query_it != end(query);) {
+    auto const& query_id = query_it->first;
+    bool jmp = false;
+
+    // use binary search in idx to jump into dat
+    if (curr_id + kReInitDistance < query_id) {
+      auto it_idx = std::lower_bound(
+          std::begin(idx), std::end(idx), query_id,
+          [](auto const& o, auto const& i) { return o.id_ < i; });
+      verify(!(it_idx == std::begin(idx) && it_idx->id_ != query_id),
+             "missing");
+      if (it_idx == std::end(idx) || it_idx->id_ != query_id) {
+        --it_idx;
+      }
+
+      curr_id = it_idx->id_;
+      dat_it = dat.data() + it_idx->offset_;
+
+      auto const header = pz::decode_varint(&dat_it, std::end(dat));
+      verify((header & 0x1) == 0x0, "idx points to empty span");
+      span_size = header >> 1;
+      consumed = 0;
+
+      jmp = true;
+    }
+
+    // forward to start of span which contains query_id
+    while (curr_id + span_size + 1 - consumed < query_id) {
+      if (consumed == 0) {
+        dat_it += 8;  // 2 * 4 bytes
+        ++consumed;  // only consume (dont advance curr_id)
+      }
+      for (; consumed < (span_size + 1); ++consumed) {
+        pz::skip_varint(&dat_it, std::end(dat));  // x
+        pz::skip_varint(&dat_it, std::end(dat));  // y
+        ++curr_id;
+      }
+
+      while (true) {
+        auto const header = pz::decode_varint(&dat_it, std::end(dat));
+        span_size = header >> 1;
+
+        if ((header & 0x1) == 0x1) {
+          if (span_size == 0) {
+            return;  // eof
+          } else {
+            curr_id += span_size + 1;  // skip empty span
+            continue;
+          }
+        } else {
+          break;  // coord span found
+        }
+      }
+
+      jmp = true;
+      consumed = 0;
+    }
+
+    // if jumped, we are at start of proper span -> reset the decoders
+    if (jmp) {
+      curr_x = read_fixed(&dat_it);
+      curr_y = read_fixed(&dat_it);
+
+      x_dec.reset(curr_x);
+      y_dec.reset(curr_y);
+      ++consumed;
+    }
+
+    // forward to actual node id
+    while (curr_id < query_id && dat_it != std::end(dat)) {
+      curr_x = x_dec.decode(
+          pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
+      curr_y = y_dec.decode(
+          pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
+      ++curr_id;
+      ++consumed;
+    }
+    verify(query_id == curr_id, "missing coords! (query_id=%li, curr_id=%li)",
+           query_id, curr_id);
+
+    // update values
+    for (; query_it->first == query_id; ++query_it) {
+      query_it->second->set_x(curr_x);
+      query_it->second->set_y(curr_y);
+    }
+  }
+}
+
+void update_locations(hybrid_node_idx const& nodes,
+                      osmium::memory::Buffer& buffer) {
+  struct query_builder : public osmium::handler::Handler {
+    void way(osmium::Way& way) {
+      for (auto& node_ref : way.nodes()) {
+        query_.emplace_back(node_ref.ref(), &node_ref.location());
+      }
+    }
+    std::vector<std::pair<osmium::object_id_type, osmium::Location*>> query_;
+  };
+
+  query_builder builder;
+  osmium::apply(buffer, builder);
+
+  get_coords(nodes, builder.query_);
+
+  for (auto const& pair : builder.query_) {
+    pair.second->set_x(pair.second->x() - hybrid_node_idx::x_offset);
+    pair.second->set_y(pair.second->y() - hybrid_node_idx::y_offset);
+  }
 }
 
 hybrid_node_idx::hybrid_node_idx()

@@ -81,13 +81,20 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
   {
     t_log("Pass 2...");
     oio::Reader reader{input_file};
-    o::ProgressBar progress{reader.file_size(), ou::isatty(2)};
+    o::ProgressBar progress_bar{reader.file_size(), ou::isatty(2)};
 
-    o::apply(reader, node_idx,  // location_handler,
-             handler, mp_manager.handler([&handler](auto&& buffer) {
-               o::apply(buffer, handler);
-             }));
+    while (auto buffer = reader.read()) {
+      progress_bar.update(reader.offset());
+
+      update_locations(node_idx, buffer);
+
+      o::apply(buffer, handler,
+               mp_manager.handler([&handler](auto&& mp_buffer) {
+                 o::apply(mp_buffer, handler);
+               }));
+    }
     reader.close();
+    progress_bar.file_done(input_file.size());
     t_log("Pass 2 done");
 
     t_log("Multipolygon Manager Memory:");

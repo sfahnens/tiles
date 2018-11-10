@@ -42,7 +42,7 @@ struct layer_names_builder {
     std::string buf;
     protozero::pbf_writer writer{buf};
     for (auto const& name : sorted) {
-      writer.add_string(0, name);
+      writer.add_string(1, name);
     }
 
     auto meta_dbi = handle.meta_dbi(txn);

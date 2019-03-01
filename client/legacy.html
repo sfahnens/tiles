@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+    <title>tiles / mapbox</title>
+    <script src="mapbox-gl.js"></script>
+    <link href="mapbox-gl.css" rel="stylesheet" />
+    <style>
+    head, body, #map {
+      padding: 0px; 
+      margin:0px; 
+      position: absolute; 
+      height: 100%;
+      width: 100%;
+    }</style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+// mapboxgl.accessToken = '<your access token here>';
+
+
+const water = "#bbd3f9";
+const rail = "#5b5b5b";
+// const pedestrian = "#ff0000";
+const pedestrian = "#fcfcfc";
+
+const sport = "#a4b1bc";
+const sport_outline = "#94a7b7";
+
+// const building = "#ff0000";
+const building = "#d8d8d8";
+const building_outline = "#c1c1c1";
+
+
+var simple = {
+    "version": 8,
+    "sources": {
+        "osm": {
+            "type": "vector",
+            // "tiles": ["http://localhost:8080/path/tiles/{z}/{x}/{y}.mvt"]
+            "tiles": ["http://localhost:8888/{z}/{x}/{y}.mvt"],
+            "maxzoom": 20
+        },
+        "raster": {
+            "type": "raster",
+            "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
+            "tileSize": 256,
+            "maxzoom": 18
+        }
+    },
+    "layers": [
+        {
+            "id": "raster",
+            "type": "raster",
+            "source": "raster"
+        }, {
+            "id": "cities",
+            "type": "circle",
+            "source": "osm",
+            "source-layer": "cities"
+        }, {
+            "id": "landuse",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "landuse",
+            "paint": {
+                "fill-color": ["match", ["get", "landuse"],
+                    "complex", "#efe7d0",
+                    "commercial", "#f1e3f4",
+                    "industrial", "#eadfce",
+                    "residential", "#edebd5",
+                    "retail", "#f2dae7",
+                    // "construction", "#aaa69d",
+
+                    "nature_light", "#d7f2e1",
+                    "nature_heavy", "#c0dbbe",
+                    "park", "#e6f4d4",
+                    "cemetery", "#bedbd1",
+                    "beach", "#fffcd3"
+
+                    "#ff0000"
+                    ]
+            }
+        }, {
+            "id": "water",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "water",
+            "paint": {"fill-color": water}
+        }, {
+            "id": "sport",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "sport",
+            "paint": {
+                "fill-color": sport,
+                "fill-outline-color": sport_outline
+
+            }
+        }, {
+            "id": "pedestrian",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "pedestrian",
+            "paint": {"fill-color": pedestrian}
+        }, {
+            "id": "waterway",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "waterway",
+            "paint": {"line-color": water}
+        }, {
+            "id": "rail",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "rail",
+            "paint": {
+                "line-color": rail,
+                "line-dasharray": [2, 2]
+            }
+        },{
+            "id": "road",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "road"
+            // "source-layer": "motis"
+        }, {
+            "id": "building",
+            "type": "fill",
+            "source": "osm",
+            "source-layer": "building",
+            "paint": {
+                "fill-color": building,
+                "fill-outline-color": building_outline
+            }
+        }
+    ]
+};
+
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: simple,
+    // zoom: 1,
+    // center: [-14, 35]
+    zoom: 14,
+    center: [8.6671065, 49.8747541]
+});
+
+// map.addControl(new mapboxgl.Navigation());
+
+
+map.on('style.load', () => {
+    map.getStyle().layers.forEach(layer => {
+        map.on('click', layer.id, e => {
+            console.log(e);
+        });
+    });
+})
+
+
+</script>
+
+</body>
+</html>

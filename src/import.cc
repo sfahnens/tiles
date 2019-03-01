@@ -1,8 +1,111 @@
 #include <iostream>
 
+#include "conf/options_parser.h"
+#include "conf/simple_config.h"
+
+#include "tiles/db/clear_database.h"
+#include "tiles/db/database_stats.h"
+#include "tiles/db/prepare_tiles.h"
+#include "tiles/db/shared_strings.h"
+#include "tiles/db/tile_database.h"
+#include "tiles/osm/load_coastlines.h"
 #include "tiles/osm/load_osm.h"
 
-int main() {
-  tiles::load_osm();
-  std::cout << "import done!" << std::endl;
+namespace tiles {
+
+// "/home/sebastian/Downloads/land-polygons-complete-4326.zip"
+// "/data/osm/2017-10-29/hessen-171029.osm.pbf"
+
+struct import_settings : public conf::simple_config {
+  explicit import_settings(
+      std::string const& db_fname = "tiles.mdb",
+      std::string const& osm_fname = "latest.osm.pbf",
+      std::string const& coastlines_fname = "coastlines.zip",
+      std::vector<std::string> const& tasks = {"all"})
+      : simple_config("tiles-import options", "") {
+    string_param(db_fname_, db_fname, "db_fname", "/path/to/tiles.mdb");
+    string_param(osm_fname_, osm_fname, "osm_fname", "/path/to/latest.osm.pbf");
+    string_param(coastlines_fname_, coastlines_fname, "coastlines_fname",
+                 "/path/to/coastlines.zip");
+    multitoken_param(tasks_, tasks, "tasks",
+                     "'all' or any combination of: 'coastlines', "
+                     "'features', 'stats', 'tiles'");
+  }
+
+  bool has_any_task(std::vector<std::string> const& query) {
+    return std::find(begin(tasks_), end(tasks_), "all") != end(tasks_) ||
+           std::any_of(begin(query), end(query), [this](auto const& q) {
+             return std::find(begin(tasks_), end(tasks_), q) != end(tasks_);
+           });
+  }
+
+  std::string db_fname_;
+  std::string osm_fname_;
+  std::string coastlines_fname_;
+
+  std::vector<std::string> tasks_;
+};
+
+}  // namespace tiles
+
+int main(int argc, char** argv) {
+  tiles::import_settings opt;
+
+  try {
+    conf::options_parser parser({&opt});
+    parser.read_command_line_args(argc, argv, false);
+
+    if (parser.help() || parser.version()) {
+      std::cout << "tiles-import\n\n";
+      parser.print_help(std::cout);
+      return 0;
+    }
+
+    parser.read_configuration_file(false);
+    parser.print_used(std::cout);
+  } catch (std::exception const& e) {
+    std::cout << "options error: " << e.what() << "\n";
+    return 1;
+  }
+
+  if (opt.has_any_task({"coastlines", "features"})) {
+    tiles::t_log("clear database");
+    tiles::clear_database(opt.db_fname_);
+  }
+
+  lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
+  tiles::tile_db_handle handle{db_env};
+
+  if (opt.has_any_task({"coastlines"})) {
+    tiles::scoped_timer t{"load coastlines"};
+    tiles::load_coastlines(handle, opt.coastlines_fname_);
+    tiles::t_log("sync db");
+    db_env.sync();
+  }
+
+  if (opt.has_any_task({"features"})) {
+    tiles::t_log("load features");
+    tiles::load_osm(handle, opt.osm_fname_);
+    tiles::t_log("sync db");
+    db_env.sync();
+  }
+
+  if (opt.has_any_task({"stats"})) {
+    tiles::database_stats(handle);
+  }
+
+  if (opt.has_any_task({"pack"})) {
+    tiles::t_log("feature meta pair coding");
+    tiles::make_meta_coding(handle);
+
+    tiles::t_log("pack features");
+    tiles::pack_features(handle);
+  }
+
+  if (opt.has_any_task({"tiles"})) {
+    tiles::t_log("prepare tiles");
+    tiles::prepare_tiles(handle, 10);
+  }
+
+  tiles::t_log("import done!");
 }

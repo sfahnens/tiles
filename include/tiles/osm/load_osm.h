@@ -1,7 +1,11 @@
 #pragma once
 
+#include <string>
+
 namespace tiles {
 
-void load_osm();
+struct tile_db_handle;
+
+void load_osm(tile_db_handle&, std::string const& fname);
 
 }  // namespace tiles

@@ -2,6 +2,10 @@
 
 #include "protozero/pbf_message.hpp"
 
+#include "geo/simplify_mask.h"
+
+#include "utl/erase_if.h"
+
 #include "tiles/fixed/algo/delta.h"
 #include "tiles/fixed/io/tags.h"
 #include "tiles/util.h"
@@ -10,107 +14,164 @@ namespace pz = protozero;
 
 namespace tiles {
 
-template <typename ITPair>
-fixed_delta_t get_next(ITPair& it_pair) {
-  verify(it_pair.first != it_pair.second, "iterator problem");
-  auto val = *it_pair.first;
-  ++it_pair.first;
-  return val;
-}
+struct default_decoder {
+  using range_t = pz::iterator_range<pz::pbf_reader::const_sint64_iterator>;
 
-template <typename ITPair, typename Points>
-void deserialize_points(ITPair& it_pair, delta_decoder& x_dec,
-                        delta_decoder& y_dec, Points& points) {
-  auto const size = get_next(it_pair);
-  points.reserve(size);
+  explicit default_decoder(range_t range) : range_{std::move(range)} {}
 
-  for (auto i = 0u; i < size; ++i) {
-    points.emplace_back(x_dec.decode(get_next(it_pair)),
-                        y_dec.decode(get_next(it_pair)));
+  template <typename Container>
+  void deserialize_points(Container& out) {
+    auto const size = get_next();
+    out.reserve(size);
+
+    for (auto i = 0u; i < size; ++i) {
+      out.emplace_back(x_decoder_.decode(get_next()),
+                       y_decoder_.decode(get_next()));
+    }
   }
+
+  fixed_delta_t get_next() {
+    verify(range_.first != range_.second, "iterator problem");
+    auto val = *range_.first;
+    ++range_.first;
+    return val;
+  }
+
+  range_t range_;
+
+  delta_decoder x_decoder_{kFixedCoordMagicOffset};
+  delta_decoder y_decoder_{kFixedCoordMagicOffset};
+};
+
+default_decoder make_default_decoder(pz::pbf_message<tags::FixedGeometry>& m) {
+  verify(m.next(), "invalid message");
+  verify(m.tag() == tags::FixedGeometry::packed_sint64_geometry, "invalid tag");
+  return default_decoder{m.get_packed_sint64()};
 }
 
-fixed_point deserialize_point(pz::pbf_message<tags::FixedGeometry>&& msg) {
-  verify(msg.next(), "invalid message");
-  verify(msg.tag() == tags::FixedGeometry::packed_sint64_geometry,
-         "invalid tag");
+struct simplifying_decoder : public default_decoder {
+  simplifying_decoder(default_decoder::range_t range,
+                      std::vector<std::string_view> simplify_masks, uint32_t z)
+      : default_decoder{std::move(range)},
+        simplify_masks_{std::move(simplify_masks)},
+        z_{z} {}
 
-  auto it_pair = msg.get_packed_sint64();
+  template <typename Container>
+  void deserialize_points(Container& out) {
+    verify(curr_mask_ < simplify_masks_.size(), "mask part missing");
+    geo::simplify_mask_reader reader{simplify_masks_[curr_mask_].data(), z_};
 
-  delta_decoder x_decoder{kFixedCoordMagicOffset};
-  delta_decoder y_decoder{kFixedCoordMagicOffset};
+    auto const size = get_next();
+    verify(size == reader.size_, "simplify mask size mismatch");
 
+    out.reserve(size);
+    for (auto i = 0u; i < size; ++i) {
+      if (reader.get_bit(i)) {
+        out.emplace_back(x_decoder_.decode(get_next()),
+                         y_decoder_.decode(get_next()));
+      } else {
+        x_decoder_.decode(get_next());
+        y_decoder_.decode(get_next());
+      }
+    }
+
+    ++curr_mask_;
+  }
+
+  std::vector<std::string_view> simplify_masks_;
+  uint32_t z_;
+  size_t curr_mask_{0};
+};
+
+simplifying_decoder make_simplifying_decoder(
+    pz::pbf_message<tags::FixedGeometry>& m,
+    std::vector<std::string_view> simplify_masks, uint32_t z) {
+  verify(m.next(), "invalid message");
+  verify(m.tag() == tags::FixedGeometry::packed_sint64_geometry, "invalid tag");
+  return {m.get_packed_sint64(), std::move(simplify_masks), z};
+}
+
+template <typename Decoder>
+fixed_point deserialize_point(Decoder&& decoder) {
   fixed_point point;
-  deserialize_points(it_pair, x_decoder, y_decoder, point);
+  decoder.deserialize_points(point);
   return point;
 }
 
-fixed_polyline deserialize_polyline(
-    pz::pbf_message<tags::FixedGeometry>&& msg) {
-  verify(msg.next(), "invalid message");
-  verify(msg.tag() == tags::FixedGeometry::packed_sint64_geometry,
-         "invalid tag");
+template <typename Decoder>
+fixed_polyline deserialize_polyline(Decoder&& decoder) {
+  auto const count = decoder.get_next();
 
-  auto it_pair = msg.get_packed_sint64();
-
-  delta_decoder x_decoder{kFixedCoordMagicOffset};
-  delta_decoder y_decoder{kFixedCoordMagicOffset};
-
-  auto const size = get_next(it_pair);
   fixed_polyline polyline;
-  polyline.resize(size);
-
-  for (auto i = 0u; i < size; ++i) {
-    deserialize_points(it_pair, x_decoder, y_decoder, polyline[i]);
+  polyline.resize(count);
+  for (auto i = 0u; i < count; ++i) {
+    decoder.deserialize_points(polyline[i]);
   }
-
   return polyline;
 }
 
-fixed_polygon deserialize_polygon(pz::pbf_message<tags::FixedGeometry>&& msg) {
-  verify(msg.next(), "invalid message");
-  verify(msg.tag() == tags::FixedGeometry::packed_sint64_geometry,
-         "invalid tag");
+template <typename Decoder>
+fixed_geometry deserialize_polygon(Decoder&& decoder) {
+  auto const count = decoder.get_next();
 
-  auto it_pair = msg.get_packed_sint64();
-
-  delta_decoder x_decoder{kFixedCoordMagicOffset};
-  delta_decoder y_decoder{kFixedCoordMagicOffset};
-
-  auto const size = get_next(it_pair);
   fixed_polygon polygon;
-  polygon.resize(size);
+  polygon.resize(count);
+  for (auto i = 0u; i < count; ++i) {
+    decoder.deserialize_points(polygon[i].outer());
 
-  for (auto i = 0u; i < size; ++i) {
-    deserialize_points(it_pair, x_decoder, y_decoder, polygon[i].outer());
-
-    auto const inner_size = get_next(it_pair);
-    polygon[i].inners().resize(inner_size);
-    for (auto j = 0u; j < inner_size; ++j) {
-      deserialize_points(it_pair, x_decoder, y_decoder, polygon[i].inners()[j]);
+    auto const inner_count = decoder.get_next();
+    polygon[i].inners().resize(inner_count);
+    for (auto j = 0u; j < inner_count; ++j) {
+      decoder.deserialize_points(polygon[i].inners()[j]);
     }
   }
-  return polygon;
+
+  utl::erase_if(polygon, [](auto& p) {
+    utl::erase_if(p.inners(), [](auto const& i) { return i.size() < 4; });
+    return p.outer().size() < 4;
+  });
+
+  if (polygon.empty()) {
+    return fixed_null{};
+  } else {
+    return polygon;
+  }
 }
 
-fixed_geometry deserialize(std::string const& str) {
-  pz::pbf_message<tags::FixedGeometry> msg{str};
+fixed_geometry deserialize(std::string_view geo) {
+  pz::pbf_message<tags::FixedGeometry> m{geo};
+  verify(m.next(), "invalid msg");
+  verify(m.tag() == tags::FixedGeometry::required_FixedGeometryType_type,
+         "invalid tag");
 
-  verify(msg.next(), "1invalid message");
-  verify(msg.tag() == tags::FixedGeometry::required_FixedGeometryType_type,
-         "1invalid tag");
-
-  auto type = static_cast<tags::FixedGeometryType>(msg.get_enum());
-  switch (type) {
+  switch (static_cast<tags::FixedGeometryType>(m.get_enum())) {
     case tags::FixedGeometryType::POINT:
-      // std::cout << "point" << std::endl;
-      return deserialize_point(std::move(msg));
+      return deserialize_point(make_default_decoder(m));
     case tags::FixedGeometryType::POLYLINE:
-      // std::cout << "polyline" << std::endl;
-      return deserialize_polyline(std::move(msg));
+      return deserialize_polyline(make_default_decoder(m));
     case tags::FixedGeometryType::POLYGON:
-      // std::cout << "polygon" << std::endl;
-      return deserialize_polygon(std::move(msg));
+      return deserialize_polygon(make_default_decoder(m));
+    default: verify(false, "unknown geometry");
+  }
+}
+
+fixed_geometry deserialize(std::string_view geo,
+                           std::vector<std::string_view> simplify_masks,
+                           uint32_t const z) {
+  pz::pbf_message<tags::FixedGeometry> m{geo};
+  verify(m.next(), "invalid msg");
+  verify(m.tag() == tags::FixedGeometry::required_FixedGeometryType_type,
+         "invalid tag");
+
+  switch (static_cast<tags::FixedGeometryType>(m.get_enum())) {
+    case tags::FixedGeometryType::POINT:
+      return deserialize_point(make_default_decoder(m));
+    case tags::FixedGeometryType::POLYLINE:
+      return deserialize_polyline(
+          make_simplifying_decoder(m, std::move(simplify_masks), z));
+    case tags::FixedGeometryType::POLYGON:
+      return deserialize_polygon(
+          make_simplifying_decoder(m, std::move(simplify_masks), z));
     default: verify(false, "unknown geometry");
   }
 }

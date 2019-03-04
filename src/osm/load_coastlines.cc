@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 #include <variant>
 
@@ -82,8 +83,9 @@ struct coastline_stats {
     auto pre_percent = 100. * pre / kTotal;
     auto post_percent = 100. * post / kTotal;
 
-    if (pre == 0 || post == kTotal || (static_cast<int>(pre_percent) / 5 !=
-                                       static_cast<int>(post_percent) / 5)) {
+    if (pre == 0 || post == kTotal ||
+        (static_cast<int>(pre_percent) / 5 !=
+         static_cast<int>(post_percent) / 5)) {
       t_log("process coastline: {}%", static_cast<int>(post_percent) / 5 * 5);
     }
   }

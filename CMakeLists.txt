@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(tiles)
 
-find_package(Boost COMPONENTS system filesystem thread iostreams REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system filesystem)
 find_package(Threads)
 
 link_directories(${Boost_LIBRARY_DIRS})
@@ -23,7 +23,7 @@ file(GLOB_RECURSE tiles-files
   src/util.cc
 )
 
-add_library(tiles EXCLUDE_FROM_ALL ${tiles-files})
+add_library(tiles STATIC ${tiles-files})
 set_target_properties(tiles PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
 target_include_directories(tiles PUBLIC include)
 target_compile_definitions(tiles PUBLIC -DPROTOZERO_USE_VIEW=std::string_view)

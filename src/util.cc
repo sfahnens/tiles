@@ -1,22 +1,22 @@
 #include "tiles/util.h"
 
-#include "boost/iostreams/filter/gzip.hpp"
-#include "boost/iostreams/filtering_stream.hpp"
+#include "utl/parser/util.h"
+
+#include "zlib.h"
 
 namespace tiles {
 
 std::string compress_gzip(std::string const& input) {
-  namespace bio = boost::iostreams;
+  auto out_size = compressBound(input.size());
+  std::string buffer('\0', out_size);
 
-  std::string output;
-  bio::filtering_ostream os;
+  auto error = compress2(reinterpret_cast<uint8_t*>(&buffer[0]), &out_size,
+                         reinterpret_cast<uint8_t const*>(&input[0]),
+                         input.size(), Z_BEST_COMPRESSION);
+  verify(!error, "compress_gzip failed");
 
-  os.push(bio::gzip_compressor(bio::gzip_params(bio::gzip::best_compression)));
-  os.push(bio::back_inserter(output));
-
-  os << input;
-  bio::close(os);
-
-  return output;
+  buffer.resize(out_size);
+  return buffer;
 }
+
 }  // namespace tiles

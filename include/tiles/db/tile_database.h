@@ -5,8 +5,6 @@
 #include "geo/tile.h"
 #include "lmdb/lmdb.hpp"
 
-#include "tiles/db/tile_index.h"
-
 namespace tiles {
 
 constexpr auto kDefaultMeta = "default_meta";

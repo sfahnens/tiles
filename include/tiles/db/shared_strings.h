@@ -15,6 +15,7 @@
 
 #include "tiles/db/feature_pack.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/db/tile_index.h"
 #include "tiles/feature/feature.h"
 #include "tiles/util.h"
 

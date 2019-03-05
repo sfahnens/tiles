@@ -268,7 +268,7 @@ struct layer_builder {
   }
 
   tile_spec const& spec_;
-  tile_builder::config const& config_;
+  tile_builder::config config_;
 
   bool has_geometry_;
 

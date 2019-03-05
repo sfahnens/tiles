@@ -24,6 +24,25 @@ namespace tiles {
 constexpr auto const kLayerCoastlineIdx = 0ull;
 constexpr auto const kLayerCoastlineName = "coastline";
 
+template <typename Vec>
+inline std::string write_layer_names(Vec&& vec) {
+  std::string buf;
+  protozero::pbf_writer writer{buf};
+  for (auto const& name : vec) {
+    writer.add_string(1, name);
+  }
+  return buf;
+}
+
+inline std::vector<std::string> read_layer_names(std::string_view const& str) {
+  std::vector<std::string> vec;
+  protozero::pbf_reader reader{str};
+  while (reader.next()) {
+    vec.emplace_back(reader.get_string());
+  }
+  return vec;
+}
+
 struct layer_names_builder {
   layer_names_builder() {
     layer_names_[kLayerCoastlineName] = kLayerCoastlineIdx;
@@ -36,16 +55,11 @@ struct layer_names_builder {
   void store(tile_db_handle& handle, lmdb::txn& txn) const {
     std::vector<std::string_view> sorted;
     sorted.resize(layer_names_.size());
-    for (auto const & [ name, idx ] : layer_names_) {
+    for (auto const& [name, idx] : layer_names_) {
       sorted.at(idx) = name;
     }
 
-    std::string buf;
-    protozero::pbf_writer writer{buf};
-    for (auto const& name : sorted) {
-      writer.add_string(0, name);
-    }
-
+    auto buf = write_layer_names(sorted);
     auto meta_dbi = handle.meta_dbi(txn);
     txn.put(meta_dbi, kMetaKeyLayerNames, buf);
   }
@@ -61,12 +75,7 @@ inline std::vector<std::string> get_layer_names(tile_db_handle& handle,
     return {{kLayerCoastlineName}};
   }
 
-  std::vector<std::string> names;
-  protozero::pbf_reader reader{*opt_names};
-  while (reader.next()) {
-    names.emplace_back(reader.get_string());
-  }
-  return names;
+  return read_layer_names(*opt_names);
 }
 
 struct pair_freq {

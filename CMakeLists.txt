@@ -40,6 +40,7 @@ target_link_libraries(tiles
   protozero
   sol2
   miniz
+  zlibstatic
 )
 
 file(GLOB_RECURSE tiles-import-files src/osm/*.cc)
@@ -57,7 +58,6 @@ target_link_libraries(tiles-import
   lmdb
   lua
   tiles
-  zlib
 )
 
 file(GLOB_RECURSE tiles-server-files src/server.cc)
@@ -71,7 +71,6 @@ target_link_libraries(tiles-server
   lmdb
   net-http_server
   tiles
-  zlib
 )
 
 

@@ -15,7 +15,9 @@ set(TILES_CXX_FLAGS "-std=c++17 -Wall -Wextra")
 
 add_definitions(-DPROTOZERO_USE_VIEW=std::string_view)
 
-add_subdirectory(deps)
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps")
+  add_subdirectory(deps)
+endif()
 
 file(GLOB_RECURSE tiles-files
   src/db/*.cc

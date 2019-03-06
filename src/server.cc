@@ -35,7 +35,7 @@ int main() {
                                                                auto cb) {
     if (std::find_if(begin(req.headers), end(req.headers), [](auto const& h) {
           return h.name == "Accept-Encoding" &&
-                 h.value.find("gzip") != std::string::npos;
+                 h.value.find("deflate") != std::string::npos;
         }) == end(req.headers)) {
       return cb(reply::stock_reply(reply::not_implemented));
     }
@@ -53,7 +53,7 @@ int main() {
 
       reply rep = reply::stock_reply(reply::ok);
       if (rendered_tile) {
-        rep.headers.emplace_back("Content-Encoding", "gzip");
+        rep.headers.emplace_back("Content-Encoding", "deflate");
         rep.content = std::move(*rendered_tile);
       } else {
         rep.status = reply::no_content;

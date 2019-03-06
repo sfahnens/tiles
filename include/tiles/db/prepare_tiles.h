@@ -53,10 +53,10 @@ struct prepare_stats {
       return;
     }
 
-    auto const gzip_sum =
+    auto const compressed_sum =
         std::accumulate(begin(tile_sizes_), end(tile_sizes_), 0ul);
-    std::cout << "| avg. gzip: " << std::setw(4)
-              << (gzip_sum / tile_sizes_.size() / 1024) << "KB\n";
+    std::cout << "| avg. compressed: " << std::setw(4)
+              << (compressed_sum / tile_sizes_.size() / 1024) << "KB\n";
   }
 
   void register_tile_size(size_t gzip) { tile_sizes_.emplace_back(gzip); }

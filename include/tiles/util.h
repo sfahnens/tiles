@@ -48,7 +48,7 @@ inline void t_log(Args&&... args) {
 
 namespace tiles {
 
-std::string compress_gzip(std::string const&);
+std::string compress_deflate(std::string const&);
 
 template <typename Fun>
 struct raii_helper {

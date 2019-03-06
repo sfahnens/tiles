@@ -133,10 +133,10 @@ std::optional<std::string> get_tile(tile_db_handle& handle, lmdb::txn& txn,
     return std::nullopt;
   }
   start<perf_task::GET_TILE_COMPRESS>(pc);
-  auto&& compressed = compress_gzip(rendered_tile);
+  auto compressed = compress_deflate(rendered_tile);
   stop<perf_task::GET_TILE_COMPRESS>(pc);
 
-  return std::move(compressed);
+  return {std::move(compressed)};
 }
 
 template <typename PerfCounter>

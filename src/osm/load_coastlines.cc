@@ -356,7 +356,7 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
   t_log("seaside_tree with {} nodes", seaside_tree.nodes_.size());
 
   {
-    lmdb::txn txn{handle.env_};
+    auto txn = handle.make_txn();
     auto meta_dbi = handle.meta_dbi(txn, lmdb::dbi_flags::CREATE);
     txn.put(meta_dbi, kMetaKeyFullySeasideTree, seaside_tree.string_view());
     txn.commit();

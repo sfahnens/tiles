@@ -81,7 +81,7 @@ void database_stats(tile_db_handle& handle) {
     std::cout << "\n";
   };
 
-  auto txn = lmdb::txn{handle.env_};
+  auto txn = handle.make_txn();
 
   auto features_dbi = handle.features_dbi(txn);
   auto tiles_dbi = handle.tiles_dbi(txn);

@@ -30,7 +30,7 @@ struct render_ctx {
 };
 
 render_ctx make_render_ctx(tile_db_handle& handle) {
-  auto txn = lmdb::txn{handle.env_};
+  auto txn = handle.make_txn();
 
   auto meta_dbi = handle.meta_dbi(txn);
 
@@ -143,7 +143,7 @@ template <typename PerfCounter>
 std::optional<std::string> get_tile(tile_db_handle& handle,
                                     render_ctx const& ctx,
                                     geo::tile const& tile, PerfCounter& pc) {
-  lmdb::txn txn{handle.env_};
+  auto txn = handle.make_txn();
   auto features_dbi = handle.features_dbi(txn);
   auto features_cursor = lmdb::cursor{txn, features_dbi};
 

@@ -34,7 +34,25 @@ struct tile_db_handle {
       : env_{env},
         dbi_name_meta_{dbi_name_meta},
         dbi_name_features_{dbi_name_features},
-        dbi_name_tiles_{dbi_name_tiles} {}
+        dbi_name_tiles_{dbi_name_tiles} {
+    auto txn = make_txn();
+    meta_dbi(txn);
+    features_dbi(txn);
+    tiles_dbi(txn);
+    txn.commit();
+  }
+
+  lmdb::txn make_txn() {
+    auto env_flags = env_.get_flags();
+
+    auto txn_flags = lmdb::txn_flags::NONE;
+    if ((env_flags & lmdb::env_open_flags::RDONLY) !=
+        lmdb::env_open_flags::NONE) {
+      txn_flags = lmdb::txn_flags::RDONLY;
+    }
+
+    return lmdb::txn{env_, txn_flags};
+  }
 
   lmdb::txn::dbi meta_dbi(lmdb::txn& txn,
                           lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) {

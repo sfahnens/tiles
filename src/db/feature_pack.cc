@@ -185,7 +185,7 @@ void pack_features(tile_db_handle& handle) {
     std::vector<std::pair<tile_index_t, std::string>> packed_features;
 
     {  // collect features
-      lmdb::txn txn{handle.env_};
+      auto txn = handle.make_txn();
       auto feature_dbi = handle.features_dbi(txn);
       lmdb::cursor c{txn, feature_dbi};
 
@@ -244,7 +244,7 @@ void pack_features(tile_db_handle& handle) {
     handle.env_.sync();
 
     {  // writeback features
-      lmdb::txn txn{handle.env_};
+      auto txn = handle.make_txn();
       auto feature_dbi = handle.features_dbi(txn);
       for (auto const & [ key, data ] : packed_features) {
         txn.put(feature_dbi, key, data);

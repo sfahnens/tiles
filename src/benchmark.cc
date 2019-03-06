@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 
       fmt::print(std::cout, "=== process z {} ({} tiles)\n", z, tiles.size());
 
-      lmdb::txn txn{handle.env_};
+      auto txn = handle.make_txn();
       auto features_dbi = handle.features_dbi(txn);
       auto features_cursor = lmdb::cursor{txn, features_dbi};
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
                    static_cast<uint32_t>(std::atoi(argv[3]))};
     std::cout << "render tile: " << tile << std::endl;
 
-    lmdb::txn txn{handle.env_};
+    auto txn = handle.make_txn();
     auto features_dbi = handle.features_dbi(txn);
     auto features_cursor = lmdb::cursor{txn, features_dbi};
 

@@ -96,7 +96,7 @@ struct pair_freq {
 };
 
 inline void make_meta_coding(tile_db_handle& handle) {
-  auto txn = lmdb::txn{handle.env_};
+  auto txn = handle.make_txn();
   auto features_dbi = handle.features_dbi(txn);
   auto c = lmdb::cursor{txn, features_dbi};
 
@@ -162,7 +162,7 @@ inline void make_meta_coding(tile_db_handle& handle) {
 using meta_coding_map_t = std::map<std::pair<std::string, std::string>, size_t>;
 
 inline meta_coding_map_t load_meta_coding_map(tile_db_handle& handle) {
-  lmdb::txn txn{handle.env_};
+  auto txn = handle.make_txn();
   auto meta_dbi = handle.meta_dbi(txn);
   auto const opt_coding = txn.get(meta_dbi, kMetaKeyFeatureMetaCoding);
   if (!opt_coding) {
@@ -205,7 +205,7 @@ inline meta_coding_vec_t load_meta_coding_vec(tile_db_handle& handle,
 }
 
 inline meta_coding_vec_t load_meta_coding_vec(tile_db_handle& handle) {
-  lmdb::txn txn{handle.env_};
+  auto txn = handle.make_txn();
   return load_meta_coding_vec(handle, txn);
 }
 

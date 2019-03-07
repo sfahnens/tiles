@@ -36,9 +36,9 @@ struct tile_db_handle {
         dbi_name_features_{dbi_name_features},
         dbi_name_tiles_{dbi_name_tiles} {
     auto txn = make_txn();
-    meta_dbi(txn);
-    features_dbi(txn);
-    tiles_dbi(txn);
+    meta_dbi(txn, lmdb::dbi_flags::CREATE);
+    features_dbi(txn, lmdb::dbi_flags::CREATE);
+    tiles_dbi(txn, lmdb::dbi_flags::CREATE);
     txn.commit();
   }
 

@@ -1,14 +1,57 @@
-git@git.motis-project.de:lib/clipper.git         904f0e6644c7f01c176443613be8f7788d59c658
-git@git.motis-project.de:lib/concurrentqueue.git b11bbfc1f8e3891d425c7045146cfc8d34e32906
-git@git.motis-project.de:lib/conf.git            78699a83f7c3979ce49a0bcd7d9179e39d87a8b3
-git@git.motis-project.de:lib/fmt.git             c2ce7e4f07f7b34b2c7bbd0a4d0798b1d7007f4f
-git@git.motis-project.de:lib/geo.git             595c7f69412606a6951567b83b593e801412d334
-git@git.motis-project.de:lib/lmdb.git            df5c07807e2a40f6e451497d15095ee405ad3693
-git@git.motis-project.de:lib/lua.git             f410081ee2eac25ac9a15f73269033700419bd4c
-git@git.motis-project.de:lib/miniz.git           f5d1cf73092133260fd705b1ff9128cae59a2e27
-git@git.motis-project.de:lib/net-old.git         255e7a265d85cef560e2ef7399e75fb05af6ffb9
-git@git.motis-project.de:lib/osmium.git          8f53cd67f95fadedb93e8ff2724b96d37d55a53d
-git@git.motis-project.de:lib/protozero.git       8efbc8a271e59b34552a72a29f4abd5f1036db46
-git@git.motis-project.de:lib/sol2.git            4c0fd7069ac78f44cb422a1733ee892ce0546832
-git@git.motis-project.de:lib/utl.git             36abee117eb8a4fbda51a2000ccded3f7fd24ebe
-git@git.motis-project.de:lib/zlib.git            412ab9a1f440f4ce1331d4226b6c814470524e19
+[osmium]
+  url=git@git.motis-project.de:lib/osmium.git
+  branch=master
+  commit=8f53cd67f95fadedb93e8ff2724b96d37d55a53d
+[lmdb]
+  url=git@git.motis-project.de:lib/lmdb.git
+  branch=master
+  commit=df5c07807e2a40f6e451497d15095ee405ad3693
+[miniz]
+  url=git@git.motis-project.de:lib/miniz.git
+  branch=master
+  commit=f5d1cf73092133260fd705b1ff9128cae59a2e27
+[lua]
+  url=git@git.motis-project.de:lib/lua.git
+  branch=master
+  commit=f410081ee2eac25ac9a15f73269033700419bd4c
+[sol2]
+  url=git@git.motis-project.de:lib/sol2.git
+  branch=v2.20.6-mod
+  commit=4c0fd7069ac78f44cb422a1733ee892ce0546832
+[utl]
+  url=git@git.motis-project.de:lib/utl.git
+  branch=master
+  commit=36abee117eb8a4fbda51a2000ccded3f7fd24ebe
+[clipper]
+  url=git@git.motis-project.de:lib/clipper.git
+  branch=master
+  commit=904f0e6644c7f01c176443613be8f7788d59c658
+[concurrentqueue]
+  url=git@git.motis-project.de:lib/concurrentqueue.git
+  branch=master
+  commit=b11bbfc1f8e3891d425c7045146cfc8d34e32906
+[net-old]
+  url=git@git.motis-project.de:lib/net-old.git
+  branch=net-old
+  commit=255e7a265d85cef560e2ef7399e75fb05af6ffb9
+[fmt]
+  url=git@git.motis-project.de:lib/fmt.git
+  branch=release
+  commit=c2ce7e4f07f7b34b2c7bbd0a4d0798b1d7007f4f
+[geo]
+  url=git@git.motis-project.de:lib/geo.git
+  branch=master
+  commit=595c7f69412606a6951567b83b593e801412d334
+[protozero]
+  url=git@git.motis-project.de:lib/protozero.git
+  branch=tiles
+  commit=8efbc8a271e59b34552a72a29f4abd5f1036db46
+[zlib]
+  url=git@git.motis-project.de:lib/zlib.git
+  branch=master
+  commit=412ab9a1f440f4ce1331d4226b6c814470524e19
+[conf]
+  url=git@git.motis-project.de:lib/conf.git
+  branch=master
+  commit=78699a83f7c3979ce49a0bcd7d9179e39d87a8b3
+

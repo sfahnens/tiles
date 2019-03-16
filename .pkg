@@ -2,7 +2,7 @@ git@git.motis-project.de:lib/clipper.git         904f0e6644c7f01c176443613be8f77
 git@git.motis-project.de:lib/concurrentqueue.git b11bbfc1f8e3891d425c7045146cfc8d34e32906
 git@git.motis-project.de:lib/conf.git            78699a83f7c3979ce49a0bcd7d9179e39d87a8b3
 git@git.motis-project.de:lib/fmt.git             c2ce7e4f07f7b34b2c7bbd0a4d0798b1d7007f4f
-git@git.motis-project.de:lib/geo.git             3873d97fdcc44c599a38faf86ad2f903cf5f3896
+git@git.motis-project.de:lib/geo.git             595c7f69412606a6951567b83b593e801412d334
 git@git.motis-project.de:lib/lmdb.git            df5c07807e2a40f6e451497d15095ee405ad3693
 git@git.motis-project.de:lib/lua.git             f410081ee2eac25ac9a15f73269033700419bd4c
 git@git.motis-project.de:lib/miniz.git           f5d1cf73092133260fd705b1ff9128cae59a2e27

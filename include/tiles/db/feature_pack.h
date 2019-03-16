@@ -22,7 +22,7 @@ void unpack_features(std::string_view const& string, Fn&& fn) {
   auto const feature_count = read_nth<uint32_t>(string.data(), 0);
 
   auto ptr = string.data() + 2 * sizeof(uint32_t);
-  auto const end = std::end(string);
+  auto const end = string.data() + string.size();
   for (auto i = 0u; i < feature_count; ++i) {
     uint64_t size = 0;
     while (size == 0) {  // skip zero elements (= span terminators)

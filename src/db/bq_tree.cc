@@ -206,7 +206,7 @@ bq_tree make_bq_tree(std::vector<geo::tile> const& tiles) {
   verify(nodes.at(0).size() == 1, "root node missing");
   auto const& root = begin(nodes.at(0))->second;
   if (root.leaf_) {
-    return bq_tree{{kFullRoot}};
+    return bq_tree{std::vector<bq_node_t>{kFullRoot}};
   }
   return serialize_bq_tree(root);
 }

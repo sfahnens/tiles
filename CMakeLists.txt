@@ -7,7 +7,11 @@ find_package(Threads)
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
-set(TILES_CXX_FLAGS "-std=c++17 -Wall -Wextra")
+if (MSVC)
+  set(TILES_CXX_FLAGS "-std=c++17 -Wall")
+else()
+  set(TILES_CXX_FLAGS "-std=c++17 -Wall -Wextra")
+endif()
 
 
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps")

@@ -64,11 +64,11 @@ inline std::string serialize_feature(feature const& f,
     }
 
   } else {
-    for (auto const & [ k, _ ] : f.meta_) {
-      pb.add_string(tags::Feature::repeated_string_keys, k);
+    for (auto const& kv : f.meta_) {
+      pb.add_string(tags::Feature::repeated_string_keys, kv.first);
     }
-    for (auto const & [ _, v ] : f.meta_) {
-      pb.add_string(tags::Feature::repeated_string_values, v);
+    for (auto const& kv : f.meta_) {
+      pb.add_string(tags::Feature::repeated_string_values, kv.second);
     }
   }
 

@@ -102,7 +102,7 @@ void encode(pz::pbf_builder<ttm::Feature>& pb,
 
 void encode_geometry(pz::pbf_builder<ttm::Feature>& pb,
                      fixed_geometry const& geometry, tile_spec const& spec) {
-  std::visit([&](auto const& arg) { encode(pb, arg, spec); }, geometry);
+  mpark::visit([&](auto const& arg) { encode(pb, arg, spec); }, geometry);
 }
 
 }  // namespace tiles

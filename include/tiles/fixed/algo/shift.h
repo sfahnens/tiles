@@ -35,7 +35,7 @@ inline void shift(fixed_polygon& multi_polygon, uint32_t const z) {
 }
 
 inline void shift(fixed_geometry& geometry, uint32_t const z) {
-  std::visit([&](auto& arg) { shift(arg, z); }, geometry);
+  mpark::visit([&](auto& arg) { shift(arg, z); }, geometry);
 }
 
 inline void shift(fixed_box& box, uint32_t const z) {

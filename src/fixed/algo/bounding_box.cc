@@ -31,7 +31,7 @@ fixed_box bounding_box(fixed_simple_polygon const& in) {
 }
 
 fixed_box bounding_box(fixed_geometry const& in) {
-  return std::visit([&](auto const& arg) { return bounding_box(arg); }, in);
+  return mpark::visit([&](auto const& arg) { return bounding_box(arg); }, in);
 }
 
 }  // namespace tiles

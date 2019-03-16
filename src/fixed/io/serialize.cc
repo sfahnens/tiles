@@ -105,7 +105,7 @@ std::string serialize(fixed_polygon const& multi_polygon) {
 }
 
 std::string serialize(fixed_geometry const& in) {
-  return std::visit([&](auto const& arg) { return serialize(arg); }, in);
+  return mpark::visit([&](auto const& arg) { return serialize(arg); }, in);
 }
 
 }  // namespace tiles

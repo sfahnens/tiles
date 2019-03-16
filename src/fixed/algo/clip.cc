@@ -114,7 +114,7 @@ fixed_geometry clip(fixed_polygon const& in, fixed_box const& box) {
 }
 
 fixed_geometry clip(fixed_geometry const& in, fixed_box const& box) {
-  return std::visit([&](auto const& arg) { return clip(arg, box); }, in);
+  return mpark::visit([&](auto const& arg) { return clip(arg, box); }, in);
 }
 
 }  // namespace tiles

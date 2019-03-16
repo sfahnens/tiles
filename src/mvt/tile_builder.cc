@@ -204,7 +204,7 @@ struct layer_builder {
   bool write_geometry(pbf_builder<ttm::Feature>& pb, feature const& f) {
     auto geometry = clip(f.geometry_, spec_.draw_bounds_);
 
-    if (std::holds_alternative<fixed_null>(geometry)) {
+    if (mpark::holds_alternative<fixed_null>(geometry)) {
       return false;
     }
 

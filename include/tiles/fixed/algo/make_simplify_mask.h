@@ -34,7 +34,8 @@ inline std::vector<std::string> make_simplify_mask(fixed_polygon const& geo) {
 }
 
 inline std::vector<std::string> make_simplify_mask(fixed_geometry const& geo) {
-  return std::visit([&](auto const& g) { return make_simplify_mask(g); }, geo);
+  return mpark::visit([&](auto const& g) { return make_simplify_mask(g); },
+                      geo);
 }
 
 }  // namespace tiles

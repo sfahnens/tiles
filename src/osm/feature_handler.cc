@@ -76,7 +76,7 @@ void handle_feature(feature_inserter& inserter,
   if (!pf.geometry_) {
     pf.geometry_ = read_osm_geometry(obj);
   }
-  if (std::holds_alternative<fixed_null>(*pf.geometry_)) {
+  if (mpark::holds_alternative<fixed_null>(*pf.geometry_)) {
     return;
   }
 

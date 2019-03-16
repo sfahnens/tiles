@@ -40,7 +40,7 @@ std::string to_svg(fixed_polygon const& in) {
 }
 
 std::string to_svg(fixed_geometry const& in) {
-  return std::visit([&](auto const& arg) { return to_svg(arg); }, in);
+  return mpark::visit([&](auto const& arg) { return to_svg(arg); }, in);
 }
 
 }  // namespace tiles

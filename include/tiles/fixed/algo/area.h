@@ -21,7 +21,7 @@ inline fixed_coord_t area(fixed_simple_polygon const& simple_polygon) {
 }
 
 inline fixed_coord_t area(fixed_geometry const& geometry) {
-  return std::visit([&](auto const& arg) { return area(arg); }, geometry);
+  return mpark::visit([&](auto const& arg) { return area(arg); }, geometry);
 }
 
 }  // namespace tiles

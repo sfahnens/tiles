@@ -41,7 +41,7 @@
 [geo]
   url=git@git.motis-project.de:lib/geo.git
   branch=master
-  commit=50d46f2a90964193d12ed20e4ecb04a6ea7c85d3
+  commit=73593483ed0aa410b91e334a452be89d2775cac9
 [protozero]
   url=git@git.motis-project.de:lib/protozero.git
   branch=tiles

@@ -108,10 +108,10 @@ void database_stats(tile_db_handle& handle) {
     auto const index_offset = read_nth<uint32_t>(el->second.data(), 1);
     if (index_offset != 0) {
       auto idx_ptr = el->second.data() + index_offset;
-      auto const end = std::end(el->second);
+      auto const end_ptr = el->second.data() + el->second.size();
       auto tree_offset = 0ull;
-      while (idx_ptr < end && tree_offset == 0) {
-        tree_offset = protozero::decode_varint(&idx_ptr, end);
+      while (idx_ptr < end_ptr && tree_offset == 0) {
+        tree_offset = protozero::decode_varint(&idx_ptr, end_ptr);
       }
 
       if (tree_offset == 0) {

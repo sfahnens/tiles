@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "protozero/pbf_builder.hpp"
 
 #include "tiles/db/shared_strings.h"

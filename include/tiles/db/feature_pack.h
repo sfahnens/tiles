@@ -43,7 +43,7 @@ void unpack_features(geo::tile const& root, std::string_view const& string,
   }
 
   auto idx_ptr = string.data() + idx_offset;
-  auto const end = std::end(string);
+  auto const end = string.data() + string.size();
   for (auto z = root.z_; z <= std::max(root.z_, tile.z_); ++z) {
     auto const tree_offset = protozero::decode_varint(&idx_ptr, end);
     if (tree_offset == 0) {

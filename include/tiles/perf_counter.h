@@ -84,15 +84,29 @@ void stop(PerfCounter& pc) {
 
 template <perf_task::perf_task_t Task, typename PerfCounter>
 struct scoped_perf_counter_impl {
-  explicit scoped_perf_counter_impl(PerfCounter& pc) : pc_{pc} {
-    pc_.template start<Task>();
+  explicit scoped_perf_counter_impl(PerfCounter& pc) : pc_{&pc} {
+    pc_->template start<Task>();
   }
-  ~scoped_perf_counter_impl() { pc_.template stop<Task>(); }
+  ~scoped_perf_counter_impl() {
+    if (pc_ != nullptr) {
+      pc_->template stop<Task>();
+    }
+  }
+
+  scoped_perf_counter_impl(scoped_perf_counter_impl&& other) noexcept {
+    std::swap(pc_, other.pc_);
+  }
+
+  scoped_perf_counter_impl& operator=(
+      scoped_perf_counter_impl&& other) noexcept {
+    std::swap(pc_, other.pc_);
+    return *this;
+  }
 
   scoped_perf_counter_impl(scoped_perf_counter_impl const&) = delete;
   scoped_perf_counter_impl& operator=(scoped_perf_counter_impl const&) = delete;
 
-  PerfCounter& pc_;
+  PerfCounter* pc_ = nullptr;
 };
 
 template <perf_task::perf_task_t Task, typename PerfCounter>

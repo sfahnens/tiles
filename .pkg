@@ -33,7 +33,7 @@
 [utl]
   url=git@git.motis-project.de:lib/utl.git
   branch=master
-  commit=36abee117eb8a4fbda51a2000ccded3f7fd24ebe
+  commit=75cd8c5faf4237d7c81b722be2945c7d8c96d141
 [fmt]
   url=git@git.motis-project.de:lib/fmt.git
   branch=release

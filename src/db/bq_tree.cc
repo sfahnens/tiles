@@ -181,7 +181,7 @@ bq_tree serialize_bq_tree(bq_tmp_node_t const& root) {
 
 bq_tree make_bq_tree(std::vector<geo::tile> const& tiles) {
   if (tiles.empty()) {
-    return bq_tree{std::vector<bq_node_t>{kFullRoot}};
+    return bq_tree{std::vector<bq_node_t>{kEmptyRoot}};
   }
 
   std::vector<std::map<geo::tile, bq_tmp_node_t>> nodes{{}};

@@ -24,7 +24,7 @@ TEST_CASE("fixed point io") {
     auto const serialized = serialize(test_case);
     auto const deserialized = deserialize(serialized);
 
-    CHECK(test_case == std::get<fixed_point>(deserialized));
+    CHECK(test_case == mpark::get<fixed_point>(deserialized));
   }
 }
 
@@ -59,6 +59,6 @@ TEST_CASE("fixed polyline io") {
     auto const serialized = serialize(test_case);
     auto const deserialized = deserialize(serialized);
 
-    CHECK(test_case == std::get<fixed_polyline>(deserialized));
+    CHECK(test_case == mpark::get<fixed_polyline>(deserialized));
   }
 }

@@ -20,7 +20,7 @@ TEST_CASE("fixed point clip") {
     fixed_point test_case{{15, 15}};
     auto result = clip(test_case, box);
     REQUIRE(result.index() == point_index);
-    CHECK(std::get<fixed_point>(result) == test_case);
+    CHECK(mpark::get<fixed_point>(result) == test_case);
   }
 
   {
@@ -52,7 +52,7 @@ TEST_CASE("fixed point polyline") {
     fixed_polyline input{{{{12, 12}, {18, 18}}}};
     auto result = clip(input, box);
     REQUIRE(result.index() == polyline_index);
-    CHECK(std::get<fixed_polyline>(result) == input);
+    CHECK(mpark::get<fixed_polyline>(result) == input);
   }
 
   {
@@ -61,6 +61,6 @@ TEST_CASE("fixed point polyline") {
     REQUIRE(result.index() == polyline_index);
 
     fixed_polyline expected{{{{12, 10}, {12, 12}}}};
-    CHECK(std::get<fixed_polyline>(result) == expected);
+    CHECK(mpark::get<fixed_polyline>(result) == expected);
   }
 }

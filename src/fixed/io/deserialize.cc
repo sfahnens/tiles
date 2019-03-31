@@ -25,8 +25,10 @@ struct default_decoder {
     out.reserve(size);
 
     for (auto i = 0u; i < size; ++i) {
-      out.emplace_back(x_decoder_.decode(get_next()),
-                       y_decoder_.decode(get_next()));
+      // do not inline -> undefined execution order
+      auto const x_val = x_decoder_.decode(get_next());
+      auto const y_val = y_decoder_.decode(get_next());
+      out.emplace_back(x_val, y_val);
     }
   }
 
@@ -67,8 +69,10 @@ struct simplifying_decoder : public default_decoder {
     out.reserve(size);
     for (auto i = 0u; i < size; ++i) {
       if (reader.get_bit(i)) {
-        out.emplace_back(x_decoder_.decode(get_next()),
-                         y_decoder_.decode(get_next()));
+        // do not inline -> undefined execution order
+        auto const x_val = x_decoder_.decode(get_next());
+        auto const y_val = y_decoder_.decode(get_next());
+        out.emplace_back(x_val, y_val);
       } else {
         x_decoder_.decode(get_next());
         y_decoder_.decode(get_next());

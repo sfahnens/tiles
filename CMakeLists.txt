@@ -13,10 +13,7 @@ else()
   set(TILES_CXX_FLAGS "-std=c++17 -Wall -Wextra")
 endif()
 
-
-if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps")
-  add_subdirectory(deps)
-endif()
+include(cmake/pkg.cmake)
 
 file(GLOB_RECURSE tiles-files
   src/db/*.cc

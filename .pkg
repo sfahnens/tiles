@@ -42,6 +42,10 @@
   url=git@git.motis-project.de:lib/protozero.git
   branch=tiles
   commit=855ce94a2d1441db7e48a8e5505eac742777759b
+[res]
+  url=git@git.motis-project.de:lib/res.git
+  branch=master
+  commit=f7f46a7ced02188b5a057100d4536579a98d71de
 [sol2]
   url=git@git.motis-project.de:lib/sol2.git
   branch=v2.20.6-mod

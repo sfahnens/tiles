@@ -67,12 +67,19 @@ set_target_properties(tiles-server PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})
 target_include_directories(tiles-server PUBLIC include)
 target_link_libraries(tiles-server
   ${Boost_LIBRARIES}
+  conf
   geo
   lmdb
   net-http_server
   tiles
 )
 
+file(GLOB_RECURSE tiles-server-res "${CMAKE_CURRENT_SOURCE_DIR}/client/*.*")
+create_resource("${CMAKE_CURRENT_SOURCE_DIR}/client/" "${tiles-server-res}" tiles_server_res)
+target_link_libraries(tiles-server
+  tiles_server_res
+  tiles_server_res-res
+)
 
 file(GLOB_RECURSE tiles-benchmark-files src/benchmark.cc)
 

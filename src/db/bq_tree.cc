@@ -6,6 +6,8 @@
 
 #include "geo/tile.h"
 
+#include "utl/verify.h"
+
 #include "tiles/util.h"
 
 /**
@@ -41,7 +43,8 @@ inline bool bit_set(uint32_t val, uint32_t idx) {
 
 bq_tree::bq_tree() : nodes_{kEmptyRoot} {}
 bq_tree::bq_tree(std::string_view str) {
-  verify(str.size() % sizeof(bq_node_t) == 0, "bq_tree invalid string_view");
+  utl::verify(str.size() % sizeof(bq_node_t) == 0,
+              "bq_tree invalid string_view");
 
   nodes_.resize(str.size() / sizeof(bq_node_t));
   std::memcpy(nodes_.data(), str.data(), str.size());
@@ -106,7 +109,7 @@ std::vector<geo::tile> bq_tree::all_leafs(geo::tile const& q) const {
 
   std::vector<geo::tile> result;
   while (!stack.empty()) {
-    auto const[tile, node] = stack.top();  // copy required!
+    auto const [tile, node] = stack.top();  // copy required!
     stack.pop();
 
     auto child_tile_it = tile.as_tile_range().begin();
@@ -155,7 +158,7 @@ bq_tree serialize_bq_tree(bq_tmp_node_t const& root) {
   vec.emplace_back(0);
 
   while (!stack.empty()) {
-    auto const[offset, node] = stack.top();  // copy required!
+    auto const [offset, node] = stack.top();  // copy required!
     stack.pop();
 
     for (auto i = 0u; i < 4u; ++i) {
@@ -203,7 +206,7 @@ bq_tree make_bq_tree(std::vector<geo::tile> const& tiles) {
   }
 
   // aggregate full nodes to leafs
-  verify(nodes.at(0).size() == 1, "root node missing");
+  utl::verify(nodes.at(0).size() == 1, "root node missing");
   auto const& root = begin(nodes.at(0))->second;
   if (root.leaf_) {
     return bq_tree{std::vector<bq_node_t>{kFullRoot}};

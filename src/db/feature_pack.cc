@@ -2,6 +2,7 @@
 
 #include "utl/equal_ranges.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "tiles/db/quad_tree.h"
 #include "tiles/db/shared_strings.h"
@@ -28,7 +29,7 @@ struct packer {
     uint32_t offset = buf_.size();
 
     for (auto it = begin; it != end; ++it) {
-      verify(it->size() >= 32, "MINI FEATURE?!");
+      utl::verify(it->size() >= 32, "MINI FEATURE?!");
       protozero::write_varint(std::back_inserter(buf_), it->size());
       buf_.append(it->data(), it->size());
     }
@@ -82,7 +83,7 @@ geo::tile find_best_tile(geo::tile const& root, feature const& feature) {
       next_best = child;
     }
 
-    verify(next_best, "at least one child must match");
+    utl::verify(next_best.has_value(), "at least one child must match");
     best = *next_best;
   }
 
@@ -97,7 +98,7 @@ std::vector<uint8_t> make_quad_key(geo::tile const& root,
 
   std::vector<geo::tile> trace{tile};
   while (!(trace.back().parent() == root)) {
-    verify(trace.back().z_ > root.z_, "tile outside root");
+    utl::verify(trace.back().z_ > root.z_, "tile outside root");
     trace.push_back(trace.back().parent());
   }
   trace.push_back(root);
@@ -136,7 +137,7 @@ std::string pack_features(geo::tile const& tile,
                                                                1 - tile.z_);
   for (auto const& str : strings) {
     auto const feature = deserialize_feature(str, coding_vec);
-    verify(feature, "feature must be valid (!?)");
+    utl::verify(feature.has_value(), "feature must be valid (!?)");
 
     auto const str2 = serialize_feature(*feature, coding_map, false);
 

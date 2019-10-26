@@ -114,7 +114,7 @@ inline void make_meta_coding(tile_db_handle& handle) {
             tile_meta.emplace_back(msg.get_string());
             break;
           case tags::Feature::repeated_string_values:
-            verify(meta_fill < tile_meta.size(),
+            utl::verify(meta_fill < tile_meta.size(),
                    "tile_meta data imbalance! (a)");
             tile_meta[meta_fill++].val_ = msg.get_string();
             break;
@@ -122,7 +122,7 @@ inline void make_meta_coding(tile_db_handle& handle) {
         }
       }
     });
-    verify(meta_fill == tile_meta.size(), "meta data imbalance! (b)");
+    utl::verify(meta_fill == tile_meta.size(), "meta data imbalance! (b)");
 
     utl::equal_ranges(tile_meta, [&](auto lb, auto ub) {
       meta_acc.emplace_back(
@@ -174,7 +174,7 @@ inline meta_coding_map_t load_meta_coding_map(tile_db_handle& handle) {
   while (reader.next()) {
     auto const size = coding_map.size();
     auto key = reader.get_string();
-    verify(reader.next(), "invalid meta coding (map)");
+    utl::verify(reader.next(), "invalid meta coding (map)");
     auto value = reader.get_string();
 
     coding_map[{key, value}] = size;
@@ -196,7 +196,7 @@ inline meta_coding_vec_t load_meta_coding_vec(tile_db_handle& handle,
   protozero::pbf_reader reader{*opt_coding};
   while (reader.next()) {
     auto key = reader.get_string();
-    verify(reader.next(), "invalid meta coding (vec)");
+    utl::verify(reader.next(), "invalid meta coding (vec)");
     auto value = reader.get_string();
 
     coding_vec.emplace_back(std::move(key), std::move(value));

@@ -9,11 +9,11 @@
 [conf]
   url=git@git.motis-project.de:lib/conf.git
   branch=master
-  commit=78699a83f7c3979ce49a0bcd7d9179e39d87a8b3
+  commit=9216a50214e8d438c166585afae7686259305e0b
 [fmt]
   url=git@git.motis-project.de:lib/fmt.git
-  branch=release
-  commit=c2ce7e4f07f7b34b2c7bbd0a4d0798b1d7007f4f
+  branch=master
+  commit=c748245847abf12fd9d3b4c04f2a3b9c9a1ae590
 [geo]
   url=git@git.motis-project.de:lib/geo.git
   branch=master
@@ -37,11 +37,11 @@
 [osmium]
   url=git@git.motis-project.de:lib/osmium.git
   branch=master
-  commit=8f53cd67f95fadedb93e8ff2724b96d37d55a53d
+  commit=5c5e2d61b2defb4bb065fa31b4270e6f96293e71
 [protozero]
   url=git@git.motis-project.de:lib/protozero.git
   branch=tiles
-  commit=c217d7356989541e957e18e0e7fe136b3b448f94
+  commit=855ce94a2d1441db7e48a8e5505eac742777759b
 [sol2]
   url=git@git.motis-project.de:lib/sol2.git
   branch=v2.20.6-mod
@@ -49,7 +49,7 @@
 [utl]
   url=git@git.motis-project.de:lib/utl.git
   branch=master
-  commit=75cd8c5faf4237d7c81b722be2945c7d8c96d141
+  commit=87b56b2bbfea1b021c70277ada6e034c122fb820
 [zlib]
   url=git@git.motis-project.de:lib/zlib.git
   branch=master

@@ -3,14 +3,15 @@
 #include "boost/geometry.hpp"
 
 #include "utl/erase_if.h"
+#include "utl/verify.h"
 
 #include "tiles/util.h"
 
 namespace tiles {
 
-std::string to_svg(fixed_null const&) { verify(false, "no impl"); }
-std::string to_svg(fixed_point const&) { verify(false, "no impl"); }
-std::string to_svg(fixed_polyline const&) { verify(false, "no impl"); }
+std::string to_svg(fixed_null const&) { throw utl::fail("no impl"); }
+std::string to_svg(fixed_point const&) { throw utl::fail("no impl"); }
+std::string to_svg(fixed_polyline const&) { throw utl::fail("no impl"); }
 
 std::string to_svg(fixed_polygon const& in) {
   fixed_box box;

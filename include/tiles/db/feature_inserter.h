@@ -68,7 +68,7 @@ struct feature_inserter : public batch_inserter {
       }
 
       auto it = pending_features_.find(tile);
-      verify(it != end(pending_features_), "cannot happen");
+      utl::verify(it != end(pending_features_), "cannot happen");
 
       auto const size = std::accumulate(
           begin(it->second.second), end(it->second.second), 0ull,

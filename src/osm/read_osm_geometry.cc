@@ -3,6 +3,7 @@
 #include "osmium/osm.hpp"
 
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "tiles/fixed/convert.h"
 #include "tiles/util.h"
@@ -24,7 +25,7 @@ void nodes_to_fixed(In const& in, Out& out) {
 }
 
 fixed_geometry read_osm_geometry(osmium::Way const& way) {
-  // TODO verify that distances fit into int32_t (or clipping will not
+  // TODO utl::verify( that distances fit into int32_t (or clipping will not
   // work)
   fixed_polyline polyline;
   polyline.emplace_back();
@@ -46,7 +47,7 @@ fixed_geometry read_osm_geometry(osmium::Area const& area) {
                        polygon.back().outer());
         break;
       case osmium::item_type::inner_ring:
-        verify(!polygon.empty(), "inner ring first!");
+        utl::verify(!polygon.empty(), "inner ring first!");
 
         polygon.back().inners().emplace_back();
         nodes_to_fixed(*reinterpret_cast<osmium::InnerRing const*>(item.data()),

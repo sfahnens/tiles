@@ -1,8 +1,19 @@
 function process_node(node)
-  if node:has_tag("place", "city") then
+  if node:has_any_tag("place") then
+    if node:has_tag("place", "city") then
+      node:set_approved_min(5)
+    elseif node:has_tag("place", "town") or
+           node:has_tag("place", "borough") then
+      node:set_approved_min(9)
+    elseif node:has_tag("place", "suburb") or
+           node:has_tag("place", "village") then
+      node:set_approved_min(11)
+    end
+
     node:set_target_layer("cities")
+    node:add_tag_as_metadata("place")
     node:add_tag_as_metadata("name")
-    node:set_approved_full()
+    node:add_tag_as_metadata("population")
   end
 end
 
@@ -10,10 +21,12 @@ function process_way(way)
   if way:has_any_tag("highway") then
     way:set_target_layer("road")
     way:add_tag_as_metadata("highway")
+    way:add_tag_as_metadata("name")
 
     if way:has_tag("highway", "motorway") or
        way:has_tag("highway", "trunk") then
       way:set_approved_min(5)
+      way:add_tag_as_metadata("ref")
 
     elseif way:has_tag("highway", "motorway_link") or
            way:has_tag("highway", "trunk_link") or
@@ -22,6 +35,7 @@ function process_way(way)
            way:has_tag("highway", "tertiary") or
            way:has_tag("highway", "aeroway") then
       way:set_approved_min(9)
+      way:add_tag_as_metadata("ref")
 
     elseif way:has_tag("highway", "residential") or
            way:has_tag("highway", "living_street") or

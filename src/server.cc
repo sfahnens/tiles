@@ -11,6 +11,7 @@
 #include "net/http/server/query_router.hpp"
 #include "net/http/server/server.hpp"
 #include "net/http/server/shutdown_handler.hpp"
+#include "net/http/server/url_decode.hpp"
 
 #include "utl/parser/mmap_reader.h"
 
@@ -108,16 +109,20 @@ int main(int argc, char** argv) {
         }
       });
 
-
   auto const serve_file = [&](auto const& fname, auto cb) {
     try {
+      std::string decoded_fname;
+      if (!url_decode(fname, decoded_fname)) {
+        return cb(reply::stock_reply(reply::bad_request));
+      }
+
       reply rep;
       rep.status = reply::status_type::ok;
       rep.headers = {{"Content-Type", ""}};  // stupid hack
       add_cors_headers(rep);
 
       if (opt.res_dname_.size() != 0) {
-        auto p = boost::filesystem::path{opt.res_dname_} / fname;
+        auto p = boost::filesystem::path{opt.res_dname_} / decoded_fname;
         if (boost::filesystem::exists(p)) {
           utl::mmap_reader mem{p.c_str()};
           rep.content = std::string{mem.m_.ptr(), mem.m_.size()};
@@ -125,7 +130,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      auto const mem = tiles_server_res::get_resource(fname);
+      auto const mem = tiles_server_res::get_resource(decoded_fname);
       rep.content =
           std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
       return cb(rep);
@@ -143,7 +148,6 @@ int main(int argc, char** argv) {
   router.route("GET", "^\\/$", [&](auto const&, auto cb) {
     return serve_file("index.html", cb);
   });
-
 
   server.listen("0.0.0.0", "8888", router);
 

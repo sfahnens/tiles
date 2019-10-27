@@ -108,7 +108,8 @@ int main(int argc, char** argv) {
         }
       });
 
-  router.route("GET", "^\\/(.*)$", [&](auto const& req, auto cb) {
+
+  auto const serve_file = [&](auto const& fname, auto cb) {
     try {
       reply rep;
       rep.status = reply::status_type::ok;
@@ -116,7 +117,7 @@ int main(int argc, char** argv) {
       add_cors_headers(rep);
 
       if (opt.res_dname_.size() != 0) {
-        auto p = boost::filesystem::path{opt.res_dname_} / req.path_params[0];
+        auto p = boost::filesystem::path{opt.res_dname_} / fname;
         if (boost::filesystem::exists(p)) {
           utl::mmap_reader mem{p.c_str()};
           rep.content = std::string{mem.m_.ptr(), mem.m_.size()};
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      auto const mem = tiles_server_res::get_resource(req.path_params[0]);
+      auto const mem = tiles_server_res::get_resource(fname);
       rep.content =
           std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
       return cb(rep);
@@ -133,7 +134,16 @@ int main(int argc, char** argv) {
     } catch (...) {
       return cb(reply::stock_reply(reply::internal_server_error));
     }
+  };
+
+  router.route("GET", "^\\/(.+)$", [&](auto const& req, auto cb) {
+    return serve_file(req.path_params[0], cb);
   });
+
+  router.route("GET", "^\\/$", [&](auto const&, auto cb) {
+    return serve_file("index.html", cb);
+  });
+
 
   server.listen("0.0.0.0", "8888", router);
 

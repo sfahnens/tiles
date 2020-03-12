@@ -1,3 +1,5 @@
 /build*
 *.sublime-workspace
-deps
+/deps*
+.idea
+/cmake-build-*

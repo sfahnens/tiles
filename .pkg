@@ -21,7 +21,7 @@
 [lmdb]
   url=git@git.motis-project.de:lib/lmdb.git
   branch=master
-  commit=7c6b6da48bd5d8deb7987d6792799b0ec10bf7ed
+  commit=fa076f8291e5032bd3467e6a858f4dbeedea904e
 [lua]
   url=git@git.motis-project.de:lib/lua.git
   branch=master

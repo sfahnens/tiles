@@ -1,21 +1,23 @@
-== DONE:
-- render: metadata completed zoom levels DONE
-- profile: zoomlevel depends on area DONE
-- db: store gzipped tiles DONE
-- auto clean database DONE
-- iterate -> zoom level 0: 2tiles?! DONE
-- iterate -> coastline: south america missing?! DONE
-- coastline shapefile base DONE
-- coastline shapefile parallel DONE
-- improve performance DONE
-- render: fast bounding box check in deserialize (same as zoomlevel) DONE
-- database disk usage statistics
-- fix coastline on tiles with features
-- compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
-- fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
-- feature packing duplicates the used database on disk!
-- render bugs: whole tile -> blue with roads and rail (z8 brandenburg)
-- use clipper for geometry clipping
++ coastline: shapefile base DONE
++ coastline: shapefile parallel DONE
++ coastline: fix coastline on tiles with features
++ db: store gzipped tiles DONE
++ db: auto clean database DONE
++ render: metadata completed zoom levels DONE
++ render: fast bounding box check in deserialize (same as zoomlevel) DONE
++ render: bugs whole tile -> blue with roads and rail (z8 brandenburg)
++ perf: improve performance DONE
++ perf: database disk usage statistics
++ perf: compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
+- perf: import europe
+- perf: import planetfile
++ profile: zoomlevel depends on area DONE
++ profile: road names
++ iterate -> zoom level 0: 2tiles?! DONE
++ iterate -> coastline: south america missing?! DONE
++ fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
++ feature packing duplicates the used database on disk!
++ use clipper for geometry clipping
 
 == HIGH PRIO:
 - occasionally: bus error!
@@ -33,15 +35,13 @@
 - optimize: merge nearby shapes with equal properties
 
 - profile: respect Key:layer
-- profile: road names
 - profile: road oneway direction
 - profile: air road
 - profile: tram
 
-- profile: improave landuse railway
+- profile: improve landuse railway
 - profile: power / substation
 - profile: rail main/greyed out
-
 
 - profile: poi shopping
 - profile: poi public transport

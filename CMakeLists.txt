@@ -93,7 +93,7 @@ target_link_libraries(tiles-benchmark
   geo
 )
 
-file(GLOB_RECURSE tiles-test-files test/*.cc)
+file(GLOB_RECURSE tiles-test-files test/*.cc src/osm/hybrid_node_idx.cc)
 
 add_executable(tiles-test EXCLUDE_FROM_ALL ${tiles-test-files})
 set_target_properties(tiles-test PROPERTIES COMPILE_FLAGS ${TILES_CXX_FLAGS})

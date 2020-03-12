@@ -47,7 +47,7 @@ struct feature_inserter : public batch_inserter {
       pending.second.push_back(value);
     }
 
-    constexpr size_t kCacheThresholdUpper = 64ull * 1024 * 1024;
+    constexpr size_t kCacheThresholdUpper = 512ull * 1024 * 1024;
     constexpr size_t kCacheThresholdLower = kCacheThresholdUpper / 2;
 
     if (pending_size_ < kCacheThresholdUpper) {

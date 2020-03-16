@@ -29,7 +29,7 @@ struct import_settings : public conf::simple_config {
                  "/path/to/coastlines.zip");
     multitoken_param(tasks_, tasks, "tasks",
                      "'all' or any combination of: 'coastlines', "
-                     "'features', 'stats', 'tiles'");
+                     "'features', 'stats', 'pack', 'tiles'");
   }
 
   bool has_any_task(std::vector<std::string> const& query) {

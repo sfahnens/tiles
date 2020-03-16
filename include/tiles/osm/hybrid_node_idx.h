@@ -39,20 +39,22 @@ void get_coords(
 void update_locations(hybrid_node_idx const&, osmium::memory::Buffer&);
 
 struct hybrid_node_idx_builder : public osmium::handler::Handler {
-  hybrid_node_idx_builder(hybrid_node_idx&);
+  explicit hybrid_node_idx_builder(hybrid_node_idx&);
   hybrid_node_idx_builder(int idx_fd, int dat_fd);
   ~hybrid_node_idx_builder();
 
   void node(osmium::Node const& n) {
-    push(n.id(), {n.location().x() + hybrid_node_idx::x_offset,
-                  n.location().y() + hybrid_node_idx::y_offset});
+    push(n.id(), {static_cast<fixed_coord_t>(n.location().x()) +
+                      hybrid_node_idx::x_offset,
+                  static_cast<fixed_coord_t>(n.location().y()) +
+                      hybrid_node_idx::y_offset});
   }
 
-  void push(osmium::object_id_type const, fixed_xy const&);
+  void push(osmium::object_id_type, fixed_xy const&);
   void finish();
 
   void dump_stats() const;
-  size_t get_stat_spans() const;  // for tests
+  [[nodiscard]] size_t get_stat_spans() const;  // for tests
 
   struct impl;
   std::unique_ptr<impl> impl_;

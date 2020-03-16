@@ -27,7 +27,6 @@ void get_coords_helper(
 }
 
 TEST_CASE("hybrid_node_idx") {
-
   SECTION("null") {
     tiles::hybrid_node_idx nodes;
     CHECK_FALSE(get_coords(nodes, 0));
@@ -120,6 +119,11 @@ TEST_CASE("hybrid_node_idx") {
       CHECK_LOCATION(l43_b, 5, 6);
       CHECK_LOCATION(l44, 8, 9);
     }
+    {
+      osmium::Location l44;
+      get_coords_helper(nodes, {{44l, &l44}});
+      CHECK_LOCATION(l44, 8, 9);
+    }
   }
 
   SECTION("entries gap") {
@@ -181,6 +185,11 @@ TEST_CASE("hybrid_node_idx") {
       CHECK_LOCATION(l44, 8, 9);
       CHECK_LOCATION(l46, 4, 5);
     }
+    {
+      osmium::Location l46;
+      get_coords_helper(nodes, {{46l, &l46}});
+      CHECK_LOCATION(l46, 4, 5);
+    }
   }
 
   SECTION("artificial splits") {
@@ -209,6 +218,12 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_EXISTS(nodes, 43, 2, 7);
     CHECK_EXISTS(nodes, 44, (1 << 28) + 14, (1 << 28) + 15);
     CHECK_EXISTS(nodes, 45, (1 << 28) + 16, (1 << 28) + 17);
+
+    {
+      osmium::Location l44;
+      get_coords_helper(nodes, {{44l, &l44}});
+      CHECK_LOCATION(l44, (1 << 28) + 14, (1 << 28) + 15);
+    }
   }
 
   SECTION("large numbers") {
@@ -243,6 +258,53 @@ TEST_CASE("hybrid_node_idx") {
         builder.push(43, {1ull + std::numeric_limits<uint32_t>::max(), 3}));
     CHECK_THROWS(
         builder.push(43, {2, 1ull + std::numeric_limits<uint32_t>::max()}));
+  }
+
+  SECTION("missing nodes") {
+    auto const idx_fd = osmium::detail::create_tmp_file();
+    auto const dat_fd = osmium::detail::create_tmp_file();
+
+    {
+      tiles::hybrid_node_idx_builder builder{idx_fd, dat_fd};
+      builder.push(42, {1, 1});
+      builder.push(43, {2, 2});
+      builder.push(45, {4, 4});
+      builder.push(46, {5, 5});
+      builder.finish();
+    }
+
+    tiles::hybrid_node_idx nodes{idx_fd, dat_fd};
+
+    std::vector<std::pair<osmium::object_id_type, osmium::Location>> mem;
+    for (auto i = 41; i < 48; ++i) {
+      mem.emplace_back(i, osmium::Location{});
+    }
+    std::vector<std::pair<osmium::object_id_type, osmium::Location*>> query;
+    for (auto& m : mem) {
+      query.emplace_back(m.first, &m.second);
+    }
+    tiles::get_coords(nodes, query);
+
+    CHECK(mem.at(0).second.x() == osmium::Location::undefined_coordinate);
+    CHECK(mem.at(0).second.y() == osmium::Location::undefined_coordinate);
+
+    CHECK(mem.at(1).second.x() == 1);
+    CHECK(mem.at(1).second.y() == 1);
+
+    CHECK(mem.at(2).second.x() == 2);
+    CHECK(mem.at(2).second.y() == 2);
+
+    CHECK(mem.at(3).second.x() == osmium::Location::undefined_coordinate);
+    CHECK(mem.at(3).second.y() == osmium::Location::undefined_coordinate);
+
+    CHECK(mem.at(4).second.x() == 4);
+    CHECK(mem.at(4).second.y() == 4);
+
+    CHECK(mem.at(5).second.x() == 5);
+    CHECK(mem.at(5).second.y() == 5);
+
+    CHECK(mem.at(6).second.x() == osmium::Location::undefined_coordinate);
+    CHECK(mem.at(6).second.y() == osmium::Location::undefined_coordinate);
   }
 }
 

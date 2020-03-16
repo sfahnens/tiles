@@ -3,8 +3,6 @@
 #include <limits>
 #include <tuple>
 
-#include <boost/numeric/conversion/cast.hpp>
-
 #include "osmium/index/detail/mmap_vector_file.hpp"
 #include "osmium/index/detail/tmpfile.hpp"
 #include "osmium/osm/way.hpp"
@@ -12,14 +10,46 @@
 
 #include "protozero/varint.hpp"
 
+#include "utl/verify.h"
+
 #include "tiles/fixed/algo/delta.h"
 #include "tiles/util.h"
 
+namespace o = osmium;
+namespace od = osmium::detail;
 namespace pz = protozero;
+
+using pz::decode_varint;
+using pz::decode_zigzag64;
+using pz::skip_varint;
+
+using osm_id_t = o::object_id_type;
 
 namespace tiles {
 
-using osm_id_t = osmium::object_id_type;
+// dat contains spans which node sets with consecutive node ids
+// there are two kinds of spans
+// "coord_span" contains compressed coordianates of consecutive nodes
+// "empty_span" contains a placeholder for n missing node ids
+
+// a coord span is a stream of integers
+// [fi] = uint32_t [vi] = var int normal [vi_zz] = var int zigzag encoded
+// vi    | ((n << 1) | k) | this span contain n+1 nodes (k = 0x0 -> coord span)
+// fi    |           x[0] | the absolute x coordinate of the 0th node
+// fi    |           y[0] | the absolute y coordinate of the 0th node
+// vi_zz |           x[1] | the delta encoded x coordinate of the 1st node
+// vi_zz |           y[1] | the delta encoded y coordinate of the 1st node
+//                     ...
+// vi_zz |           x[n] | the delta encoded x coordinate of the last node
+// vi_zz |           y[n] | the delta encoded y coordinate of the last node
+
+// a empty span contains just the number of missing nodes
+// vi    | ((n << 1) | k) | this represents n+1 missing nodes (k = 0x1 -> empty)
+
+// a empty span with n = 0 and k = 0x1 marks EOF
+
+// idx contains a sorted pairs
+// of osm node id and offset of the corresponding span in dat
 
 struct id_offset {
   id_offset(osm_id_t id, size_t offset) : id_{id}, offset_{offset} {}
@@ -39,8 +69,8 @@ struct id_offset {
 struct hybrid_node_idx::impl {
   impl(int idx_fd, int dat_fd) : idx_{idx_fd}, dat_{dat_fd} {}
 
-  osmium::detail::mmap_vector_file<id_offset> idx_;
-  osmium::detail::mmap_vector_file<char> dat_;
+  od::mmap_vector_file<id_offset> idx_;
+  od::mmap_vector_file<char> dat_;
 };
 
 uint32_t read_fixed(char const** data) {
@@ -90,15 +120,13 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
       }
     }
 
-    auto const x0 = read_fixed(&dat_it);
-    auto const y0 = read_fixed(&dat_it);
+    delta_decoder x_dec{read_fixed(&dat_it)};
+    delta_decoder y_dec{read_fixed(&dat_it)};
     if (curr_id == id) {
-      return fixed_xy{x0, y0};
+      return fixed_xy{x_dec.curr_, y_dec.curr_};
     }
     ++curr_id;
 
-    delta_decoder x_dec{x0};
-    delta_decoder y_dec{y0};
     for (auto i = 1ul; i < (span_size + 1); ++i) {
       auto x = x_dec.decode(
           pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
@@ -111,175 +139,212 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
       ++curr_id;
     }
   }
-
   return std::nullopt;
 }
 
 void get_coords(
     hybrid_node_idx const& nodes,
-    std::vector<std::pair<osmium::object_id_type, osmium::Location*>>& query) {
+    std::vector<std::pair<o::object_id_type, o::Location*>>& queries) {
   auto const& idx = nodes.impl_->idx_;
   auto const& dat = nodes.impl_->dat_;
 
-  if (idx.empty()) {
+  if (idx.empty()) {  // unlikely in prod
     return;
+  }
+
+  osm_id_t curr_id = std::numeric_limits<osm_id_t>::min();
+  char const* dat_it = nullptr;
+  long span_size = 0;  // length of current span
+  long span_pos = 0;  // position in current span
+
+  delta_decoder x_dec{0};
+  delta_decoder y_dec{0};
+
+  enum class fsm_state {
+    from_index,
+    at_span_start,
+    in_span,
+  };
+
+  fsm_state state = fsm_state::from_index;
+
+  std::sort(begin(queries), end(queries));
+  auto q_it = begin(queries);
+  for (; q_it != end(queries) && q_it->first < idx.at(0).id_; ++q_it) {
+    // skip missing pre
   }
 
   constexpr auto kReInitDistance = 1024;
 
-  osm_id_t curr_id = std::numeric_limits<osm_id_t>::min();
-  char const* dat_it = nullptr;
-  long span_size = 0;
-  long consumed = 0;
+  while (q_it != end(queries)) {
+    auto const& query_id = q_it->first;
 
-  delta_decoder x_dec{0};
-  delta_decoder y_dec{0};
-  fixed_coord_t curr_x, curr_y;
+    switch (state) {
+      // pre cond: have any query_id
+      case fsm_state::from_index: {
+        auto it_idx = std::lower_bound(
+            std::begin(idx), std::end(idx), query_id,
+            [](auto const& o, auto const& i) { return o.id_ < i; });
 
-  std::sort(begin(query), end(query));
-  for (auto query_it = begin(query); query_it != end(query);) {
-    auto const& query_id = query_it->first;
-    bool jmp = false;
+        utl::verify(!(it_idx == std::begin(idx) && it_idx->id_ != query_id),
+                    "missing (cannnot happen)");
+        if (it_idx == std::end(idx) || it_idx->id_ != query_id) {
+          --it_idx;
+        }
 
-    // use binary search in idx to jump into dat
-    if (curr_id + kReInitDistance < query_id) {
-      auto it_idx = std::lower_bound(
-          std::begin(idx), std::end(idx), query_id,
-          [](auto const& o, auto const& i) { return o.id_ < i; });
-      verify(!(it_idx == std::begin(idx) && it_idx->id_ != query_id),
-             "missing");
-      if (it_idx == std::end(idx) || it_idx->id_ != query_id) {
-        --it_idx;
-      }
+        curr_id = it_idx->id_;
+        dat_it = dat.data() + it_idx->offset_;
+        state = fsm_state::at_span_start;
+      } break;
 
-      curr_id = it_idx->id_;
-      dat_it = dat.data() + it_idx->offset_;
-
-      auto const header = pz::decode_varint(&dat_it, std::end(dat));
-      verify((header & 0x1) == 0x0, "idx points to empty span");
-      span_size = header >> 1;
-      consumed = 0;
-
-      jmp = true;
-    }
-
-    // forward to start of span which contains query_id
-    while (curr_id + span_size + 1 - consumed < query_id) {
-      if (consumed == 0) {
-        dat_it += 8;  // 2 * 4 bytes
-        ++consumed;  // only consume (dont advance curr_id)
-      }
-      for (; consumed < (span_size + 1); ++consumed) {
-        pz::skip_varint(&dat_it, std::end(dat));  // x
-        pz::skip_varint(&dat_it, std::end(dat));  // y
-        ++curr_id;
-      }
-
-      while (true) {
-        auto const header = pz::decode_varint(&dat_it, std::end(dat));
+      // pre cond: curr_id <= query_id, dat_it points to header for curr_id
+      case fsm_state::at_span_start: {
+        auto const header = decode_varint(&dat_it, std::end(dat));
         span_size = header >> 1;
 
         if ((header & 0x1) == 0x1) {
           if (span_size == 0) {
             return;  // eof
           } else {
-            curr_id += span_size + 1;  // skip empty span
-            continue;
+            curr_id += span_size;  // skip missing node ids
+            state = fsm_state::at_span_start;
+            break;
           }
-        } else {
-          break;  // coord span found
         }
-      }
+        span_size += 1;
+        span_pos = 0;
 
-      jmp = true;
-      consumed = 0;
-    }
+        // not found : skip missing queries
+        if (query_id < curr_id) {
+          for (; q_it != end(queries) && q_it->first < curr_id; ++q_it) {
+          }
+          x_dec.reset(read_fixed(&dat_it));
+          y_dec.reset(read_fixed(&dat_it));
+          state = fsm_state::in_span;
+          break;
+        }
 
-    // if jumped, we are at start of proper span -> reset the decoders
-    if (jmp) {
-      curr_x = read_fixed(&dat_it);
-      curr_y = read_fixed(&dat_it);
+        // is in this span : go into
+        if (query_id < curr_id + span_size) {
+          x_dec.reset(read_fixed(&dat_it));
+          y_dec.reset(read_fixed(&dat_it));
+          state = fsm_state::in_span;
+          break;
+        }
 
-      x_dec.reset(curr_x);
-      y_dec.reset(curr_y);
-      ++consumed;
-    }
+        // not in this span : skip
+        dat_it += 2 * sizeof(uint32_t);  // skip fixed x[0]/y[0];
+        for (auto i = 1; i < span_size; ++i) {
+          skip_varint(&dat_it, std::end(dat));  // x[i]
+          skip_varint(&dat_it, std::end(dat));  // y[i]
+        }
+        curr_id += span_size;
+        state = fsm_state::at_span_start;
+      } break;
 
-    // forward to actual node id
-    while (curr_id < query_id && dat_it != std::end(dat)) {
-      curr_x = x_dec.decode(
-          pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
-      curr_y = y_dec.decode(
-          pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
-      ++curr_id;
-      ++consumed;
-    }
-    verify(query_id == curr_id, "missing coords! (query_id=%li, curr_id=%li)",
-           query_id, curr_id);
+      // pre cond: x_dec/y_dec initialized for span_pos
+      case fsm_state::in_span: {
+        if (query_id < curr_id + (span_size - span_pos)) {
+          while (curr_id != query_id) {
+            utl::verify(dat_it != std::end(dat), "hit end(dat)");
+            utl::verify(span_pos < span_size, "hit end of span");
 
-    // update values
-    for (; query_it->first == query_id; ++query_it) {
-      query_it->second->set_x(curr_x);
-      query_it->second->set_y(curr_y);
+            x_dec.decode(
+                decode_zigzag64(decode_varint(&dat_it, std::end(dat))));
+            y_dec.decode(
+                decode_zigzag64(decode_varint(&dat_it, std::end(dat))));
+            ++curr_id;
+            ++span_pos;
+          }
+
+          utl::verify(query_id == curr_id, "missed node");
+          for (; q_it != end(queries) && q_it->first == query_id; ++q_it) {
+            q_it->second->set_x(x_dec.curr_);
+            q_it->second->set_y(y_dec.curr_);
+          }
+          state = fsm_state::in_span;
+          break;
+        }
+
+        // distance big enough : use index from scratch
+        if (query_id > curr_id + kReInitDistance) {
+          state = fsm_state::from_index;
+          break;
+        }
+
+        // next distance nearby, but not in this span : unwind span first
+        ++span_pos;  // don't unwind current pos
+        for (; span_pos < span_size; ++span_pos) {
+          skip_varint(&dat_it, std::end(dat));  // x
+          skip_varint(&dat_it, std::end(dat));  // y
+          ++curr_id;
+        }
+
+        ++curr_id;  // first id of next span
+        state = fsm_state::at_span_start;
+      } break;
     }
   }
 }
 
-void update_locations(hybrid_node_idx const& nodes,
-                      osmium::memory::Buffer& buffer) {
-  struct query_builder : public osmium::handler::Handler {
-    void way(osmium::Way& way) {
+void update_locations(hybrid_node_idx const& nodes, o::memory::Buffer& buffer) {
+  struct query_builder : public o::handler::Handler {
+    void way(o::Way& way) {
       for (auto& node_ref : way.nodes()) {
         query_.emplace_back(node_ref.ref(), &node_ref.location());
       }
     }
-    std::vector<std::pair<osmium::object_id_type, osmium::Location*>> query_;
+    std::vector<std::pair<o::object_id_type, o::Location*>> query_;
   };
 
   query_builder builder;
-  osmium::apply(buffer, builder);
+  o::apply(buffer, builder);
 
-  get_coords(nodes, builder.query_);
+  if (!builder.query_.empty()) {
+    get_coords(nodes, builder.query_);
 
-  for (auto const& pair : builder.query_) {
-    pair.second->set_x(pair.second->x() - hybrid_node_idx::x_offset);
-    pair.second->set_y(pair.second->y() - hybrid_node_idx::y_offset);
+    for (auto const& pair : builder.query_) {
+      pair.second->set_x(pair.second->x() - hybrid_node_idx::x_offset);
+      pair.second->set_y(pair.second->y() - hybrid_node_idx::y_offset);
+    }
   }
 }
 
 hybrid_node_idx::hybrid_node_idx()
-    : impl_{std::make_unique<impl>(osmium::detail::create_tmp_file(),
-                                   osmium::detail::create_tmp_file())} {}
+    : impl_{std::make_unique<impl>(od::create_tmp_file(),
+                                   od::create_tmp_file())} {}
 hybrid_node_idx::hybrid_node_idx(int idx_fd, int dat_fd)
     : impl_{std::make_unique<impl>(idx_fd, dat_fd)} {}
 hybrid_node_idx::~hybrid_node_idx() = default;
 
-void hybrid_node_idx::way(osmium::Way& way) const {
+void hybrid_node_idx::way(o::Way& way) const {
   for (auto& node_ref : way.nodes()) {
     auto const& coords = get_coords(*this, node_ref.ref());
-    verify(coords, "coords missing!");
+    utl::verify(coords.has_value(), "coords missing!");
     node_ref.set_location(
-        osmium::Location{static_cast<int32_t>(coords->x() - x_offset),
-                         static_cast<int32_t>(coords->y() - y_offset)});
+        o::Location{static_cast<int32_t>(coords->x() - x_offset),
+                    static_cast<int32_t>(coords->y() - y_offset)});
   }
 }
 
 struct hybrid_node_idx_builder::impl {
-  impl(osmium::detail::mmap_vector_file<id_offset>& idx,
-       osmium::detail::mmap_vector_file<char>& dat)
+  impl(od::mmap_vector_file<id_offset>& idx, od::mmap_vector_file<char>& dat)
       : nodes_{nullptr}, idx_{idx}, dat_{dat} {}
 
-  impl(std::unique_ptr<hybrid_node_idx::impl> nodes)
+  explicit impl(std::unique_ptr<hybrid_node_idx::impl> nodes)
       : nodes_{std::move(nodes)}, idx_{nodes_->idx_}, dat_{nodes_->dat_} {}
 
   void push(osm_id_t const id, fixed_xy const& pos) {
     constexpr auto coord_min = std::numeric_limits<uint32_t>::min();
     constexpr auto coord_max = std::numeric_limits<uint32_t>::max();
 
-    verify(pos.x() >= coord_min && pos.y() >= coord_min &&
-               pos.x() <= coord_max && pos.y() <= coord_max,
-           "pos not within bounds");
-    verify(id > last_id_, "ids not sorted!");
+    utl::verify(pos.x() >= coord_min && pos.y() >= coord_min &&
+                    pos.x() <= coord_max && pos.y() <= coord_max,
+                "pos ({}, {}) not within bounds ({} / {})",  //
+                pos.x(), pos.y(), coord_min, coord_max);
+    utl::verify(id > last_id_, "ids not sorted!");
+
+    ++stat_nodes_;
 
     if (last_id_ + 1 != id && !span_.empty()) {
       push_coord_span();
@@ -387,7 +452,7 @@ struct hybrid_node_idx_builder::impl {
     tiles::t_log("index size: {} entries", idx_.size());
     tiles::t_log("data size: {} bytes", dat_.size());
 
-    tiles::t_log("bulder: nodes {}", stat_nodes_);
+    tiles::t_log("builder: nodes {}", stat_nodes_);
     tiles::t_log("builder: spans {}", stat_spans_);
 
     for (auto i = 0u; i < stat_coord_chars_.size(); ++i) {
@@ -401,8 +466,8 @@ struct hybrid_node_idx_builder::impl {
   }
 
   std::unique_ptr<hybrid_node_idx::impl> nodes_;
-  osmium::detail::mmap_vector_file<id_offset>& idx_;
-  osmium::detail::mmap_vector_file<char>& dat_;
+  od::mmap_vector_file<id_offset>& idx_;
+  od::mmap_vector_file<char>& dat_;
 
   osm_id_t last_id_ = 0;
   std::vector<fixed_xy> span_;
@@ -428,7 +493,7 @@ hybrid_node_idx_builder::hybrid_node_idx_builder(int idx_fd, int dat_fd)
 
 hybrid_node_idx_builder::~hybrid_node_idx_builder() = default;
 
-void hybrid_node_idx_builder::push(osmium::object_id_type const id,
+void hybrid_node_idx_builder::push(o::object_id_type const id,
                                    fixed_xy const& coords) {
   impl_->push(id, coords);
 }

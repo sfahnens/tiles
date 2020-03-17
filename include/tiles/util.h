@@ -27,6 +27,25 @@ inline void t_log(Args&&... args) {
 
 std::string compress_deflate(std::string const&);
 
+struct progress_tracker {
+  explicit progress_tracker(std::string label, size_t total)
+      : label_{std::move(label)},
+        total_{total},
+        pos_{std::numeric_limits<size_t>::max()} {}
+
+  void update(size_t curr) {
+    size_t curr_pos = static_cast<size_t>(100. * curr / total_ / 5) * 5;
+    size_t prev_pos = pos_.exchange(curr_pos);
+    if (prev_pos != curr_pos) {
+      t_log("{} : {:>3}%", label_, curr_pos);
+    }
+  }
+
+  std::string label_;
+  size_t total_;
+  std::atomic_size_t pos_;
+};
+
 template <typename Fun>
 struct raii_helper {
   raii_helper(Fun&& fun) : fun_{std::move(fun)} {}

@@ -16,6 +16,9 @@ constexpr auto kMetaKeyFullySeasideTree = "fully-seaside-tree";
 constexpr auto kMetaKeyLayerNames = "layer-names";
 constexpr auto kMetaKeyFeatureMetaCoding = "feature-meta-coding";
 
+using dbi_opener_fn =
+    std::function<lmdb::txn::dbi(lmdb::txn&, lmdb::dbi_flags)>;
+
 inline lmdb::env make_tile_database(
     char const* db_fname,
     lmdb::env_open_flags flags = lmdb::env_open_flags::NOSUBDIR) {
@@ -70,12 +73,54 @@ struct tile_db_handle {
     return txn.dbi_open(dbi_name_tiles_, flags | lmdb::dbi_flags::INTEGERKEY);
   }
 
+  dbi_opener_fn meta_dbi_opener() {
+    using namespace std::placeholders;
+    return std::bind(&tile_db_handle::meta_dbi, this, _1, _2);
+  }
+
+  dbi_opener_fn features_dbi_opener() {
+    using namespace std::placeholders;
+    return std::bind(&tile_db_handle::features_dbi, this, _1, _2);
+  }
+
+  dbi_opener_fn tiles_dbi_opener() {
+    using namespace std::placeholders;
+    return std::bind(&tile_db_handle::tiles_dbi, this, _1, _2);
+  }
+
   lmdb::env& env_;
   char const* dbi_name_meta_;
   char const* dbi_name_features_;
   char const* dbi_name_tiles_;
 };
 
+struct dbi_handle {
+  dbi_handle(tile_db_handle& handle, dbi_opener_fn dbi_opener,
+             lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
+      : env_{handle.env_}, dbi_opener_{std::move(dbi_opener)}, flags_{flags} {}
+
+  dbi_handle(lmdb::env& env, std::string dbiname,
+             lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
+      : env_{env},
+        dbi_opener_{
+            [dbiname{std::move(dbiname)}](
+                lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) {
+              return txn.dbi_open(dbiname.c_str(), flags);
+            }},
+        flags_{flags} {}
+
+  std::pair<lmdb::txn, lmdb::txn::dbi> begin_txn() {
+    lmdb::txn txn{env_};
+    lmdb::txn::dbi dbi = dbi_opener_(txn, flags_);
+    return {std::move(txn), dbi};
+  }
+
+  lmdb::env& env_;
+  dbi_opener_fn dbi_opener_;
+  lmdb::dbi_flags flags_;
+};
+
+// TODO use dbi_handle
 struct batch_inserter {
   batch_inserter(tile_db_handle& handle,
                  lmdb::txn::dbi (tile_db_handle::*dbi_opener)(lmdb::txn&,

@@ -49,6 +49,7 @@ struct layer_names_builder {
   }
 
   size_t get_layer_idx(std::string const& name) {
+    std::lock_guard<std::mutex> l{mutex_};
     return utl::get_or_create_index(layer_names_, name);
   }
 
@@ -64,6 +65,7 @@ struct layer_names_builder {
     txn.put(meta_dbi, kMetaKeyLayerNames, buf);
   }
 
+  std::mutex mutex_;
   std::map<std::string, size_t> layer_names_;
 };
 

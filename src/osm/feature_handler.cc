@@ -2,9 +2,7 @@
 
 #include "sol.hpp"
 
-#include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/fixed_geometry.h"
-#include "tiles/fixed/io/serialize.h"
 #include "tiles/osm/pending_feature.h"
 #include "tiles/osm/read_osm_geometry.h"
 
@@ -40,11 +38,13 @@ struct feature_handler::script_runner {
   sol::function process_area_;
 };
 
-feature_handler::feature_handler(feature_inserter& inserter,
+feature_handler::feature_handler(feature_inserter_mt& inserter,
                                  layer_names_builder& layer_names_builder)
     : runner_{std::make_unique<feature_handler::script_runner>()},
       inserter_{inserter},
       layer_names_builder_{layer_names_builder} {}
+
+feature_handler::feature_handler(feature_handler&&) noexcept = default;
 feature_handler::~feature_handler() = default;
 
 template <typename OSMObject>
@@ -63,7 +63,7 @@ std::map<std::string, std::string> make_meta(pending_feature const& f,
 }
 
 template <typename OSMObject>
-void handle_feature(feature_inserter& inserter,
+void handle_feature(feature_inserter_mt& inserter,
                     layer_names_builder& layer_names,
                     sol::function const& process, OSMObject const& obj) {
   auto pf = pending_feature{obj, [&obj] { return read_osm_geometry(obj); }};

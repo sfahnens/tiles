@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <variant>
 
-#include "blockingconcurrentqueue.h"
 #include "clipper/clipper.hpp"
 
 #include "utl/to_vec.h"
@@ -24,6 +23,7 @@
 #include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/mvt/tile_spec.h"
+#include "tiles/util_parallel.h"
 
 namespace cl = ClipperLib;
 namespace sc = std::chrono;
@@ -44,26 +44,6 @@ using coastline_ptr = std::shared_ptr<coastline>;
 struct geo_task {
   geo::tile tile_;
   std::vector<coastline_ptr> coastlines_;
-};
-
-template <typename T>
-struct queue_wrapper {
-  queue_wrapper() : pending_{0} {}
-
-  void enqueue(T&& t) {
-    ++pending_;
-    queue_.enqueue(std::forward<T>(t));
-  }
-
-  bool dequeue(T& t) {
-    return queue_.wait_dequeue_timed(t, sc::milliseconds(100));
-  }
-
-  void finish() { --pending_; }
-  bool finished() const { return pending_ == 0; }
-
-  std::atomic_uint64_t pending_;
-  moodycamel::BlockingConcurrentQueue<T> queue_;
 };
 
 using geo_queue_t = queue_wrapper<geo_task>;

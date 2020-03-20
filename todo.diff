@@ -1,48 +1,62 @@
-+ coastline: shapefile base DONE
-+ coastline: shapefile parallel DONE
++ coastline: shapefile base
++ coastline: shapefile parallel
 + coastline: fix coastline on tiles with features
-+ db: store gzipped tiles DONE
-+ db: auto clean database DONE
-+ render: metadata completed zoom levels DONE
-+ render: fast bounding box check in deserialize (same as zoomlevel) DONE
+
++ db: store gzipped tiles
++ db: auto clean database
++ db: feature packing duplicates the used database on disk!
++ db: feature packs in extra file for fine grained memory management
+- db: variant (+types) for metadata
+
++ import: shared strings during second pass
++ import: parallelize
+- import: dont prepare fully seaside
+- import: fragmentation management for planet file
+- import: prepare tiles with empty database?!
+- import: shared_metadata and feature inserter flush in other thread
+- import: count broken geometries (missing nodes)
+- import: create pack index only if there are enough features in an entry
+
+- misc: proper feature wraparound 180/-180 <-> artifacts on island?!
+- misc: some tiles mising on lower z for full coastlines
+- misc: improve geometry clipping: compute unclipped z-range
+- misc: update conf library
+
++ render: metadata completed zoom levels
++ render: fast bounding box check in deserialize (same as zoomlevel)
 + render: bugs whole tile -> blue with roads and rail (z8 brandenburg)
-+ perf: improve performance DONE
++ render: iterate -> zoom level 0: 2tiles?!
++ render: iterate -> coastline: south america missing?!
++ render: fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
++ render: use clipper for geometry clipping
+- render: combine seaside on higer z levels
+- render: order shapes by area
+- render: skip simplify for simple features (polygon with 4 points -> binary)
+- render: deduplicate features on higher zoom levels
+- render: merge nearby shapes with equal properties
+
++ perf: improve performance
 + perf: database disk usage statistics
 + perf: compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
 - perf: import europe
 - perf: import planetfile
-+ profile: zoomlevel depends on area DONE
+- perf: custom arena/block allocator for geometry stuff
+- perf: compress tiles with https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h
+
++ profile: zoomlevel depends on area
 + profile: road names
-+ iterate -> zoom level 0: 2tiles?! DONE
-+ iterate -> coastline: south america missing?! DONE
-+ fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
-+ feature packing duplicates the used database on disk!
-+ use clipper for geometry clipping
-
-== HIGH PRIO:
-- occasionally: bus error!
-
-- render: order shapes by area
-- skip simplify for simple features (polygon with 4 points -> binary)
-- improve geometry clipping: compute unclipped z-range
-
-== LOW PRIO:
-- proper feature wraparound 180/-180 <-> artifacts on island?!
-- prepare tiles with empty database?!
-
 - profile: warning if layer ist not set?!
-
-- optimize: merge nearby shapes with equal properties
-
+- profile: handling of railway zoom levels / way types
+- profile: simplified grayish profile for background use
+- profile: administrative features
 - profile: respect Key:layer
-- profile: road oneway direction
+- profile: road oneway direction arrows
 - profile: air road
 - profile: tram
-
+- profile: scottland greens
+- profile: milano roadside greens
 - profile: improve landuse railway
 - profile: power / substation
-- profile: rail main/greyed out
-
 - profile: poi shopping
 - profile: poi public transport
 - profile: poi traffic lights
@@ -50,15 +64,7 @@
 - profile: woog steeg = building
 - profile: foreign names?!
 
-- database: variant for metadata
-- geometry: custom block allocator for geometry stuff
-- render: parallelize
-- import: parallelize
+- server: remove net-old -> boost beast minimal http example?
+- server: parallelize
+- server: better live statistics (wait some time to aggregate multiple requests)
 
-- prepare tiles: investigate: some tiles mising on lower z for full coastlines
-- better live statistics (wait some time to aggregate multiple requests)
-
-- implement custom arena allocator
-- use https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h for compression
-
-- create index only if there are enough features in an entry

@@ -10,7 +10,7 @@
 
 + import: shared strings during second pass
 + import: parallelize
-- import: dont prepare fully seaside
++ import: dont prepare fully seaside
 - import: fragmentation management for planet file
 - import: prepare tiles with empty database?!
 - import: shared_metadata and feature inserter flush in other thread

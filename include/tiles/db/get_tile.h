@@ -28,6 +28,7 @@ struct render_ctx {
   shared_metadata_decoder metadata_decoder_;
 
   bool ignore_prepared_ = false;
+  bool ignore_fully_seaside_ = false;
 };
 
 render_ctx make_render_ctx(tile_db_handle& db_handle) {
@@ -95,9 +96,10 @@ void pack_records_foreach(lmdb::cursor& c, geo::tile const& query_tile,
 }
 
 template <typename ForeachPack, typename PerfCounter>
-void render_features(tile_builder& builder, render_ctx const& ctx,
-                     geo::tile const& tile, ForeachPack&& foreach_pack,
-                     PerfCounter& pc) {
+size_t render_features(tile_builder& builder, render_ctx const& ctx,
+                       geo::tile const& tile, ForeachPack&& foreach_pack,
+                       PerfCounter& pc) {
+  size_t added_features = 0;
   auto const box = tile_spec{tile}.draw_bounds_;  // XXX really with overdraw?
 
   start<perf_task::RENDER_TILE_QUERY_FEATURE>(pc);
@@ -119,11 +121,13 @@ void render_features(tile_builder& builder, render_ctx const& ctx,
 
       start<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
       builder.add_feature(*feature);
+      ++added_features;
       stop<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
     });
 
     start<perf_task::RENDER_TILE_ITER_FEATURE>(pc);
   });
+  return added_features;
 }
 
 template <typename ForeachPack, typename PerfCounter>
@@ -135,12 +139,19 @@ std::optional<std::string> get_tile(render_ctx const& ctx,
 
   tile_builder builder{tile, ctx.layer_names_};
   render_seaside(builder, ctx, tile, pc);
-  render_features(builder, ctx, tile,  //
-                  std::forward<ForeachPack>(foreach_pack), pc);
+  auto const rendered_features = render_features(
+      builder, ctx, tile, std::forward<ForeachPack>(foreach_pack), pc);
+
+  if (ctx.ignore_fully_seaside_ && ctx.seaside_tiles_.contains(tile) &&
+      rendered_features == 0) {
+    return std::nullopt;
+  }
 
   start<perf_task::RENDER_TILE_FINISH>(pc);
-  stop<perf_task::RENDER_TILE_FINISH>(pc);
   auto rendered_tile = builder.finish();
+  stop<perf_task::RENDER_TILE_FINISH>(pc);
+
+  stop<perf_task::GET_TILE_RENDER>(pc);
 
   if (rendered_tile.empty()) {
     return std::nullopt;
@@ -171,10 +182,15 @@ std::optional<std::string> get_tile(tile_db_handle& handle, lmdb::txn& txn,
     auto db_tile = txn.get(tiles_dbi, make_tile_key(tile));
     stop<perf_task::GET_TILE_FETCH>(pc);
 
-    if (!db_tile) {
-      return std::nullopt;
+    if (db_tile) {
+      return std::string{*db_tile};
     }
-    return std::string{*db_tile};
+
+    if (ctx.seaside_tiles_.contains(tile)) {
+      return get_tile(ctx, tile, [](auto&&) {}, pc);
+    }
+
+    return std::nullopt;
   }
 
   return get_tile(ctx, tile,

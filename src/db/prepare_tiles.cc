@@ -41,9 +41,13 @@ struct prepare_manager {
 
   std::vector<prepare_task> get_batch() {
     std::lock_guard<std::mutex> lock{mutex_};
+    // do not process all expensive low-z tiles in one thread
+    auto const batch_size = (1u << 9u);
+    auto const batch_inc = 1u << static_cast<uint32_t>(std::max(
+                               9 - static_cast<int>(curr_zoomlevel_), 0));
+
     std::vector<prepare_task> batch;
-    for (auto i = 0u; i < (1u << 8u);
-         i += 1u << std::max(8u - curr_zoomlevel_, 0u)) {
+    for (auto i = 0u; i < batch_size; i += batch_inc) {
       if (curr_zoomlevel_ > max_zoomlevel_) {
         break;
       }
@@ -119,7 +123,8 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
                    uint32_t max_zoomlevel) {
   auto m = make_prepare_manager(db_handle, max_zoomlevel);
 
-  auto const render_ctx = make_render_ctx(db_handle);
+  auto render_ctx = make_render_ctx(db_handle);
+  render_ctx.ignore_fully_seaside_ = true;
   null_perf_counter npc;
 
   std::vector<std::thread> threads;
@@ -145,7 +150,6 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
 
         for (auto& task : batch) {
           using namespace std::chrono;
-
           auto start = steady_clock::now();
           task.result_ = get_tile(
               render_ctx, task.tile_,
@@ -161,6 +165,11 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
         }
 
         {
+          if (std::none_of(begin(batch), end(batch),
+                           [](auto const& t) { return t.result_; })) {
+            continue;
+          }
+
           auto txn = db_handle.make_txn();
           auto tiles_dbi = db_handle.tiles_dbi(txn);
           for (auto& task : batch) {

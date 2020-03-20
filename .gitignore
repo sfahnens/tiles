@@ -3,3 +3,4 @@
 /deps*
 .idea
 /cmake-build-*
+.vscode*

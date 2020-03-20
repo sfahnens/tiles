@@ -29,6 +29,7 @@
 + render: iterate -> coastline: south america missing?!
 + render: fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
 + render: use clipper for geometry clipping
+- render: multipolygons https://www.openstreetmap.org/relation/5429059 -> sandbank under water?
 - render: combine seaside on higer z levels
 - render: order shapes by area
 - render: skip simplify for simple features (polygon with 4 points -> binary)
@@ -40,6 +41,7 @@
 + perf: compact feature storage: 4kb pages of lmdb lead to bad memory efficiency
 - perf: import europe
 - perf: import planetfile
+- perf: use lz4 compression in pack file
 - perf: custom arena/block allocator for geometry stuff
 - perf: compress tiles with https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h
 
@@ -53,7 +55,7 @@
 - profile: road oneway direction arrows
 - profile: air road
 - profile: tram
-- profile: scottland greens
+- profile: scotland greens
 - profile: milano roadside greens
 - profile: improve landuse railway
 - profile: power / substation

@@ -6,6 +6,8 @@
 
 #include "sol.hpp"
 
+#include "utl/erase_duplicates.h"
+
 #include "tiles/fixed/algo/area.h"
 #include "tiles/osm/read_osm_geometry.h"
 #include "tiles/util.h"
@@ -84,6 +86,17 @@ struct pending_feature {
     metadata_.emplace_back(std::move(key), std::move(value));
   }
 
+  void finish_metadata() {
+    for (auto const& tag : tag_as_metadata_) {
+      metadata_.emplace_back(
+          tag, std::string{obj_.get_value_by_key(tag.c_str(), "")});
+    }
+
+    utl::erase_duplicates(
+        metadata_, [](auto const& a, auto const& b) { return a < b; },
+        [](auto const& a, auto const& b) { return a.key_ == b.key_; });
+  }
+
   osmium::OSMObject const& obj_;
 
   bool is_approved_;
@@ -91,7 +104,7 @@ struct pending_feature {
 
   std::string target_layer_;
   std::vector<std::string> tag_as_metadata_;
-  std::vector<std::pair<std::string, std::string>> metadata_;
+  std::vector<metadata> metadata_;
 
   std::function<fixed_geometry()> read_geometry_;
   std::optional<fixed_geometry> geometry_;

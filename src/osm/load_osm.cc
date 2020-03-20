@@ -1,15 +1,20 @@
 #include "tiles/osm/load_osm.h"
 
+#include "utl/verify.h"
+
 #include "osmium/area/assembler.hpp"
 #include "osmium/area/multipolygon_manager.hpp"
 #include "osmium/io/pbf_input.hpp"
+#include "osmium/io/reader_with_progress_bar.hpp"
 #include "osmium/memory/buffer.hpp"
-#include "osmium/util/progress_bar.hpp"
 #include "osmium/visitor.hpp"
 
+#include "tiles/db/layer_names.h"
+#include "tiles/db/shared_metadata.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/osm/feature_handler.h"
 #include "tiles/osm/hybrid_node_idx.h"
+#include "tiles/util.h"
 #include "tiles/util_parallel.h"
 
 namespace tiles {
@@ -23,7 +28,8 @@ namespace om = osmium::memory;
 namespace ou = osmium::util;
 namespace oeb = osmium::osm_entity_bits;
 
-void load_osm(tile_db_handle& handle, std::string const& fname) {
+void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
+              std::string const& fname) {
   oio::File input_file{fname};
 
   oa::MultipolygonManager<oa::Assembler> mp_manager{
@@ -36,14 +42,12 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
     t_log("Pass 1...");
     hybrid_node_idx_builder node_idx_builder{node_idx};
 
-    o::ProgressBar progress_bar{input_file.size(), ou::isatty(2)};
-    oio::Reader reader{input_file, oeb::node | oeb::relation};
+    oio::ReaderWithProgressBar reader{true, input_file,
+                                      oeb::node | oeb::relation};
     while (auto buffer = reader.read()) {
-      progress_bar.update(reader.offset());
       o::apply(buffer, node_idx_builder, mp_manager);
     }
     reader.close();
-    progress_bar.file_done(input_file.size());
     t_log("Pass 1 done");
 
     mp_manager.prepare_for_lookup();
@@ -55,9 +59,8 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
     node_idx_builder.dump_stats();
   }
 
-  feature_inserter_mt inserter{
-      dbi_handle{handle, handle.features_dbi_opener()}};
   layer_names_builder names_builder;
+  shared_metadata_builder metadata_builder;
 
   in_order_queue<om::Buffer> mp_queue;
 
@@ -70,8 +73,9 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
     std::atomic_size_t next_handlers_slot{0};
     std::vector<std::pair<std::thread::id, feature_handler>> handlers;
     for (auto i = 0; i < thread_count; ++i) {
-      handlers.emplace_back(std::thread::id{},
-                            feature_handler{inserter, names_builder});
+      handlers.emplace_back(
+          std::thread::id{},
+          feature_handler{inserter, names_builder, metadata_builder});
     }
     auto const get_handler = [&]() -> feature_handler& {
       auto const thread_id = std::this_thread::get_id();
@@ -146,8 +150,9 @@ void load_osm(tile_db_handle& handle, std::string const& fname) {
   }
 
   {
-    lmdb::txn txn = handle.make_txn();
-    names_builder.store(handle, txn);
+    auto txn = db_handle.make_txn();
+    names_builder.store(db_handle, txn);
+    metadata_builder.store(db_handle, txn);
     txn.commit();
   }
 }

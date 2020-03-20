@@ -1,16 +1,27 @@
 #include "tiles/db/feature_pack.h"
 
+#include <numeric>
+#include <optional>
+
+#include "utl/concat.h"
 #include "utl/equal_ranges.h"
+#include "utl/equal_ranges_linear.h"
+#include "utl/erase_if.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "tiles/db/pack_file.h"
 #include "tiles/db/quad_tree.h"
-#include "tiles/db/shared_strings.h"
+#include "tiles/db/shared_metadata.h"
+#include "tiles/db/tile_database.h"
+#include "tiles/db/tile_index.h"
 #include "tiles/feature/deserialize.h"
 #include "tiles/feature/feature.h"
 #include "tiles/feature/serialize.h"
 #include "tiles/fixed/algo/bounding_box.h"
+#include "tiles/fixed/io/dump.h"
 #include "tiles/mvt/tile_spec.h"
+#include "tiles/util_parallel.h"
 
 namespace tiles {
 
@@ -129,17 +140,16 @@ struct packable_feature {
 };
 
 std::string pack_features(geo::tile const& tile,
-                          meta_coding_vec_t const& coding_vec,
-                          meta_coding_map_t const& coding_map,
-                          std::vector<std::string> const& strings) {
+                          shared_metadata_coder const& metadata_coder,
+                          std::vector<std::string_view> const& strings) {
 
   std::vector<std::vector<packable_feature>> features_by_min_z(kMaxZoomLevel +
                                                                1 - tile.z_);
   for (auto const& str : strings) {
-    auto const feature = deserialize_feature(str, coding_vec);
+    auto const feature = deserialize_feature(str, metadata_coder);
     utl::verify(feature.has_value(), "feature must be valid (!?)");
 
-    auto const str2 = serialize_feature(*feature, coding_map, false);
+    auto const str2 = serialize_feature(*feature, metadata_coder, false);
 
     auto const best_tile = find_best_tile(tile, *feature);
     auto const z = std::max(tile.z_, feature->zoom_levels_.first) - tile.z_;
@@ -174,86 +184,199 @@ std::string pack_features(geo::tile const& tile,
   return p.buf_;
 }
 
-constexpr auto const kPackBatchThreshold = 64ull * 1024 * 1024;
+struct tile_record {
+  geo::tile tile_;
+  std::vector<pack_record> records_;
+};
 
-void pack_features(tile_db_handle& handle) {
-  auto const coding_map = load_meta_coding_map(handle);
-  auto const coding_vec = load_meta_coding_vec(handle);
+void pack_features(tile_db_handle& db_handle, pack_handle& pack_handle) {
+  auto const metadata_coder = make_shared_metadata_coder(db_handle);
 
-  std::optional<tile_index_t> resume_key;
-  do {
-    size_t packed_features_size = 0;
-    std::vector<std::pair<tile_index_t, std::string>> packed_features;
+  std::vector<tile_record> tasks;
+  {
+    auto txn = db_handle.make_txn();
+    auto feature_dbi = db_handle.features_dbi(txn);
+    lmdb::cursor c{txn, feature_dbi};
 
-    {  // collect features
-      auto txn = handle.make_txn();
-      auto feature_dbi = handle.features_dbi(txn);
-      lmdb::cursor c{txn, feature_dbi};
+    for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
+         el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
+      auto tile = feature_key_to_tile(el->first);
+      auto records = pack_records_deserialize(el->second);
+      utl::verify(!records.empty(), "pack_features: empty pack_records");
 
-      geo::tile tile{std::numeric_limits<uint32_t>::max(),
-                     std::numeric_limits<uint32_t>::max(),
-                     std::numeric_limits<uint32_t>::max()};
-      std::vector<std::string> features;
-
-      auto el =
-          resume_key
-              ? c.get<tile_index_t>(lmdb::cursor_op::SET_RANGE, *resume_key)
-              : c.get<tile_index_t>(lmdb::cursor_op::FIRST);
-      resume_key = std::nullopt;
-
-      for (; el; el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-        auto const& this_tile = feature_key_to_tile(el->first);
-        if (!(tile == this_tile) &&
-            packed_features_size >= kPackBatchThreshold) {
-          resume_key = el->first;
-          break;
-        }
-
-        std::vector<std::string> this_features;
-        unpack_features(el->second, [&this_features](auto const& view) {
-          this_features.emplace_back(view);
-        });
-
-        c.del();
-
-        if (!(tile == this_tile)) {
-          if (!features.empty()) {
-            packed_features.emplace_back(
-                make_feature_key(tile),
-                pack_features(tile, coding_vec, coding_map, features));
-            packed_features_size += packed_features.back().second.size();
-          }
-
-          tile = this_tile;
-          features = std::move(this_features);
-        } else {
-          features.insert(end(features),
-                          std::make_move_iterator(begin(this_features)),
-                          std::make_move_iterator(end(this_features)));
-        }
+      if (!tasks.empty() && tasks.back().tile_ == tile) {
+        utl::concat(tasks.back().records_, records);
+      } else {
+        tasks.push_back({tile, records});
       }
-
-      if (!features.empty()) {
-        packed_features.emplace_back(
-            make_feature_key(tile),
-            pack_features(tile, coding_vec, coding_map, features));
-      }
-
-      txn.commit();
     }
 
-    handle.env_.sync();
+    txn.dbi_clear(feature_dbi);
+    txn.commit();
+  }
 
-    {  // writeback features
-      auto txn = handle.make_txn();
-      auto feature_dbi = handle.features_dbi(txn);
-      for (auto const & [ key, data ] : packed_features) {
-        txn.put(feature_dbi, key, data);
+  for (auto& task : tasks) {
+    std::sort(begin(task.records_), end(task.records_));
+  }
+  std::sort(begin(tasks), end(tasks), [](auto const& lhs, auto const& rhs) {
+    return lhs.records_.front().offset_ > rhs.records_.front().offset_;
+  });
+
+  progress_tracker pack_progress{"pack features", tasks.size()};
+
+  queue_wrapper<std::function<void()>> work_queue;
+  queue_wrapper<std::pair<geo::tile, std::string>> result_queue;
+
+  auto const enqueue_work = [&](auto n) {
+    auto const enqueue = [&] {
+      auto task = std::move(tasks.back());
+      tasks.pop_back();
+
+      auto parts = utl::to_vec(task.records_, [&](auto const& r) {
+        return std::string{pack_handle.get(r)};
+      });
+
+      work_queue.enqueue([&, tile = task.tile_, parts = std::move(parts)] {
+        std::vector<std::string_view> features;
+        for (auto const& part : parts) {
+          unpack_features(part, [&features](auto const& view) {
+            features.emplace_back(view);
+          });
+        }
+        result_queue.enqueue(
+            {tile, pack_features(tile, metadata_coder, features)});
+      });
+
+      return std::accumulate(
+          begin(task.records_), end(task.records_), 0ul,
+          [](auto acc, auto const& r) { return acc + r.size_; });
+    };
+
+    if (n == -1) {
+      size_t enqueued_size = 0;
+      while (!tasks.empty() && enqueued_size < 128ul * 1024 * 1024) {
+        enqueued_size += enqueue();
       }
-      txn.commit();
+    } else {
+      while (!tasks.empty() && n > 0) {
+        enqueue();
+        --n;
+      }
+    }
+  };
+
+  size_t insert_offset = 0;
+  std::vector<std::pair<geo::tile, pack_record>> back_queue;
+
+  auto const free_space = [&] {
+    auto const first_occupied =
+        !tasks.empty()
+            ? tasks.back().records_.front().offset_
+            : (!back_queue.empty() ? back_queue.front().second.offset_
+                                   : std::numeric_limits<size_t>::max());
+    utl::verify(insert_offset <= first_occupied,
+                "insert_compact: invalid state");
+
+    return first_occupied - insert_offset;
+  };
+
+  size_t insert_compact_size = 0;
+  size_t insert_back_queue_size = 0;
+
+  auto const insert_compact = [&](auto const& tile, auto const& buf) {
+    if (free_space() >= buf.size()) {
+      auto record = pack_handle.insert(insert_offset, buf);
+      insert_offset += buf.size();
+      insert_compact_size += buf.size();
+      return std::optional{record};
+    } else {
+      insert_back_queue_size += buf.size();
+      back_queue.emplace_back(tile, pack_handle.append(buf));
+      return std::optional<pack_record>{};
+    }
+  };
+
+  auto dequeue_results = [&](auto n) {
+    auto txn = db_handle.make_txn();
+    auto feature_dbi = db_handle.features_dbi(txn);
+
+    auto const dequeue = [&] {
+      std::pair<geo::tile, std::string> result;
+      if (result_queue.dequeue(result)) {
+        auto opt_record = insert_compact(result.first, result.second);
+        if (opt_record) {
+          txn.put(feature_dbi, make_feature_key(result.first),
+                  pack_records_serialize(*opt_record));
+        }
+        result_queue.finish();
+        pack_progress.inc();
+      }
+    };
+
+    if (n == -1) {  // while there is any work left
+      while (!(result_queue.finished() && work_queue.finished())) {
+        dequeue();
+      }
+    } else {  // dequeue some (and enqueue some)
+      while (n > 0 && !(result_queue.finished() && work_queue.finished())) {
+        dequeue();
+        --n;
+      }
     }
 
-  } while (resume_key);
+    // back queue management
+    while (!back_queue.empty() &&
+           back_queue.back().second.size_ <= free_space()) {
+      std::cout << "take from back queue" << std::endl;
+      auto [tile, from_record] = back_queue.back();
+      back_queue.pop_back();
+
+      auto to_record = pack_handle.move(insert_offset, from_record);
+      insert_offset += to_record.size_;
+      pack_handle.resize(from_record.offset_);
+
+      txn.put(feature_dbi, make_feature_key(tile),
+              pack_records_serialize(to_record));
+    }
+
+    txn.commit();
+  };
+
+  constexpr auto kBatchSize = 32;
+
+  {
+    queue_processor proc{work_queue};
+    enqueue_work(-1);  // some more as buffer
+    while (!tasks.empty()) {
+      dequeue_results(kBatchSize);
+      enqueue_work(kBatchSize);
+    }
+    dequeue_results(-1);  // ensure fully drained
+  }
+
+  {
+    auto txn = db_handle.make_txn();
+    auto feature_dbi = db_handle.features_dbi(txn);
+
+    for (auto const& [tile, from_record] : back_queue) {
+      auto to_record = pack_handle.move(insert_offset, from_record);
+      insert_offset += to_record.size_;
+      txn.put(feature_dbi, make_feature_key(tile),
+              pack_records_serialize(to_record));
+    }
+
+    txn.commit();
+    pack_handle.resize(insert_offset);
+  }
+
+  t_log("pack file utilization: {:.2f}%",
+        100. * pack_handle.size() / pack_handle.capacity());
+
+  utl::verify(tasks.empty(), "pack_features: task queue not empty");
+  utl::verify(work_queue.queue_.size_approx() == 0,
+              "pack_features: work queue not empty");
+  utl::verify(result_queue.queue_.size_approx() == 0,
+              "pack_features: result queue not empty");
 }
 
 }  // namespace tiles

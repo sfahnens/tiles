@@ -1,8 +1,8 @@
 #include "catch.hpp"
 
-#include "tiles/db/shared_strings.h"
+#include "tiles/db/layer_names.h"
 
-TEST_CASE("shared_strings") {
+TEST_CASE("layer_names") {
   SECTION("empty") {
     std::vector<std::string> vec_in;
     auto const buf = tiles::write_layer_names(vec_in);

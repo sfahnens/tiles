@@ -7,15 +7,22 @@
 
 #include "tiles/bin_utils.h"
 #include "tiles/db/quad_tree.h"
-#include "tiles/db/tile_database.h"
 
 namespace tiles {
+
+struct tile_db_handle;
+struct pack_handle;
+struct shared_metadata_coder;
 
 // quick packing (e.g. as part of a insert flush)
 std::string pack_features(std::vector<std::string> const&);
 
-// full database packing (e.g. once)
-void pack_features(tile_db_handle&);
+// optimal packing (incl. index)
+std::string pack_features(geo::tile const&, shared_metadata_coder const&,
+                          std::vector<std::string_view> const&);
+
+// full database packing (e.g. once and optimal)
+void pack_features(tile_db_handle&, pack_handle&);
 
 template <typename Fn>
 void unpack_features(std::string_view const& string, Fn&& fn) {

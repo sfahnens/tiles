@@ -4,7 +4,7 @@
 
 #include "protozero/pbf_message.hpp"
 
-#include "tiles/db/shared_strings.h"
+#include "tiles/db/shared_metadata.h"
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/algo/delta.h"
 #include "tiles/fixed/io/deserialize.h"
@@ -14,7 +14,7 @@ namespace tiles {
 
 inline std::optional<feature> deserialize_feature(
     std::string_view const& str,  //
-    meta_coding_vec_t const& meta_coding,
+    shared_metadata_decoder const& metadata_decoder,
     fixed_box const& box_hint = {{kInvalidBoxHint, kInvalidBoxHint},
                                  {kInvalidBoxHint, kInvalidBoxHint}},
     uint32_t const zoom_level_hint = kInvalidZoomLevel) {
@@ -27,7 +27,7 @@ inline std::optional<feature> deserialize_feature(
   size_t layer = kInvalidLayer;
 
   size_t meta_fill = 0;
-  std::vector<std::pair<std::string, std::string>> meta;
+  std::vector<metadata> meta;
 
   std::vector<std::string_view> simplify_masks;
   fixed_geometry geometry;
@@ -83,17 +83,17 @@ inline std::optional<feature> deserialize_feature(
       case tags::Feature::packed_uint64_meta_pairs:
         utl::verify(meta.empty(),
                     "meta_pairs must come before, meta keys/values!");
-        for (auto const& idx : msg.get_packed_uint64()) {
-          meta.push_back(meta_coding.at(idx));
+        for (auto const id : msg.get_packed_uint64()) {
+          meta.push_back(metadata_decoder.decode(id));
         }
         meta_fill = meta.size();
         break;
       case tags::Feature::repeated_string_keys:
-        meta.emplace_back(msg.get_string(), "");
+        meta.emplace_back(msg.get_string(), std::string{});
         break;
       case tags::Feature::repeated_string_values:
         utl::verify(meta_fill < meta.size(), "meta data imbalance! (a)");
-        meta[meta_fill++].second = msg.get_string();
+        meta[meta_fill++].value_ = msg.get_string();
         break;
 
       case tags::Feature::repeated_string_simplify_masks:
@@ -117,9 +117,7 @@ inline std::optional<feature> deserialize_feature(
   utl::verify(meta_fill == meta.size(), "meta data imbalance! (b)");
   utl::verify(layer != kInvalidLayer, "invalid layer found!");
 
-  return feature{id, layer, zoom_levels,
-                 std::map<std::string, std::string>{begin(meta), end(meta)},
-                 std::move(geometry)};
+  return feature{id, layer, zoom_levels, std::move(meta), std::move(geometry)};
 }
 
 }  // namespace tiles

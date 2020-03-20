@@ -77,7 +77,7 @@ struct in_order_queue {
           queue_.pop_back();
           ++next_expected_ready;
         }
-        
+
         if (ready.empty()) {
           active_ = false;
           return;  // common case after first iteration of outer loop
@@ -113,15 +113,66 @@ struct queue_wrapper {
     queue_.enqueue(std::forward<T>(t));
   }
 
-  bool dequeue(T& t) {
-    return queue_.wait_dequeue_timed(t, std::chrono::milliseconds(100));
+  void enqueue_bulk(std::vector<T> const& vec) {
+    pending_ += vec.size();
+    queue_.enqueue_bulk(vec.data(), vec.size());
   }
 
+  bool dequeue(T& t) {
+    return queue_.wait_dequeue_timed(t, std::chrono::milliseconds(10));
+  }
+
+  void dequeue_bulk(std::vector<T>& vec) {
+    size_t count = queue_.wait_dequeue_bulk_timed(
+        vec.data(), vec.size(), std::chrono::milliseconds(10));
+    vec.resize(count);
+  }
+
+  void add_keep_alive() { ++pending_; }
+  void remove_keep_alive() { --pending_; }
+
   void finish() { --pending_; }
+  void finish_bulk(size_t count) { pending_ -= count; }
   bool finished() const { return pending_ == 0; }
 
   std::atomic_uint64_t pending_;
   moodycamel::BlockingConcurrentQueue<T> queue_;
+};
+
+struct queue_processor {
+  explicit queue_processor(queue_wrapper<std::function<void()>>& queue)
+      : queue_{queue}, shutdown_{false} {
+    for (auto i = 0u; i < std::thread::hardware_concurrency(); ++i) {
+      threads_.emplace_back([&, this] {
+        while (true) {
+          if (shutdown_) {
+            break;
+          }
+
+          std::function<void()> fn;
+          if (queue_.dequeue(fn)) {
+            try {
+              fn();
+              queue_.finish();
+            } catch (...) {
+              std::cerr << " exception in queue_processor"
+                        << std::this_thread::get_id() << std::endl;
+              throw;  // this better not happens ;)
+            }
+          }
+        }
+      });
+    }
+  }
+
+  ~queue_processor() {
+    shutdown_ = true;
+    std::for_each(begin(threads_), end(threads_), [](auto& t) { t.join(); });
+  }
+
+  queue_wrapper<std::function<void()>>& queue_;
+  std::atomic_bool shutdown_;
+  std::vector<std::thread> threads_;
 };
 
 // template <typename Task, uint64_t MaxInFlight = 64>
@@ -144,7 +195,8 @@ struct queue_wrapper {
 //   }
 
 //   template <typename R, typename... Args>
-//   auto submit_env(std::function<R(Args...)>&& fn) -> std::future<R(Args...)>
+//   auto submit_env(std::function<R(Args...)>&& fn) ->
+//   std::future<R(Args...)>
 //   {
 //     std::packaged_task<R(Args...)> task{
 //         [fn = std::forward(fn)](Args...&&) { return fn(Args...); }};

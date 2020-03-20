@@ -17,11 +17,11 @@
 [geo]
   url=git@git.motis-project.de:lib/geo.git
   branch=master
-  commit=73593483ed0aa410b91e334a452be89d2775cac9
+  commit=6cdf77876c02703d6e5a5f050b65c21c14b1fc35
 [lmdb]
   url=git@git.motis-project.de:lib/lmdb.git
   branch=master
-  commit=fa076f8291e5032bd3467e6a858f4dbeedea904e
+  commit=22276cdaf4945444a9847e57175d728f55a44cdb
 [lua]
   url=git@git.motis-project.de:lib/lua.git
   branch=master

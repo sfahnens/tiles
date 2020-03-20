@@ -214,16 +214,16 @@ struct layer_builder {
   }
 
   void write_metadata(pbf_builder<ttm::Feature>& pb,
-                      std::map<std::string, std::string> const& meta) {
+                      std::vector<metadata> const& meta) {
     std::vector<uint32_t> t;
 
-    for (auto const& pair : meta) {
-      if (pair.first == "layer" || boost::starts_with(pair.first, "__")) {
+    for (auto const& m : meta) {
+      if (m.key_ == "layer" || boost::starts_with(m.key_, "__")) {
         continue;
       }
 
-      t.emplace_back(utl::get_or_create_index(meta_key_cache_, pair.first));
-      t.emplace_back(utl::get_or_create_index(meta_value_cache_, pair.second));
+      t.emplace_back(utl::get_or_create_index(meta_key_cache_, m.key_));
+      t.emplace_back(utl::get_or_create_index(meta_value_cache_, m.value_));
     }
 
     pb.add_packed_uint32(ttm::Feature::packed_uint32_tags, begin(t), end(t));
@@ -286,10 +286,12 @@ struct tile_builder::impl {
 
   void add_feature(feature const& f) {
     utl::verify(f.layer_ < layer_names_.size(), "invalid layer in db");
-    utl::get_or_create(builders_, f.layer_, [&] {
-      return std::make_unique<layer_builder>(layer_names_.at(f.layer_), spec_,
-                                             config_);
-    })->add_feature(f);
+    utl::get_or_create(builders_, f.layer_,
+                       [&] {
+                         return std::make_unique<layer_builder>(
+                             layer_names_.at(f.layer_), spec_, config_);
+                       })
+        ->add_feature(f);
   }
 
   std::string finish() {

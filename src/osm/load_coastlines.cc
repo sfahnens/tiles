@@ -11,18 +11,17 @@
 #include "utl/to_vec.h"
 
 #include "tiles/db/bq_tree.h"
-#include "tiles/db/feature_inserter.h"
-#include "tiles/db/shared_strings.h"
+#include "tiles/db/feature_inserter_mt.h"
+#include "tiles/db/layer_names.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/feature/serialize.h"
-#include "tiles/osm/load_shapefile.h"
-
 #include "tiles/fixed/algo/area.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/mvt/tile_spec.h"
+#include "tiles/osm/load_shapefile.h"
 #include "tiles/util_parallel.h"
 
 namespace cl = ClipperLib;
@@ -253,7 +252,8 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
   }
 }
 
-void load_coastlines(tile_db_handle& handle, std::string const& fname) {
+void load_coastlines(tile_db_handle& db_handle, feature_inserter_mt& inserter,
+                     std::string const& fname) {
   geo_queue_t geo_queue;
   db_queue_t db_queue;
   coastline_stats stats;
@@ -310,14 +310,14 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
   }
 
   {
-    feature_inserter inserter{handle, &tile_db_handle::features_dbi};
     while (!geo_queue.finished() || !db_queue.finished()) {
       std::pair<geo::tile, std::string> data;
       if (!db_queue.dequeue(data)) {
         continue;
       }
 
-      inserter.insert_unbuffered(data.first, data.second);
+      inserter.insert(data.first, data.second);
+      inserter.flush();
       db_queue.finish();
     }
   }
@@ -336,8 +336,8 @@ void load_coastlines(tile_db_handle& handle, std::string const& fname) {
   t_log("seaside_tree with {} nodes", seaside_tree.nodes_.size());
 
   {
-    auto txn = handle.make_txn();
-    auto meta_dbi = handle.meta_dbi(txn, lmdb::dbi_flags::CREATE);
+    auto txn = db_handle.make_txn();
+    auto meta_dbi = db_handle.meta_dbi(txn);
     txn.put(meta_dbi, kMetaKeyFullySeasideTree, seaside_tree.string_view());
     txn.commit();
   }

@@ -59,6 +59,8 @@ int main(int argc, char** argv) {
   tiles::tile_db_handle handle{db_env};
   auto const render_ctx = make_render_ctx(handle);
 
+  tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
+
   boost::asio::io_service ios;
   server server{ios};
 
@@ -89,7 +91,8 @@ int main(int argc, char** argv) {
                         static_cast<uint32_t>(std::stoul(req.path_params[0]))};
 
           tiles::perf_counter pc;
-          auto rendered_tile = tiles::get_tile(handle, render_ctx, tile, pc);
+          auto rendered_tile =
+              tiles::get_tile(handle, pack_handle, render_ctx, tile, pc);
           tiles::perf_report_get_tile(pc);
 
           reply rep = reply::stock_reply(reply::ok);

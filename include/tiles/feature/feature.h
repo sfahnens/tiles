@@ -14,11 +14,31 @@ constexpr uint32_t kInvalidZoomLevel = 0x3F;  // 63; max for one byte in svarint
 constexpr fixed_coord_t kInvalidBoxHint =
     std::numeric_limits<fixed_coord_t>::max();
 
+struct metadata {
+  metadata() = default;
+  metadata(std::string key, std::string value)
+      : key_{std::move(key)}, value_{std::move(value)} {}
+
+  friend bool operator==(metadata const& lhs, metadata const& rhs) {
+    return std::tie(lhs.key_, lhs.value_) == std::tie(rhs.key_, rhs.value_);
+  }
+
+  friend bool operator!=(metadata const& lhs, metadata const& rhs) {
+    return std::tie(lhs.key_, lhs.value_) != std::tie(rhs.key_, rhs.value_);
+  }
+
+  friend bool operator<(metadata const& lhs, metadata const& rhs) {
+    return std::tie(lhs.key_, lhs.value_) < std::tie(rhs.key_, rhs.value_);
+  }
+
+  std::string key_, value_;
+};
+
 struct feature {
   uint64_t id_;
   size_t layer_;
   std::pair<uint32_t, uint32_t> zoom_levels_;
-  std::map<std::string, std::string> meta_;
+  std::vector<metadata> meta_;
   fixed_geometry geometry_;
 };
 

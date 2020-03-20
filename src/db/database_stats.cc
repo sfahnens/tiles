@@ -13,6 +13,7 @@
 
 #include "tiles/bin_utils.h"
 #include "tiles/db/feature_pack.h"
+#include "tiles/db/pack_file.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
 #include "tiles/feature/feature.h"
@@ -20,7 +21,7 @@
 
 namespace tiles {
 
-void database_stats(tile_db_handle& handle) {
+void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
   auto const format_num = [](auto& os, char const* label, double const n) {
     auto const k = n / 1e3;
     auto const m = n / 1e6;
@@ -81,14 +82,14 @@ void database_stats(tile_db_handle& handle) {
     std::cout << "\n";
   };
 
-  auto txn = handle.make_txn();
+  auto txn = db_handle.make_txn();
 
-  auto features_dbi = handle.features_dbi(txn);
-  auto tiles_dbi = handle.tiles_dbi(txn);
-  auto meta_dbi = handle.meta_dbi(txn);
+  auto features_dbi = db_handle.features_dbi(txn);
+  auto tiles_dbi = db_handle.tiles_dbi(txn);
+  auto meta_dbi = db_handle.meta_dbi(txn);
 
   std::cout << ">> lmdb stat:\n";
-  print_stat(std::cout, "lmdb:env", handle.env_.stat());
+  print_stat(std::cout, "lmdb:env", db_handle.env_.stat());
   print_stat(std::cout, " dbi:features", features_dbi.stat());
   print_stat(std::cout, " dbi:tiles", tiles_dbi.stat());
   print_stat(std::cout, " dbi:meta", meta_dbi.stat());
@@ -103,43 +104,47 @@ void database_stats(tile_db_handle& handle) {
   auto fc = lmdb::cursor{txn, features_dbi};
   for (auto el = fc.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
        el = fc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-    pack_sizes.emplace_back(el->second.size());
+    pack_records_foreach(el->second, [&](auto record) {
+      auto const pack = pack_handle.get(record);
 
-    auto const index_offset = read_nth<uint32_t>(el->second.data(), 1);
-    if (index_offset != 0) {
-      auto idx_ptr = el->second.data() + index_offset;
-      auto const end_ptr = el->second.data() + el->second.size();
-      auto tree_offset = 0ull;
-      while (idx_ptr < end_ptr && tree_offset == 0) {
-        tree_offset = protozero::decode_varint(&idx_ptr, end_ptr);
-      }
+      pack_sizes.push_back(pack.size());
 
-      if (tree_offset == 0) {
-        index_sizes.push_back(el->second.size() - index_offset);
-      } else {
-        index_sizes.push_back(el->second.size() - tree_offset);
-      }
-    }
+      auto const index_offset = read_nth<uint32_t>(pack.data(), 1);
+      if (index_offset != 0) {
+        auto idx_ptr = pack.data() + index_offset;
+        auto const end_ptr = pack.data() + pack.size();
+        auto tree_offset = 0ull;
+        while (idx_ptr < end_ptr && tree_offset == 0) {
+          tree_offset = protozero::decode_varint(&idx_ptr, end_ptr);
+        }
 
-    unpack_features(el->second, [&](auto const& str) {
-      protozero::pbf_message<tags::Feature> msg{str};
-      while (msg.next()) {
-        switch (msg.tag()) {
-          case tags::Feature::packed_sint64_header: {
-            auto const* pre = msg.m_data;
-            msg.skip();
-            auto const* post = msg.m_data;
-            header_sizes.push_back(std::distance(pre, post));
-          } break;
-          case tags::Feature::repeated_string_simplify_masks:
-            simplify_mask_sizes.push_back(msg.get_view().size());
-            break;
-          case tags::Feature::required_FixedGeometry_geometry:
-            geometry_sizes.push_back(msg.get_view().size());
-            break;
-          default: msg.skip();
+        if (tree_offset == 0) {
+          index_sizes.push_back(pack.size() - index_offset);
+        } else {
+          index_sizes.push_back(pack.size() - tree_offset);
         }
       }
+
+      unpack_features(pack, [&](auto const& str) {
+        protozero::pbf_message<tags::Feature> msg{str};
+        while (msg.next()) {
+          switch (msg.tag()) {
+            case tags::Feature::packed_sint64_header: {
+              auto const* pre = msg.m_data;
+              msg.skip();
+              auto const* post = msg.m_data;
+              header_sizes.push_back(std::distance(pre, post));
+            } break;
+            case tags::Feature::repeated_string_simplify_masks:
+              simplify_mask_sizes.push_back(msg.get_view().size());
+              break;
+            case tags::Feature::required_FixedGeometry_geometry:
+              geometry_sizes.push_back(msg.get_view().size());
+              break;
+            default: msg.skip();
+          }
+        }
+      });
     });
   }
 

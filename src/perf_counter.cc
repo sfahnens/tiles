@@ -8,6 +8,7 @@
 
 namespace tiles {
 
+// TODO use formatters!
 void perf_report_get_tile(perf_counter& pc) {
   auto const format_count = [](auto& os, char const* label, double const n) {
     auto const k = n / 1e3;

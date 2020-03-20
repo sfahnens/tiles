@@ -1,11 +1,14 @@
 #pragma once
 
+#include <atomic>
 #include <map>
+#include <mutex>
 
 #include "geo/tile.h"
 #include "lmdb/lmdb.hpp"
 
 #include "tiles/db/feature_pack.h"
+#include "tiles/db/pack_file.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
 #include "tiles/feature/feature.h"
@@ -18,7 +21,6 @@ namespace tiles {
 
 struct cache_bucket {
   geo::tile tile_;
-  std::atomic_size_t fill_state_{0};  // nth entry in the database
 
   std::mutex mutex_;
   size_t mem_size_{0};
@@ -29,8 +31,9 @@ struct feature_inserter_mt {
   static constexpr size_t kCacheThresholdUpper = 1024ull * 1024 * 1024;
   static constexpr size_t kCacheThresholdLower = kCacheThresholdUpper / 4 * 3;
 
-  feature_inserter_mt(dbi_handle handle)
-      : handle_{std::move(handle)},
+  feature_inserter_mt(dbi_handle dbi_handle, pack_handle& pack_handle)
+      : dbi_handle_{std::move(dbi_handle)},
+        pack_handle_{pack_handle},
         cache_((1 << kTileDefaultIndexZoomLvl) *
                (1 << kTileDefaultIndexZoomLvl)) {
     auto it = geo::tile_iterator{kTileDefaultIndexZoomLvl};
@@ -40,14 +43,6 @@ struct feature_inserter_mt {
       ++it;
     }
     utl::verify(it->z_ == kTileDefaultIndexZoomLvl + 1, "it broken");
-
-    auto [txn, dbi] = handle_.begin_txn();
-    auto c = lmdb::cursor{txn, dbi};
-    for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-         el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-      auto const tile = feature_key_to_tile(el->first);
-      get_bucket(tile).fill_state_ = feature_key_to_idx(el->first);
-    }
   }
 
   ~feature_inserter_mt() { flush(0, 0); }
@@ -57,15 +52,19 @@ struct feature_inserter_mt {
     auto const value = serialize_feature(f);
 
     for (auto const& tile : make_tile_range(box)) {
-      cache_size_ += value.size();
-      auto& bucket = get_bucket(tile);
-
-      std::lock_guard<std::mutex> l(bucket.mutex_);
-      bucket.mem_size_ += value.size();
-      bucket.mem_.push_back(value);
+      insert(tile, value);
     }
 
     flush();
+  }
+
+  void insert(geo::tile const& tile, std::string const& value) {
+    cache_size_ += value.size();
+    auto& bucket = get_bucket(tile);
+
+    std::lock_guard<std::mutex> l(bucket.mutex_);
+    bucket.mem_size_ += value.size();
+    bucket.mem_.push_back(value);
   }
 
   void flush(size_t threshold_upper = kCacheThresholdUpper,
@@ -123,18 +122,26 @@ struct feature_inserter_mt {
         std::swap(queue.back().second, bucket_ptr->mem_);
       }
     }
-    {  // phase 2: write to database
-      auto [txn, dbi] = handle_.begin_txn();
+    {  // phase 2: write to pack_file and update database
+      auto [txn, dbi] = dbi_handle_.begin_txn();
+      lmdb::cursor c{txn, dbi};
+
       for (auto const& [bucket_ptr, features] : queue) {
-        txn.put(
-            dbi,
-            make_feature_key(bucket_ptr->tile_, ++(bucket_ptr->fill_state_)),
-            pack_features(features));
+        auto key = make_feature_key(bucket_ptr->tile_);
+        auto pack_record = pack_handle_.append(pack_features(features));
+
+        if (auto el = c.get(lmdb::cursor_op::SET_KEY, key); el) {
+          std::string pack_records{el->second};
+          pack_records_update(pack_records, pack_record);
+          c.put(key, pack_records);
+        } else {
+          c.put(key, pack_records_serialize(pack_record));
+        }
       }
       txn.commit();
     }
 
-    t_log("persisted {} packs with {} features ({}) bounds ({}, {} / {}, {})",
+    t_log("persisted {} packs with {} features ({}) in ({}, {} / {}, {})",
           printable_num{persisted_packs}, printable_num{persisted_features},
           printable_bytes{persisted_size}, min_x, min_y, max_x, max_y);
   }
@@ -150,7 +157,8 @@ struct feature_inserter_mt {
     return *it;
   }
 
-  dbi_handle handle_;
+  dbi_handle dbi_handle_;
+  pack_handle& pack_handle_;
 
   std::mutex flush_mutex_;
   std::atomic_size_t cache_size_{0};

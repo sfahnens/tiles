@@ -5,8 +5,10 @@
 
 #include "tiles/db/clear_database.h"
 #include "tiles/db/database_stats.h"
+#include "tiles/db/feature_inserter_mt.h"
+#include "tiles/db/feature_pack.h"
+#include "tiles/db/pack_file.h"
 #include "tiles/db/prepare_tiles.h"
-#include "tiles/db/shared_strings.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/osm/load_coastlines.h"
 #include "tiles/osm/load_osm.h"
@@ -71,40 +73,41 @@ int main(int argc, char** argv) {
   if (opt.has_any_task({"coastlines", "features"})) {
     tiles::t_log("clear database");
     tiles::clear_database(opt.db_fname_);
+    tiles::clear_pack_file(opt.db_fname_.c_str());
   }
 
   lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
-  tiles::tile_db_handle handle{db_env};
+  tiles::tile_db_handle db_handle{db_env};
+  tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
 
-  if (opt.has_any_task({"coastlines"})) {
-    tiles::scoped_timer t{"load coastlines"};
-    tiles::load_coastlines(handle, opt.coastlines_fname_);
-    tiles::t_log("sync db");
-    db_env.sync();
-  }
+  {
+    tiles::feature_inserter_mt inserter{
+        tiles::dbi_handle{db_handle, db_handle.features_dbi_opener()},
+        pack_handle};
 
-  if (opt.has_any_task({"features"})) {
-    tiles::t_log("load features");
-    tiles::load_osm(handle, opt.osm_fname_);
-    tiles::t_log("sync db");
-    db_env.sync();
+    if (opt.has_any_task({"coastlines"})) {
+      tiles::scoped_timer t{"load coastlines"};
+      tiles::load_coastlines(db_handle, inserter, opt.coastlines_fname_);
+    }
+
+    if (opt.has_any_task({"features"})) {
+      tiles::t_log("load features");
+      tiles::load_osm(db_handle, inserter, opt.osm_fname_);
+    }
   }
 
   if (opt.has_any_task({"stats"})) {
-    tiles::database_stats(handle);
+    tiles::database_stats(db_handle, pack_handle);
   }
 
   if (opt.has_any_task({"pack"})) {
-    tiles::t_log("feature meta pair coding");
-    tiles::make_meta_coding(handle);
-
     tiles::t_log("pack features");
-    tiles::pack_features(handle);
+    tiles::pack_features(db_handle, pack_handle);
   }
 
   if (opt.has_any_task({"tiles"})) {
     tiles::t_log("prepare tiles");
-    tiles::prepare_tiles(handle, 10);
+    tiles::prepare_tiles(db_handle, pack_handle, 10);
   }
 
   tiles::t_log("import done!");

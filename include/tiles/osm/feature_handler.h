@@ -4,13 +4,15 @@
 
 #include "osmium/handler.hpp"
 
-#include "tiles/db/feature_inserter_mt.h"
-#include "tiles/db/shared_strings.h"
-
 namespace tiles {
 
+struct feature_inserter_mt;
+struct layer_names_builder;
+struct shared_metadata_builder;
+
 struct feature_handler : public osmium::handler::Handler {
-  feature_handler(feature_inserter_mt&, layer_names_builder&);
+  feature_handler(feature_inserter_mt&, layer_names_builder&,
+                  shared_metadata_builder&);
 
   feature_handler(feature_handler&&) noexcept;
   feature_handler(feature_handler const&) = delete;
@@ -29,6 +31,7 @@ private:
 
   feature_inserter_mt& inserter_;
   layer_names_builder& layer_names_builder_;
+  shared_metadata_builder& shared_metadata_builder_;
 };
 
 }  // namespace tiles

@@ -4,7 +4,7 @@
 
 #include "protozero/pbf_builder.hpp"
 
-#include "tiles/db/shared_strings.h"
+#include "tiles/db/shared_metadata.h"
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/algo/delta.h"
@@ -13,9 +13,9 @@
 
 namespace tiles {
 
-inline std::string serialize_feature(feature const& f,
-                                     meta_coding_map_t const& coding_map = {},
-                                     bool fast = true) {
+inline std::string serialize_feature(
+    feature const& f, shared_metadata_coder const& metadata_coder = {},
+    bool fast = true) {
   std::string buf;
   protozero::pbf_builder<tags::Feature> pb(buf);
 
@@ -44,13 +44,12 @@ inline std::string serialize_feature(feature const& f,
     std::vector<size_t> coded_metas;
     std::vector<std::string> uncoded_keys, uncoded_values;
 
-    for (auto const& pair : f.meta_) {
-      auto it = coding_map.find(pair);
-      if (it == end(coding_map)) {
-        uncoded_keys.push_back(pair.first);
-        uncoded_values.push_back(pair.second);
+    for (auto const& m : f.meta_) {
+      if (auto opt_id = metadata_coder.encode(m); opt_id) {
+        coded_metas.push_back(*opt_id);
       } else {
-        coded_metas.push_back(it->second);
+        uncoded_keys.push_back(m.key_);
+        uncoded_values.push_back(m.value_);
       }
     }
 
@@ -66,11 +65,11 @@ inline std::string serialize_feature(feature const& f,
     }
 
   } else {
-    for (auto const& kv : f.meta_) {
-      pb.add_string(tags::Feature::repeated_string_keys, kv.first);
+    for (auto const& m : f.meta_) {
+      pb.add_string(tags::Feature::repeated_string_keys, m.key_);
     }
-    for (auto const& kv : f.meta_) {
-      pb.add_string(tags::Feature::repeated_string_values, kv.second);
+    for (auto const& m : f.meta_) {
+      pb.add_string(tags::Feature::repeated_string_values, m.value_);
     }
   }
 

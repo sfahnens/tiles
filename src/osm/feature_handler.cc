@@ -2,6 +2,9 @@
 
 #include "sol.hpp"
 
+#include "tiles/db/feature_inserter_mt.h"
+#include "tiles/db/layer_names.h"
+#include "tiles/db/shared_metadata.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/osm/pending_feature.h"
 #include "tiles/osm/read_osm_geometry.h"
@@ -38,33 +41,21 @@ struct feature_handler::script_runner {
   sol::function process_area_;
 };
 
-feature_handler::feature_handler(feature_inserter_mt& inserter,
-                                 layer_names_builder& layer_names_builder)
+feature_handler::feature_handler(
+    feature_inserter_mt& inserter, layer_names_builder& layer_names_builder,
+    shared_metadata_builder& shared_metadata_builder)
     : runner_{std::make_unique<feature_handler::script_runner>()},
       inserter_{inserter},
-      layer_names_builder_{layer_names_builder} {}
+      layer_names_builder_{layer_names_builder},
+      shared_metadata_builder_{shared_metadata_builder} {}
 
 feature_handler::feature_handler(feature_handler&&) noexcept = default;
 feature_handler::~feature_handler() = default;
 
 template <typename OSMObject>
-std::map<std::string, std::string> make_meta(pending_feature const& f,
-                                             OSMObject const& o) {
-  std::map<std::string, std::string> meta;
-  for (auto const& tag : f.tag_as_metadata_) {
-    meta[tag] = std::string{o.get_value_by_key(tag.c_str(), "")};
-  }
-
-  for (auto const& pair : f.metadata_) {
-    meta[pair.first] = pair.second;
-  }
-
-  return meta;
-}
-
-template <typename OSMObject>
 void handle_feature(feature_inserter_mt& inserter,
                     layer_names_builder& layer_names,
+                    shared_metadata_builder& shared_metadata_builder,
                     sol::function const& process, OSMObject const& obj) {
   auto pf = pending_feature{obj, [&obj] { return read_osm_geometry(obj); }};
   process(pf);
@@ -80,20 +71,26 @@ void handle_feature(feature_inserter_mt& inserter,
     return;
   }
 
+  pf.finish_metadata();
+  shared_metadata_builder.update(pf.metadata_);
+
   inserter.insert(feature{static_cast<uint64_t>(pf.get_id()),
                           layer_names.get_layer_idx(pf.target_layer_),
-                          pf.zoom_levels_, make_meta(pf, obj),
+                          pf.zoom_levels_, std::move(pf.metadata_),
                           std::move(*pf.geometry_)});
 }
 
 void feature_handler::node(osmium::Node const& n) {
-  handle_feature(inserter_, layer_names_builder_, runner_->process_node_, n);
+  handle_feature(inserter_, layer_names_builder_, shared_metadata_builder_,
+                 runner_->process_node_, n);
 }
 void feature_handler::way(osmium::Way const& w) {
-  handle_feature(inserter_, layer_names_builder_, runner_->process_way_, w);
+  handle_feature(inserter_, layer_names_builder_, shared_metadata_builder_,
+                 runner_->process_way_, w);
 }
 void feature_handler::area(osmium::Area const& a) {
-  handle_feature(inserter_, layer_names_builder_, runner_->process_area_, a);
+  handle_feature(inserter_, layer_names_builder_, shared_metadata_builder_,
+                 runner_->process_area_, a);
 }
 
 }  // namespace tiles

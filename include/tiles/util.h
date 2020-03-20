@@ -31,10 +31,26 @@ struct progress_tracker {
   explicit progress_tracker(std::string label, size_t total)
       : label_{std::move(label)},
         total_{total},
+        curr_{0},
         pos_{std::numeric_limits<size_t>::max()} {}
 
-  void update(size_t curr) {
-    size_t curr_pos = static_cast<size_t>(100. * curr / total_ / 5) * 5;
+  void update(size_t new_curr) {
+    // see https://stackoverflow.com/a/16190791
+    size_t old_curr = curr_;
+    while (old_curr < new_curr &&
+           !curr_.compare_exchange_weak(old_curr, new_curr))
+      ;
+
+    log_progress_maybe();
+  }
+
+  void inc() {
+    ++curr_;
+    log_progress_maybe();
+  }
+
+  void log_progress_maybe() {
+    size_t curr_pos = static_cast<size_t>(100. * curr_ / total_ / 5) * 5;
     size_t prev_pos = pos_.exchange(curr_pos);
     if (prev_pos != curr_pos) {
       t_log("{} : {:>3}%", label_, curr_pos);
@@ -43,6 +59,7 @@ struct progress_tracker {
 
   std::string label_;
   size_t total_;
+  std::atomic_size_t curr_;
   std::atomic_size_t pos_;
 };
 
@@ -82,13 +99,19 @@ struct scoped_timer final {
 
 struct printable_num {
   explicit printable_num(double n) : n_{n} {}
-  explicit printable_num(size_t n) : n_{static_cast<double>(n)} {}
+  explicit printable_num(uint64_t n) : n_{static_cast<double>(n)} {}
   double n_;
+};
+
+struct printable_ns {
+  explicit printable_ns(double n) : n_{static_cast<uint64_t>(n)} {}
+  explicit printable_ns(uint64_t n) : n_{n} {}
+  uint64_t n_;
 };
 
 struct printable_bytes {
   explicit printable_bytes(double n) : n_{n} {}
-  explicit printable_bytes(size_t n) : n_{static_cast<double>(n)} {}
+  explicit printable_bytes(uint64_t n) : n_{static_cast<double>(n)} {}
   double n_;
 };
 
@@ -117,6 +140,31 @@ struct formatter<tiles::printable_num> {
       return format_to(ctx.out(), "{:>6.1f}M ", m);
     } else {
       return format_to(ctx.out(), "{:>6.1f}G ", g);
+    }
+  }
+};
+
+template <>
+struct formatter<tiles::printable_ns> {
+  template <typename ParseContext>
+  constexpr auto parse(ParseContext& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(tiles::printable_ns const& num, FormatContext& ctx) {
+    auto const ns = num.n_;
+    auto const mys = ns / 1e3;
+    auto const ms = ns / 1e6;
+    auto const s = ns / 1e9;
+    if (ns < 1e3) {
+      return format_to(ctx.out(), "{:>7.3f}ns", ns);
+    } else if (mys < 1e3) {
+      return format_to(ctx.out(), "{:>7.3f}µs", mys);
+    } else if (ms < 1e3) {
+      return format_to(ctx.out(), "{:>7.3f}ms", ms);
+    } else {
+      return format_to(ctx.out(), "{:>7.3f}s ", s);
     }
   }
 };

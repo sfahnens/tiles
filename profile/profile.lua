@@ -52,19 +52,36 @@ function process_way(way)
       way:set_approved_min(12)
     end
 
-  elseif way:has_tag("railway", "rail", "tram") then
-    -- if way:has_tag("usage", "industrial") or
-    --    way:has_tag("usage", "military") or
-    --    way:has_tag("usage", "test") or
-    --    way:has_tag("usage", "tourism") or
-    --    way:has_tag("service", "yard") or
-    --    way:has_tag("service", "spur") or
-    --    way:has_tag("railway:preserved", "yes") then
-    --   return
-    -- end
+  elseif way:has_any_tag("railway", "rail", "subway", "tram") then
+    if way:has_tag("railway", "disused") or
+       way:has_tag("railway", "abandoned") then
+      way:set_target_layer("rail")
+      way:set_approved_min(14)
+      way:add_metadata("rail", "old")
 
-    way:set_target_layer("rail")
-    way:set_approved_full()
+    elseif way:has_tag("usage", "industrial") or
+            way:has_tag("usage", "military") or
+            way:has_tag("usage", "test") or
+            way:has_tag("usage", "tourism") or
+            way:has_tag("service", "yard") or
+            way:has_tag("service", "spur") or
+            way:has_tag("railway", "miniature") or
+            way:has_tag("railway:preserved", "yes") then
+      way:set_target_layer("rail")
+      way:set_approved_min(14)
+      way:add_metadata("rail", "detail")
+
+    elseif way:has_tag("railway", "subway") or
+           way:has_tag("railway", "tram") then
+      way:set_target_layer("rail")
+      way:set_approved_min(10)
+      way:add_metadata("rail", "secondary")
+
+    else
+      way:set_target_layer("rail")
+      way:set_approved_min(5)
+      way:add_metadata("rail", "primary")
+    end
 
   elseif way:has_any_tag("waterway") then
     way:set_target_layer("waterway")

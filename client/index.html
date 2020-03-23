@@ -154,15 +154,6 @@ var custom = {
             "source-layer": "waterway",
             "paint": {"line-color": water}
         }, {
-            "id": "rail",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "rail",
-            "paint": {
-                "line-color": rail,
-                "line-dasharray": [1, 1]
-            }
-        },{
             "id": "road_back",
             "type": "line",
             "source": "osm",
@@ -226,6 +217,44 @@ var custom = {
                   20, ["*", ["var", "base"], 8]
                 ]
               ]
+            }
+        }, {
+            "id": "rail_old",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "rail",
+            "filter": ["==", "rail", "old"],
+            "paint": {
+                "line-color": rail,
+            }
+        }, {
+            "id": "rail_detail",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "rail",
+            "filter": ["==", "rail", "detail"],
+            "paint": {
+                "line-color": rail,
+            }
+        }, {
+            "id": "rail_secondary",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "rail",
+            "filter": ["==", "rail", "secondary"],
+            "paint": {
+                "line-color": rail,
+                "line-width": 1.15
+            }
+        }, {
+            "id": "rail_primary",
+            "type": "line",
+            "source": "osm",
+            "source-layer": "rail",
+            "filter": ["==", "rail", "primary"],
+            "paint": {
+                "line-color": rail,
+                "line-width": 1.3
             }
         }, {
             "id": "building",

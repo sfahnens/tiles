@@ -66,6 +66,7 @@
 - profile: woog steeg = building
 - profile: foreign names?!
 
++ server: add fonts for all languages
 - server: remove net-old -> boost beast minimal http example?
 - server: parallelize
 - server: better live statistics (wait some time to aggregate multiple requests)

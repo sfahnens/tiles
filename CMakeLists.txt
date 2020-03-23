@@ -81,6 +81,11 @@ target_link_libraries(tiles-server
   tiles_server_res-res
 )
 
+target_link_libraries(tiles-server
+  pbf_sdf_fonts_res
+  pbf_sdf_fonts_res-res
+)
+
 file(GLOB_RECURSE tiles-benchmark-files src/benchmark.cc)
 
 add_executable(tiles-benchmark EXCLUDE_FROM_ALL ${tiles-benchmark-files})

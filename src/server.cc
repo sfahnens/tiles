@@ -19,6 +19,7 @@
 #include "tiles/db/tile_database.h"
 #include "tiles/perf_counter.h"
 
+#include "pbf_sdf_fonts_res.h"
 #include "tiles_server_res.h"
 
 using namespace net::http::server;
@@ -111,6 +112,29 @@ int main(int argc, char** argv) {
           tiles::t_log("unhandled unknown error");
         }
       });
+
+  router.route("GET", "^\\/font/(.+)$", [&](auto const& req, auto cb) {
+    try {
+      std::string decoded_fname;
+      if (!url_decode(req.path_params[0], decoded_fname)) {
+        return cb(reply::stock_reply(reply::bad_request));
+      }
+
+      reply rep;
+      rep.status = reply::status_type::ok;
+      rep.headers = {{"Content-Type", ""}};  // stupid hack
+      add_cors_headers(rep);
+
+      auto const mem = pbf_sdf_fonts_res::get_resource(decoded_fname);
+      rep.content =
+          std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      return cb(rep);
+    } catch (std::exception const& e) {
+      return cb(reply::stock_reply(reply::not_found));
+    } catch (...) {
+      return cb(reply::stock_reply(reply::internal_server_error));
+    }
+  });
 
   auto const serve_file = [&](auto const& fname, auto cb) {
     try {

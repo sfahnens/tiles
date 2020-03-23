@@ -38,14 +38,18 @@
   url=git@git.motis-project.de:lib/osmium.git
   branch=master
   commit=5c5e2d61b2defb4bb065fa31b4270e6f96293e71
+[pbf-sdf-fonts]
+  url=git@git.motis-project.de:lib/pbf-sdf-fonts.git
+  branch=master
+  commit=3183de5951bb285f27859ba14bbbf156a66cd724
 [protozero]
   url=git@git.motis-project.de:lib/protozero.git
   branch=tiles
   commit=855ce94a2d1441db7e48a8e5505eac742777759b
 [res]
   url=git@git.motis-project.de:lib/res.git
-  branch=master
-  commit=f7f46a7ced02188b5a057100d4536579a98d71de
+  branch=explicit-targets
+  commit=fb2514e683179669c7298af14dbf0c25599c4a18
 [sol2]
   url=git@git.motis-project.de:lib/sol2.git
   branch=v2.20.6-mod

@@ -3,22 +3,59 @@
 #include <iostream>
 #include <random>
 
-#include "tiles/db/get_tile.h"
-#include "tiles/db/tile_database.h"
-#include "tiles/perf_counter.h"
+#include "conf/configuration.h"
+#include "conf/options_parser.h"
 
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 
-int main(int argc, char** argv) {
-  lmdb::env db_env = tiles::make_tile_database("./tiles.mdb");
+#include "tiles/db/get_tile.h"
+#include "tiles/db/tile_database.h"
+#include "tiles/perf_counter.h"
+
+namespace tiles {
+
+struct benchmark_settings : public conf::configuration {
+
+  benchmark_settings() : configuration("tiles-benchmark options", "") {
+    param(db_fname_, "db_fname", "/path/to/tiles.mdb");
+    param(tile_, "tile", "xyz coords of a tile, if not present random smaple");
+  }
+
+  std::string db_fname_{"tiles.mdb"};
+  std::vector<uint32_t> tile_;
+};
+
+}  // namespace tiles
+
+int main(int argc, char const** argv) {
+  tiles::benchmark_settings opt;
+
+  try {
+    conf::options_parser parser({&opt});
+    parser.read_command_line_args(argc, argv, false);
+
+    if (parser.help() || parser.version()) {
+      std::cout << "tiles-benchmark\n\n";
+      parser.print_help(std::cout);
+      return 0;
+    }
+
+    parser.read_configuration_file(false);
+    parser.print_used(std::cout);
+  } catch (std::exception const& e) {
+    std::cout << "options error: " << e.what() << "\n";
+    return 1;
+  }
+
+  lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
   tiles::tile_db_handle db_handle{db_env};
-  tiles::pack_handle pack_handle{"./tiles.mdb"};
+  tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
 
   auto render_ctx = make_render_ctx(db_handle);
   render_ctx.ignore_prepared_ = true;
 
-  if (argc == 1) {
+  if (opt.tile_.empty()) {
     geo::latlng p1{49.83, 8.55};
     geo::latlng p2{50.13, 8.74};
 
@@ -48,10 +85,9 @@ int main(int argc, char** argv) {
       std::cout << "rendered tile: " << size_sum << " bytes" << std::endl;
     }
 
-  } else if (argc == 4) {
-    geo::tile tile{static_cast<uint32_t>(std::atoi(argv[1])),
-                   static_cast<uint32_t>(std::atoi(argv[2])),
-                   static_cast<uint32_t>(std::atoi(argv[3]))};
+  } else {
+    utl::verify(opt.tile_.size() == 3, "need exactly three coordinats: x y z");
+    geo::tile tile{opt.tile_[0], opt.tile_[1], opt.tile_[2]};
     std::cout << "render tile: " << tile << std::endl;
 
     auto txn = db_handle.make_txn();
@@ -64,8 +100,5 @@ int main(int argc, char** argv) {
     size_t size_sum = rendered_tile ? rendered_tile->size() : 0;
     tiles::perf_report_get_tile(pc);
     std::cout << "rendered tile: " << size_sum << " bytes" << std::endl;
-
-  } else {
-    std::cout << "unexpected number of arguments" << std::endl;
   }
 }

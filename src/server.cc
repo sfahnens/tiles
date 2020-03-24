@@ -4,8 +4,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "conf/configuration.h"
 #include "conf/options_parser.h"
-#include "conf/simple_config.h"
 
 #include "net/http/server/enable_cors.hpp"
 #include "net/http/server/query_router.hpp"
@@ -24,19 +24,17 @@
 
 using namespace net::http::server;
 
-struct server_settings : public conf::simple_config {
-  explicit server_settings(std::string const& db_fname = "tiles.mdb",
-                           std::string const& res_dname = "")
-      : simple_config("tiles-server options", "") {
-    string_param(db_fname_, db_fname, "db_fname", "/path/to/tiles.mdb");
-    string_param(res_dname_, res_dname, "res_dname", "/path/to/res");
+struct server_settings : public conf::configuration {
+  server_settings() : configuration("tiles-server options", "") {
+    param(db_fname_, "db_fname", "/path/to/tiles.mdb");
+    param(res_dname_, "res_dname", "/path/to/res");
   }
 
-  std::string db_fname_;
+  std::string db_fname_{"tiles.mdb"};
   std::string res_dname_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char const** argv) {
   server_settings opt;
 
   try {

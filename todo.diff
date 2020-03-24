@@ -17,10 +17,10 @@
 - import: count broken geometries (missing nodes)
 - import: create pack index only if there are enough features in an entry
 
++ misc: update conf library
 - misc: proper feature wraparound 180/-180 <-> artifacts on island?!
 - misc: some tiles mising on lower z for full coastlines
 - misc: improve geometry clipping: compute unclipped z-range
-- misc: update conf library
 
 + render: metadata completed zoom levels
 + render: fast bounding box check in deserialize (same as zoomlevel)

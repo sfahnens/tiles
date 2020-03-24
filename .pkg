@@ -9,7 +9,7 @@
 [conf]
   url=git@git.motis-project.de:lib/conf.git
   branch=master
-  commit=9216a50214e8d438c166585afae7686259305e0b
+  commit=5125043d5e295a70f3a0e0fb41ca80487816b2bf
 [fmt]
   url=git@git.motis-project.de:lib/fmt.git
   branch=master

@@ -114,6 +114,10 @@ prepare_manager make_prepare_manager(tile_db_handle& db_handle,
     maxy = std::max(maxy, tile.y_);
   }
 
+  utl::verify(minx != std::numeric_limits<uint32_t>::max() &&
+                  miny != std::numeric_limits<uint32_t>::max(),
+              "prepare_tiles: invalid bounds (no features in database?)");
+
   return prepare_manager{
       geo::make_tile_range(minx, miny, maxx, maxy, kTileDefaultIndexZoomLvl),
       max_zoomlevel};

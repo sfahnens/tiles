@@ -8,6 +8,15 @@
 #include "tiles/bin_utils.h"
 #include "tiles/db/quad_tree.h"
 
+// feature pack "wire format" specification
+//
+//  1b : header?! TODO implement this
+//  4b : feature count uint32_t
+//  4b : offset of index
+// var : payload [serialized_feature | \0]
+// var : quad_trees per level quad trees
+// var : index to the quad trees
+
 namespace tiles {
 
 struct tile_db_handle;
@@ -26,6 +35,7 @@ void pack_features(tile_db_handle&, pack_handle&);
 
 template <typename Fn>
 void unpack_features(std::string_view const& string, Fn&& fn) {
+  utl::verify(string.size() > 8, "invalid feature_pack");
   auto const feature_count = read_nth<uint32_t>(string.data(), 0);
 
   auto ptr = string.data() + 2 * sizeof(uint32_t);
@@ -43,12 +53,14 @@ void unpack_features(std::string_view const& string, Fn&& fn) {
 template <typename Fn>
 void unpack_features(geo::tile const& root, std::string_view const& string,
                      geo::tile const& tile, Fn&& fn) {
+  utl::verify(string.size() > 8, "invalid feature_pack");
   auto const idx_offset = read_nth<uint32_t>(string.data(), 1);
 
   if (idx_offset == 0) {
     return unpack_features(string, fn);  // no tree available
   }
 
+  utl::verify(string.size() >= idx_offset, "invalid feature_pack idx_offset");
   auto idx_ptr = string.data() + idx_offset;
   auto const end = string.data() + string.size();
   for (auto z = root.z_; z <= std::max(root.z_, tile.z_); ++z) {

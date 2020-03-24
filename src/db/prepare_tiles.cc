@@ -19,7 +19,7 @@ namespace tiles {
 struct prepare_task {
   explicit prepare_task(geo::tile tile) : tile_{tile} {}
   geo::tile tile_;
-  std::vector<std::pair<geo::tile, std::string_view>> packs_;
+  std::vector<std::pair<geo::tile, pack_record>> packs_;
   std::optional<std::string> result_;
 };
 
@@ -143,7 +143,7 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
 
           for (auto& task : batch) {
             pack_records_foreach(c, task.tile_, [&](auto t, auto r) {
-              task.packs_.emplace_back(t, pack_handle.get(r));
+              task.packs_.emplace_back(t, r);
             });
           }
         }
@@ -151,13 +151,15 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
         for (auto& task : batch) {
           using namespace std::chrono;
           auto start = steady_clock::now();
-          task.result_ = get_tile(
-              render_ctx, task.tile_,
-              [&](auto&& fn) {
-                std::for_each(begin(task.packs_), end(task.packs_),
-                              [&](auto const& p) { fn(p.first, p.second); });
-              },
-              npc);
+          task.result_ =
+              get_tile(render_ctx, task.tile_,
+                       [&](auto&& fn) {
+                         std::for_each(begin(task.packs_), end(task.packs_),
+                                       [&](auto const& p) {
+                                         fn(p.first, pack_handle.get(p.second));
+                                       });
+                       },
+                       npc);
           auto finish = steady_clock::now();
 
           m.finish(task.tile_, task.result_ ? task.result_->size() : 0,

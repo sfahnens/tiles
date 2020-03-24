@@ -142,7 +142,6 @@ struct packable_feature {
 std::string pack_features(geo::tile const& tile,
                           shared_metadata_coder const& metadata_coder,
                           std::vector<std::string_view> const& strings) {
-
   std::vector<std::vector<packable_feature>> features_by_min_z(kMaxZoomLevel +
                                                                1 - tile.z_);
   for (auto const& str : strings) {
@@ -286,12 +285,12 @@ void pack_features(tile_db_handle& db_handle, pack_handle& pack_handle) {
   auto const insert_compact = [&](auto const& tile, auto const& buf) {
     if (free_space() >= buf.size()) {
       auto record = pack_handle.insert(insert_offset, buf);
-      insert_offset += buf.size();
-      insert_compact_size += buf.size();
+      insert_offset += record.size_;
+      insert_compact_size += record.size_;
       return std::optional{record};
     } else {
-      insert_back_queue_size += buf.size();
-      back_queue.emplace_back(tile, pack_handle.append(buf));
+      insert_back_queue_size +=
+          back_queue.emplace_back(tile, pack_handle.append(buf)).second.size_;
       return std::optional<pack_record>{};
     }
   };

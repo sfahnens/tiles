@@ -33,6 +33,7 @@ target_link_libraries(tiles
   fmt
   geo
   lmdb
+  lz4
   osmium
   utl
   concurrentqueue

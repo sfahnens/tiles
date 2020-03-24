@@ -103,20 +103,17 @@ struct pack_handle {
     utl::verify(std::fclose(file_) == 0, "pack_handle: problem while fclose");
   }
 
-  [[nodiscard]] size_t size() const { return dat_.size(); }[[nodiscard]] size_t
-      capacity() const {
-    return dat_.capacity();
-  }
+  size_t size() const { return dat_.size(); }
+
+  size_t capacity() const { return dat_.capacity(); }
 
   void resize(size_t new_size) { dat_.resize(new_size); }
 
-  std::string_view get(pack_record record) const {
-    utl::verify(record.offset_ < dat_.size() &&
-                    record.offset_ + record.size_ <= dat_.size(),
-                "pack_file: record not file [size={},record=({},{})",
-                dat_.size(), record.offset_, record.size_);
-    return std::string_view{dat_.data() + record.offset_, record.size_};
-  }
+  std::string get(pack_record record) const;
+
+  pack_record insert(size_t offset, std::string_view dat);
+
+  pack_record append(std::string_view dat) { return insert(dat_.size(), dat); }
 
   pack_record move(size_t offset, pack_record from_record) {
     pack_record to_record{offset, from_record.size_};
@@ -125,15 +122,6 @@ struct pack_handle {
                  dat_.data() + from_record.offset_, to_record.size_);
     return to_record;
   }
-
-  pack_record insert(size_t offset, std::string_view dat) {
-    pack_record record{offset, dat.size()};
-    dat_.resize(std::max(dat_.size(), record.offset_ + record.size_));
-    std::memcpy(dat_.data() + offset, dat.data(), dat.size());
-    return record;
-  }
-
-  pack_record append(std::string_view dat) { return insert(dat_.size(), dat); }
 
   FILE* file_;
   osmium::detail::mmap_vector_file<char> dat_;

@@ -26,6 +26,10 @@
   url=git@git.motis-project.de:lib/lua.git
   branch=master
   commit=f410081ee2eac25ac9a15f73269033700419bd4c
+[lz4]
+  url=git@git.motis-project.de:lib/lz4.git
+  branch=master
+  commit=0d243c02b430861d234c113038b6ba0a3936ed2f
 [miniz]
   url=git@git.motis-project.de:lib/miniz.git
   branch=master

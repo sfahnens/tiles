@@ -70,7 +70,6 @@ target_link_libraries(tiles-server
   conf
   geo
   lmdb
-  net-http_server
   tiles
 )
 

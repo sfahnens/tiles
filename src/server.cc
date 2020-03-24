@@ -1,28 +1,147 @@
+#include <cstdlib>
 #include <exception>
 #include <iomanip>
 #include <iostream>
+#include <memory>
+#include <string>
 
+#include "boost/asio.hpp"
+#include "boost/beast/core.hpp"
+#include "boost/beast/http.hpp"
+#include "boost/beast/version.hpp"
 #include "boost/filesystem.hpp"
 
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
-
-#include "net/http/server/enable_cors.hpp"
-#include "net/http/server/query_router.hpp"
-#include "net/http/server/server.hpp"
-#include "net/http/server/shutdown_handler.hpp"
-#include "net/http/server/url_decode.hpp"
 
 #include "utl/parser/mmap_reader.h"
 
 #include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/perf_counter.h"
+#include "tiles/util.h"
 
 #include "pbf_sdf_fonts_res.h"
 #include "tiles_server_res.h"
 
-using namespace net::http::server;
+// Generic server code adapted from Boost ASIO and Boost BEAST examples.
+// Distributed under the Boost Software License, Version 1.0.
+
+namespace beast = boost::beast;  // from "boost/beast.hpp"
+namespace http = beast::http;  // from "boost/beast/http.hpp"
+namespace net = boost::asio;  // from "boost/asio.hpp"
+using tcp = boost::asio::ip::tcp;  // from "boost/asio/ip/tcp.hpp"
+
+namespace tiles {
+
+using request_t = http::request<http::dynamic_body>;
+using response_t = http::response<http::string_body>;
+using callback_t = std::function<void(request_t const&, response_t&)>;
+
+std::string url_decode(request_t const& req) {
+  auto const& in = req.target();
+  std::string out;
+  out.reserve(in.size());
+  for (std::size_t i = 0; i < in.size(); ++i) {
+    if (in[i] == '%') {
+      utl::verify(i + 3 <= in.size(), "invalid url");
+      int value = 0;
+      std::istringstream is{in.substr(i + 1, 2).to_string()};
+      utl::verify(static_cast<bool>(is >> std::hex >> value), "invalid url");
+      out += static_cast<char>(value);
+      i += 2;
+    } else if (in[i] == '+') {
+      out += ' ';
+    } else {
+      out += in[i];
+    }
+  }
+  return out;
+}
+
+struct http_connection : public std::enable_shared_from_this<http_connection> {
+  http_connection(tcp::socket socket, callback_t const& callback)
+      : socket_{std::move(socket)}, callback_{callback} {}
+
+  void start() {
+    auto self = shared_from_this();
+    http::async_read(
+        socket_, buffer_, request_, [self](beast::error_code ec, std::size_t) {
+          if (!ec) {
+            self->response_.version(self->request_.version());
+            self->response_.keep_alive(false);
+
+            try {
+              self->callback_(self->request_, self->response_);
+            } catch (std::exception const& e) {
+              tiles::t_log("unhandled error: {}", e.what());
+              self->response_.result(http::status::internal_server_error);
+            } catch (...) {
+              tiles::t_log("unhandled unknown error");
+              self->response_.result(http::status::internal_server_error);
+            }
+            self->response_.set(http::field::content_length,
+                                self->response_.body().size());
+            http::async_write(self->socket_, self->response_,
+                              [self](beast::error_code ec, std::size_t) {
+                                self->socket_.shutdown(
+                                    tcp::socket::shutdown_send, ec);
+                                self->deadline_.cancel();
+                              });
+          }
+        });
+    check_deadline();
+  }
+
+  void check_deadline() {
+    auto self = shared_from_this();
+    deadline_.async_wait([self](beast::error_code ec) {
+      if (!ec) {
+        self->socket_.close(ec);
+      }
+    });
+  }
+
+  tcp::socket socket_;
+  beast::flat_buffer buffer_{8192};
+  request_t request_;
+  response_t response_;
+  callback_t const& callback_;
+  net::steady_timer deadline_{socket_.get_executor(), std::chrono::seconds(60)};
+};
+
+void http_server(tcp::acceptor& acceptor, tcp::socket& socket,
+                 callback_t const& cb) {
+  acceptor.async_accept(socket, [&](beast::error_code ec) {
+    if (!ec) std::make_shared<http_connection>(std::move(socket), cb)->start();
+    http_server(acceptor, socket, cb);
+  });
+}
+
+void serve_forever(std::string const& address, uint16_t port, callback_t cb) {
+  try {
+    net::io_context ioc{static_cast<int>(std::thread::hardware_concurrency())};
+    tcp::acceptor acceptor{ioc, {net::ip::make_address(address), port}};
+    tcp::socket socket{ioc};
+    http_server(acceptor, socket, cb);
+
+    boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
+    signals.async_wait(
+        [&](boost::system::error_code const&, int) { ioc.stop(); });
+
+    std::vector<std::thread> threads;
+    for (auto i = 1u; i < std::thread::hardware_concurrency(); ++i) {
+      threads.emplace_back([&ioc] { ioc.run(); });
+    }
+    ioc.run();
+
+    std::for_each(begin(threads), end(threads), [](auto& t) { t.join(); });
+  } catch (std::exception const& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
+}
+
+}  // namespace tiles
 
 struct server_settings : public conf::configuration {
   server_settings() : configuration("tiles-server options", "") {
@@ -57,137 +176,105 @@ int main(int argc, char const** argv) {
   lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
   tiles::tile_db_handle handle{db_env};
   auto const render_ctx = make_render_ctx(handle);
-
   tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
 
-  boost::asio::io_service ios;
-  server server{ios};
-
-  query_router router;
-  router.route("OPTIONS", ".*", [](auto const&, auto cb) {
-    reply rep = reply::stock_reply(reply::ok);
-    add_cors_headers(rep);
-    cb(rep);
-  });
-
-  // z, x, y
-  router.route(
-      "GET", "^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$",
-      [&](auto const& req, auto cb) {
-        if (std::find_if(begin(req.headers), end(req.headers),
-                         [](auto const& h) {
-                           return h.name == "Accept-Encoding" &&
-                                  h.value.find("deflate") != std::string::npos;
-                         }) == end(req.headers)) {
-          return cb(reply::stock_reply(reply::not_implemented));
-        }
-
-        try {
-          tiles::t_log("received a request: {}", req.uri);
-          auto const tile =
-              geo::tile{static_cast<uint32_t>(std::stoul(req.path_params[1])),
-                        static_cast<uint32_t>(std::stoul(req.path_params[2])),
-                        static_cast<uint32_t>(std::stoul(req.path_params[0]))};
-
-          tiles::perf_counter pc;
-          auto rendered_tile =
-              tiles::get_tile(handle, pack_handle, render_ctx, tile, pc);
-          tiles::perf_report_get_tile(pc);
-
-          reply rep = reply::stock_reply(reply::ok);
-          if (rendered_tile) {
-            rep.headers.emplace_back("Content-Encoding", "deflate");
-            rep.content = std::move(*rendered_tile);
-          } else {
-            rep.status = reply::no_content;
-          }
-
-          add_cors_headers(rep);
-          return cb(rep);
-        } catch (std::exception const& e) {
-          tiles::t_log("unhandled error: {}", e.what());
-        } catch (...) {
-          tiles::t_log("unhandled unknown error");
-        }
-      });
-
-  router.route("GET", "^\\/font/(.+)$", [&](auto const& req, auto cb) {
-    try {
-      std::string decoded_fname;
-      if (!url_decode(req.path_params[0], decoded_fname)) {
-        return cb(reply::stock_reply(reply::bad_request));
-      }
-
-      reply rep;
-      rep.status = reply::status_type::ok;
-      rep.headers = {{"Content-Type", ""}};  // stupid hack
-      add_cors_headers(rep);
-
-      auto const mem = pbf_sdf_fonts_res::get_resource(decoded_fname);
-      rep.content =
-          std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
-      return cb(rep);
-    } catch (std::exception const& e) {
-      return cb(reply::stock_reply(reply::not_found));
-    } catch (...) {
-      return cb(reply::stock_reply(reply::internal_server_error));
+  auto const maybe_serve_tile = [&](auto const& req, auto& res) -> bool {
+    static tiles::regex_matcher matcher{"^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
+    auto const match = matcher.match(tiles::url_decode(req));
+    if (!match) {
+      return false;
     }
-  });
 
-  auto const serve_file = [&](auto const& fname, auto cb) {
-    try {
-      std::string decoded_fname;
-      if (!url_decode(fname, decoded_fname)) {
-        return cb(reply::stock_reply(reply::bad_request));
-      }
-
-      reply rep;
-      rep.status = reply::status_type::ok;
-      rep.headers = {{"Content-Type", ""}};  // stupid hack
-      add_cors_headers(rep);
-
-      if (opt.res_dname_.size() != 0) {
-        auto p = boost::filesystem::path{opt.res_dname_} / decoded_fname;
-        if (boost::filesystem::exists(p)) {
-          utl::mmap_reader mem{p.c_str()};
-          rep.content = std::string{mem.m_.ptr(), mem.m_.size()};
-          return cb(rep);
-        }
-      }
-
-      auto const mem = tiles_server_res::get_resource(decoded_fname);
-      rep.content =
-          std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
-      return cb(rep);
-    } catch (std::exception const& e) {
-      return cb(reply::stock_reply(reply::not_found));
-    } catch (...) {
-      return cb(reply::stock_reply(reply::internal_server_error));
+    if (req[http::field::accept_encoding]  //
+            .find("deflate") == boost::string_view::npos) {
+      res.result(http::status::not_implemented);
+      return true;
     }
+
+    tiles::t_log("received a request: {}", req.target());
+    auto const tile =
+        geo::tile{tiles::stou(match->at(2)), tiles::stou(match->at(3)),
+                  tiles::stou(match->at(1))};
+
+    tiles::perf_counter pc;
+    auto rendered_tile =
+        tiles::get_tile(handle, pack_handle, render_ctx, tile, pc);
+    tiles::perf_report_get_tile(pc);
+
+    if (rendered_tile) {
+      res.body() = std::move(*rendered_tile);
+      res.set(http::field::content_encoding, "deflate");
+      res.result(http::status::ok);
+    } else {
+      res.result(http::status::no_content);
+    }
+    return true;
   };
 
-  router.route("GET", "^\\/(.+)$", [&](auto const& req, auto cb) {
-    return serve_file(req.path_params[0], cb);
-  });
-
-  router.route("GET", "^\\/$", [&](auto const&, auto cb) {
-    return serve_file("index.html", cb);
-  });
-
-  server.listen("0.0.0.0", "8888", router);
-
-  io_service_shutdown shutd(ios);
-  shutdown_handler<io_service_shutdown> shutdown(ios, shutd);
-
-  tiles::t_log(">>> tiles-server up and running!");
-  while (true) {
-    try {
-      ios.run();
-      break;
-    } catch (std::exception const& e) {
-      tiles::t_log("unhandled error: {}", e.what());
-    } catch (...) {
-      tiles::t_log("unhandled unknown error");
+  auto const maybe_serve_font = [&](auto const& req, auto& res) -> bool {
+    static tiles::regex_matcher matcher{"^\\/font/(.+)$"};
+    auto const match = matcher.match(tiles::url_decode(req));
+    if (!match) {
+      return false;
     }
-  }
+
+    std::cout << match->at(0) << std::endl;
+
+    try {
+      auto const mem =
+          pbf_sdf_fonts_res::get_resource(std::string{match->at(1)});
+      res.body() =
+          std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      res.result(http::status::ok);
+    } catch (std::out_of_range const&) {
+      res.result(http::status::not_found);
+    }
+    return true;
+  };
+
+  auto const maybe_serve_file = [&](auto const& req, auto& res) -> bool {
+    static tiles::regex_matcher matcher{"^\\/(.+)$"};
+    auto const match = matcher.match(tiles::url_decode(req));
+    if (!match && req.target() != "/") {
+      return false;
+    }
+
+    auto fname = match ? match->at(1) : "index.html";
+    if (opt.res_dname_.size() != 0) {
+      auto p = boost::filesystem::path{opt.res_dname_} / fname;
+      if (boost::filesystem::exists(p)) {
+        utl::mmap_reader mem{p.c_str()};
+        res.body() = std::string{mem.m_.ptr(), mem.m_.size()};
+      }
+    } else {
+      auto const mem = tiles_server_res::get_resource(fname);
+      res.body() =
+          std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+    }
+
+    res.result(http::status::ok);
+    return true;
+  };
+
+  tiles::serve_forever("0.0.0.0", 8888, [&](auto const& req, auto& res) {
+    switch (req.method()) {
+      case http::verb::options:
+        res.result(http::status::no_content);
+        res.set(http::field::access_control_allow_origin, "*");
+        res.set(http::field::access_control_allow_headers,
+                "X-Requested-With, Content-Type, Accept, Authorization");
+        res.set(http::field::access_control_allow_methods,
+                "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+        break;
+      case http::verb::get:
+      case http::verb::head:
+        if (!(maybe_serve_tile(req, res) ||  //
+              maybe_serve_font(req, res) ||  //
+              maybe_serve_file(req, res))) {
+          res.result(http::status::not_found);
+        }
+        break;
+      default: res.result(http::status::method_not_allowed);
+    }
+  });
 }

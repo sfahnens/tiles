@@ -1,13 +1,19 @@
 #pragma once
 
 #include <time.h>
+#include <charconv>
 #include <chrono>
+#include <functional>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "fmt/core.h"
 #include "fmt/ostream.h"
+
+#include "utl/verify.h"
 
 namespace tiles {
 template <typename... Args>
@@ -195,3 +201,26 @@ struct formatter<tiles::printable_bytes> {
 };
 
 }  // namespace fmt
+
+namespace tiles {
+
+inline uint32_t stou(std::string_view sv) {
+  uint32_t var;
+  auto result = std::from_chars(sv.data(), sv.data() + sv.size(), var);
+  utl::verify(result.ec == std::errc(), "cannot convert to uint32_t: {}", sv);
+  return var;
+}
+
+struct regex_matcher {
+  using match_result_t = std::optional<std::vector<std::string>>;
+
+  explicit regex_matcher(std::string pattern);
+  ~regex_matcher();
+
+  match_result_t match(std::string) const;
+
+  struct impl;
+  std::unique_ptr<impl> impl_;
+};
+
+}  // namespace tiles

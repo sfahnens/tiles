@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <limits>
+#include <unordered_set>
 
 #include "boost/algorithm/string/predicate.hpp"
 
@@ -286,12 +287,20 @@ struct tile_builder::impl {
 
   void add_feature(feature const& f) {
     utl::verify(f.layer_ < layer_names_.size(), "invalid layer in db");
-    utl::get_or_create(builders_, f.layer_,
-                       [&] {
-                         return std::make_unique<layer_builder>(
-                             layer_names_.at(f.layer_), spec_, config_);
-                       })
-        ->add_feature(f);
+
+    if ((mpark::holds_alternative<fixed_point>(f.geometry_) &&
+         !node_ids_.insert(f.id_).second) ||
+        (mpark::holds_alternative<fixed_polyline>(f.geometry_) &&
+         !line_ids_.insert(f.id_).second) ||
+        (mpark::holds_alternative<fixed_polygon>(f.geometry_) &&
+         !poly_ids_.insert(f.id_).second)) {
+      return;
+    }
+
+    utl::get_or_create(builders_, f.layer_, [&] {
+      return std::make_unique<layer_builder>(layer_names_.at(f.layer_), spec_,
+                                             config_);
+    })->add_feature(f);
   }
 
   std::string finish() {
@@ -318,6 +327,8 @@ struct tile_builder::impl {
   tile_builder::config config_;
 
   std::map<size_t, std::unique_ptr<layer_builder>> builders_;
+
+  std::unordered_set<uint64_t> node_ids_, line_ids_, poly_ids_;
 };
 
 tile_builder::tile_builder(geo::tile const& tile,

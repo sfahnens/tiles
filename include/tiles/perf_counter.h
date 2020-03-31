@@ -10,6 +10,8 @@ namespace tiles {
 
 namespace perf_task {
 enum perf_task_t : uint32_t {
+  RESULT_SIZE,
+
   GET_TILE_TOTAL,
   GET_TILE_FETCH,
   GET_TILE_RENDER,
@@ -42,6 +44,11 @@ struct perf_counter {
   }
 
   template <perf_task::perf_task_t Task>
+  void append(uint64_t const value) {
+    finished_[Task].push_back(value);
+  }
+
+  template <perf_task::perf_task_t Task>
   void start() {
     running_[Task] = clock_t::now();
   }
@@ -61,10 +68,13 @@ struct perf_counter {
   }
 
   std::array<time_point_t, perf_task::SIZE> running_;
-  std::array<std::vector<size_t>, perf_task::SIZE> finished_;
+  std::array<std::vector<uint64_t>, perf_task::SIZE> finished_;
 };
 
 struct null_perf_counter {
+  template <perf_task::perf_task_t Task>
+  void append(uint64_t) {}
+
   template <perf_task::perf_task_t Task>
   void start() {}
 

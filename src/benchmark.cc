@@ -16,14 +16,15 @@
 namespace tiles {
 
 struct benchmark_settings : public conf::configuration {
-
   benchmark_settings() : configuration("tiles-benchmark options", "") {
     param(db_fname_, "db_fname", "/path/to/tiles.mdb");
     param(tile_, "tile", "xyz coords of a tile, if not present random smaple");
+    param(compress_, "compress", "compress the tiles");
   }
 
   std::string db_fname_{"tiles.mdb"};
   std::vector<uint32_t> tile_;
+  bool compress_{true};
 };
 
 }  // namespace tiles
@@ -54,6 +55,7 @@ int main(int argc, char const** argv) {
 
   auto render_ctx = make_render_ctx(db_handle);
   render_ctx.ignore_prepared_ = true;
+  render_ctx.compress_result_ = opt.compress_;
 
   if (opt.tile_.empty()) {
     geo::latlng p1{49.83, 8.55};
@@ -73,16 +75,13 @@ int main(int argc, char const** argv) {
       auto features_dbi = db_handle.features_dbi(txn);
       auto features_cursor = lmdb::cursor{txn, features_dbi};
 
-      size_t size_sum = 0;
       tiles::perf_counter pc;
       for (auto const& tile : geo::make_tile_range(p1, p2, z)) {
         auto rendered_tile = tiles::get_tile(db_handle, txn, features_cursor,
                                              pack_handle, render_ctx, tile, pc);
-        size_sum += rendered_tile ? rendered_tile->size() : 0;
         // break;
       }
       tiles::perf_report_get_tile(pc);
-      std::cout << "rendered tile: " << size_sum << " bytes" << std::endl;
     }
 
   } else {
@@ -97,8 +96,6 @@ int main(int argc, char const** argv) {
     tiles::perf_counter pc;
     auto const rendered_tile = tiles::get_tile(
         db_handle, txn, features_cursor, pack_handle, render_ctx, tile, pc);
-    size_t size_sum = rendered_tile ? rendered_tile->size() : 0;
     tiles::perf_report_get_tile(pc);
-    std::cout << "rendered tile: " << size_sum << " bytes" << std::endl;
   }
 }

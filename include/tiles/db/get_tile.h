@@ -27,6 +27,7 @@ struct render_ctx {
   std::vector<std::string> layer_names_;
   shared_metadata_decoder metadata_decoder_;
 
+  bool compress_result_ = true;
   bool ignore_prepared_ = false;
   bool ignore_fully_seaside_ = false;
 };
@@ -157,11 +158,16 @@ std::optional<std::string> get_tile(render_ctx const& ctx,
     return std::nullopt;
   }
 
-  start<perf_task::GET_TILE_COMPRESS>(pc);
-  auto compressed = compress_deflate(rendered_tile);
-  stop<perf_task::GET_TILE_COMPRESS>(pc);
-
-  return {std::move(compressed)};
+  if (ctx.compress_result_) {
+    start<perf_task::GET_TILE_COMPRESS>(pc);
+    auto compressed = compress_deflate(rendered_tile);
+    stop<perf_task::GET_TILE_COMPRESS>(pc);
+    pc.template append<perf_task::RESULT_SIZE>(compressed.size());
+    return {std::move(compressed)};
+  } else {
+    pc.template append<perf_task::RESULT_SIZE>(rendered_tile.size());
+    return {std::move(rendered_tile)};
+  }
 }
 
 template <typename PerfCounter>

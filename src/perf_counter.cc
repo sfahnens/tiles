@@ -6,81 +6,54 @@
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 
+#include "tiles/util.h"
+
 namespace tiles {
 
-// TODO use formatters!
-void perf_report_get_tile(perf_counter& pc) {
-  auto const format_count = [](auto& os, char const* label, double const n) {
-    auto const k = n / 1e3;
-    auto const m = n / 1e6;
-    auto const g = n / 1e9;
-    if (n < 1e3) {
-      fmt::print(os, "{:>4}: {:>7}  ", label, n);
-    } else if (k < 1e3) {
-      fmt::print(os, "{:>4}: {:>7.1f}K ", label, k);
-    } else if (m < 1e3) {
-      fmt::print(os, "{:>4}: {:>7.1f}M ", label, m);
-    } else {
-      fmt::print(os, "{:>4}: {:>7.1f}G ", label, g);
-    }
-  };
+template <typename Printable>
+void print(char const* label, std::vector<uint64_t>& m) {
+  auto const sum = std::accumulate(begin(m), end(m), 0.);
+  std::sort(begin(m), end(m));
 
-  auto const format_dur = [](auto& os, char const* label, double const ns) {
-    auto const mys = ns / 1e3;
-    auto const ms = ns / 1e6;
-    auto const s = ns / 1e9;
-    if (ns < 1e3) {
-      fmt::print(os, "{:>4}: {:>7.3f}ns ", label, ns);
-    } else if (mys < 1e3) {
-      fmt::print(os, "{:>4}: {:>7.3f}µs ", label, mys);
-    } else if (ms < 1e3) {
-      fmt::print(os, "{:>4}: {:>7.3f}ms ", label, ms);
-    } else {
-      fmt::print(os, "{:>4}: {:>7.3f}s  ", label, s);
-    }
-  };
+  fmt::print(std::cout, "{:<18} > cnt: {} sum: {}", label,
+             printable_num{m.size()}, Printable{sum});
 
-  auto const print_counter = [&](auto const& label, auto& m) {
-    auto const sum = std::accumulate(begin(m), end(m), 0.);
-    std::sort(begin(m), end(m));
-
-    fmt::print(std::cout, "{:<24} > ", label);
-    format_count(std::cout, "cnt", m.size());
-    format_dur(std::cout, "sum", sum);
-
-    if (m.empty()) {
-      std::cout << "\n";
-      return;
-    }
-
-    format_dur(std::cout, "mean", sum / m.size());
-    format_dur(std::cout, "q95", m[m.size() * .95]);
-    format_dur(std::cout, "max", m.back());
+  if (m.empty()) {
     std::cout << "\n";
-  };
+    return;
+  }
 
-  print_counter("GET: TOTAL", pc.finished_[perf_task::GET_TILE_TOTAL]);
-  print_counter("GET: FETCH", pc.finished_[perf_task::GET_TILE_FETCH]);
-  print_counter("GET: RENDER", pc.finished_[perf_task::GET_TILE_RENDER]);
-  print_counter("GET: COMPRESS", pc.finished_[perf_task::GET_TILE_COMPRESS]);
+  fmt::print(std::cout, " mean: {} q95: {} max: {}\n",
+             Printable{sum / m.size()}, Printable{m[m.size() * .95]},
+             Printable{m.back()});
+}
 
-  print_counter("RNDR: FIND SEASIDE",
-                pc.finished_[perf_task::RENDER_TILE_FIND_SEASIDE]);
-  print_counter("RNDR: ADD SEASIDE",
-                pc.finished_[perf_task::RENDER_TILE_ADD_SEASIDE]);
+void perf_report_get_tile(perf_counter& pc) {
+  print<printable_bytes>(" RESULT: SIZE", pc.finished_[perf_task::RESULT_SIZE]);
 
-  print_counter("RNDR: QUERY FEAT",
-                pc.finished_[perf_task::RENDER_TILE_QUERY_FEATURE]);
-  print_counter("RNDR: ITER FEAT",
-                pc.finished_[perf_task::RENDER_TILE_ITER_FEATURE]);
-  print_counter("RNDR: DESER FEAT OKAY",
-                pc.finished_[perf_task::RENDER_TILE_DESER_FEATURE_OKAY]);
-  print_counter("RNDR: DESER FEAT SKIP",
-                pc.finished_[perf_task::RENDER_TILE_DESER_FEATURE_SKIP]);
-  print_counter("RNDR: ADD FEAT",
-                pc.finished_[perf_task::RENDER_TILE_ADD_FEATURE]);
-  print_counter("RNDR: FINISH",
-                pc.finished_[perf_task::RENDER_TILE_FINISH]);
+  print<printable_ns>(" GET: TOTAL", pc.finished_[perf_task::GET_TILE_TOTAL]);
+  print<printable_ns>(" GET: FETCH", pc.finished_[perf_task::GET_TILE_FETCH]);
+  print<printable_ns>(" GET: RENDER", pc.finished_[perf_task::GET_TILE_RENDER]);
+  print<printable_ns>(" GET: COMPRESS",
+                      pc.finished_[perf_task::GET_TILE_COMPRESS]);
+
+  print<printable_ns>("RNDR: FIND SEASIDE",
+                      pc.finished_[perf_task::RENDER_TILE_FIND_SEASIDE]);
+  print<printable_ns>("RNDR: ADD SEASIDE",
+                      pc.finished_[perf_task::RENDER_TILE_ADD_SEASIDE]);
+
+  print<printable_ns>("RNDR: QUERY FEAT",
+                      pc.finished_[perf_task::RENDER_TILE_QUERY_FEATURE]);
+  print<printable_ns>("RNDR: ITER FEAT",
+                      pc.finished_[perf_task::RENDER_TILE_ITER_FEATURE]);
+  print<printable_ns>("RNDR: DESER OKAY",
+                      pc.finished_[perf_task::RENDER_TILE_DESER_FEATURE_OKAY]);
+  print<printable_ns>("RNDR: DESER SKIP",
+                      pc.finished_[perf_task::RENDER_TILE_DESER_FEATURE_SKIP]);
+  print<printable_ns>("RNDR: ADD FEAT",
+                      pc.finished_[perf_task::RENDER_TILE_ADD_FEATURE]);
+  print<printable_ns>("RNDR: FINISH",
+                      pc.finished_[perf_task::RENDER_TILE_FINISH]);
 }
 
 }  // namespace tiles

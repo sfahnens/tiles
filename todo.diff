@@ -12,7 +12,7 @@
 + import: parallelize
 + import: dont prepare fully seaside
 + import: prepare tiles with empty database?!
-- import: fragmentation management for planet file
++ import: fragmentation management for planet file
 - import: shared_metadata and feature inserter flush in other thread
 - import: count broken geometries (missing nodes)
 - import: create pack index only if there are enough features in an entry

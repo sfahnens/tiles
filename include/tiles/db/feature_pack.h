@@ -28,7 +28,7 @@ std::string pack_features(std::vector<std::string> const&);
 
 // optimal packing (incl. index)
 std::string pack_features(geo::tile const&, shared_metadata_coder const&,
-                          std::vector<std::string_view> const&);
+                          std::vector<std::string> const&);
 
 // full database packing (e.g. once and optimal)
 void pack_features(tile_db_handle&, pack_handle&);

@@ -12,6 +12,9 @@
 namespace tiles {
 
 struct pack_record {
+  pack_record() = default;
+  pack_record(size_t offset, size_t size) : offset_{offset}, size_{size} {}
+
   friend bool operator==(pack_record const& lhs, pack_record const& rhs) {
     return std::tie(lhs.offset_, lhs.size_) == std::tie(rhs.offset_, rhs.size_);
   }
@@ -19,6 +22,8 @@ struct pack_record {
   friend bool operator<(pack_record const& lhs, pack_record const& rhs) {
     return std::tie(lhs.offset_, lhs.size_) < std::tie(rhs.offset_, rhs.size_);
   }
+
+  [[nodiscard]] size_t end_offset() const { return offset_ + size_; }
 
   size_t offset_, size_;
 };
@@ -103,10 +108,8 @@ struct pack_handle {
     utl::verify(std::fclose(file_) == 0, "pack_handle: problem while fclose");
   }
 
-  [[nodiscard]] size_t size() const { return dat_.size(); }[[nodiscard]] size_t
-      capacity() const {
-    return dat_.capacity();
-  }
+  [[nodiscard]] size_t size() const { return dat_.size(); }
+  [[nodiscard]] size_t capacity() const { return dat_.capacity(); }
 
   void resize(size_t new_size) { dat_.resize(new_size); }
 

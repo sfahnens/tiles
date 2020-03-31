@@ -6,7 +6,7 @@
 + db: auto clean database
 + db: feature packing duplicates the used database on disk!
 + db: feature packs in extra file for fine grained memory management
-- db: variant (+types) for metadata
++ db: variant (+types) for metadata
 
 + import: shared strings during second pass
 + import: parallelize

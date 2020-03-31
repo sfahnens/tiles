@@ -11,22 +11,23 @@ function process_node(node)
     end
 
     node:set_target_layer("cities")
-    node:add_tag_as_metadata("place")
-    node:add_tag_as_metadata("name")
-    node:add_tag_as_metadata("population")
+    node:add_tag_as_string("place")
+    node:add_tag_as_string("name")
+    node:add_tag_as_integer("population")
+
   end
 end
 
 function process_way(way)
   if way:has_any_tag("highway") then
     way:set_target_layer("road")
-    way:add_tag_as_metadata("highway")
-    way:add_tag_as_metadata("name")
+    way:add_tag_as_string("highway")
+    way:add_tag_as_string("name")
 
     if way:has_tag("highway", "motorway") or
        way:has_tag("highway", "trunk") then
       way:set_approved_min(5)
-      way:add_tag_as_metadata("ref")
+      way:add_tag_as_string("ref")
 
     elseif way:has_tag("highway", "motorway_link") or
            way:has_tag("highway", "trunk_link") or
@@ -35,7 +36,7 @@ function process_way(way)
            way:has_tag("highway", "tertiary") or
            way:has_tag("highway", "aeroway") then
       way:set_approved_min(9)
-      way:add_tag_as_metadata("ref")
+      way:add_tag_as_string("ref")
 
     elseif way:has_tag("highway", "residential") or
            way:has_tag("highway", "living_street") or
@@ -57,7 +58,7 @@ function process_way(way)
        way:has_tag("railway", "abandoned") then
       way:set_target_layer("rail")
       way:set_approved_min(14)
-      way:add_metadata("rail", "old")
+      way:add_string("rail", "old")
 
     elseif way:has_tag("usage", "industrial") or
             way:has_tag("usage", "military") or
@@ -69,18 +70,18 @@ function process_way(way)
             way:has_tag("railway:preserved", "yes") then
       way:set_target_layer("rail")
       way:set_approved_min(14)
-      way:add_metadata("rail", "detail")
+      way:add_string("rail", "detail")
 
     elseif way:has_tag("railway", "subway") or
            way:has_tag("railway", "tram") then
       way:set_target_layer("rail")
       way:set_approved_min(10)
-      way:add_metadata("rail", "secondary")
+      way:add_string("rail", "secondary")
 
     else
       way:set_target_layer("rail")
       way:set_approved_min(5)
-      way:add_metadata("rail", "primary")
+      way:add_string("rail", "primary")
     end
 
   elseif way:has_any_tag("waterway") then
@@ -108,14 +109,14 @@ function process_area(area)
 
   elseif area:has_any_tag("landuse", "residential", "retail", "industrial", "commercial") then
     area:set_target_layer("landuse")
-    area:add_tag_as_metadata("landuse")
+    area:add_tag_as_string("landuse")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    6, -1)
 
   elseif area:has_any_tag("landuse", "quarry", "farmyard", "railway") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "industrial")
+    area:add_string("landuse", "industrial")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    6, -1)
@@ -129,7 +130,7 @@ function process_area(area)
          area:has_tag("amenity", "place_of_worship") or
          area:has_tag("amenity", "university") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "complex")
+    area:add_string("landuse", "complex")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    6, -1)
@@ -139,7 +140,7 @@ function process_area(area)
          area:has_tag("natural", "oarchard") or
          area:has_tag("natural", "scrub") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "nature_heavy")
+    area:add_string("landuse", "nature_heavy")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    6, -1)
@@ -151,7 +152,7 @@ function process_area(area)
          area:has_tag("natural", "grassland") or
          area:has_tag("landuse", "grass") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "nature_light")
+    area:add_string("landuse", "nature_light")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    6, -1)
@@ -164,15 +165,14 @@ function process_area(area)
          area:has_tag("landuse", "greenhouse_horticulture") or
          area:has_tag("landuse", "allotments") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "park")
+    area:add_string("landuse", "park")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    6, -1)
 
-
   elseif area:has_tag("landuse", "cemetery") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "cemetery")
+    area:add_string("landuse", "cemetery")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    8, -1)
@@ -198,7 +198,7 @@ function process_area(area)
 
   elseif area:has_tag("natural", "beach") then
     area:set_target_layer("landuse")
-    area:add_metadata("landuse", "beach")
+    area:add_string("landuse", "beach")
     area:set_approved_min_by_area(14, 1e8,
                                   10, 1e10,
                                    8, -1)

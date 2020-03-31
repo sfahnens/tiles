@@ -20,7 +20,7 @@ void write_nth(char* data, size_t offset, T const& t) {
 }
 
 template <typename T>
-T read(char const* data, size_t offset) {
+T read(char const* data, size_t offset = 0UL) {
   T t;
   std::memcpy(&t, data + offset, sizeof(T));
   return t;

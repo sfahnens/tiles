@@ -26,8 +26,14 @@ struct feature_handler::script_runner {
         "set_approved_min_by_area", &pending_feature::set_approved_min_by_area,
         "set_approved_full", &pending_feature::set_approved_full,  //
         "set_target_layer", &pending_feature::set_target_layer,  //
-        "add_tag_as_metadata", &pending_feature::add_tag_as_metadata,  //
-        "add_metadata", &pending_feature::add_metadata);
+        "add_bool", &pending_feature::add_bool,  //
+        "add_string", &pending_feature::add_string,  //
+        "add_numeric", &pending_feature::add_numeric,  //
+        "add_integer", &pending_feature::add_integer,  //
+        "add_tag_as_bool", &pending_feature::add_tag_as_bool,  //
+        "add_tag_as_string", &pending_feature::add_tag_as_string,  //
+        "add_tag_as_numeric", &pending_feature::add_tag_as_numeric,  //
+        "add_tag_as_integer", &pending_feature::add_tag_as_integer);
 
     process_node_ = lua_["process_node"];
     process_way_ = lua_["process_way"];

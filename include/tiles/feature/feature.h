@@ -14,6 +14,14 @@ constexpr uint32_t kInvalidZoomLevel = 0x3F;  // 63; max for one byte in svarint
 constexpr fixed_coord_t kInvalidBoxHint =
     std::numeric_limits<fixed_coord_t>::max();
 
+enum class metadata_value_t : uint8_t {
+  bool_false = 0,
+  bool_true = 1,
+  string = 2,
+  numeric = 3,
+  integer = 4
+};
+
 struct metadata {
   metadata() = default;
   metadata(std::string key, std::string value)

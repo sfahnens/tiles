@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "boost/algorithm/string/predicate.hpp"
 #include "boost/asio.hpp"
 #include "boost/beast/core.hpp"
 #include "boost/beast/http.hpp"
@@ -218,8 +219,6 @@ int main(int argc, char const** argv) {
       return false;
     }
 
-    std::cout << match->at(0) << std::endl;
-
     try {
       auto const mem =
           pbf_sdf_fonts_res::get_resource(std::string{match->at(1)});
@@ -250,6 +249,14 @@ int main(int argc, char const** argv) {
       auto const mem = tiles_server_res::get_resource(fname);
       res.body() =
           std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+    }
+
+    if (boost::algorithm::ends_with(fname, ".html")) {
+      res.set(http::field::content_type, "text/html");
+    } else if (boost::algorithm::ends_with(fname, ".css")) {
+      res.set(http::field::content_type, "text/css");
+    } else if (boost::algorithm::ends_with(fname, ".js")) {
+      res.set(http::field::content_type, "text/javascript");
     }
 
     res.result(http::status::ok);

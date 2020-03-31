@@ -3,385 +3,45 @@
 <script src="mapbox-gl.js"></script>
 <link href="mapbox-gl.css" rel="stylesheet">
 <style>
-  head, body, #container {
+  head,
+  body,
+  #map {
     padding: 0px;
-    margin:0px;
+    margin: 0px;
     position: absolute;
     height: 100%;
     width: 100%;
   }
-  #container {
-    display: flex;
-    align-items: stretch;
-    align-content: stretch;
-  }
-  #container > div {
-    flex-grow: 1;
-    border-collapse: collapse;
-    border-left: 5px solid white;
-  }
-  #container > div:first-of-type {
-    border-left: 0px;
-  }
 </style>
 </head>
+
 <body>
-<div id="container">
-    <div id="map_1"></div>
-    <div id="map_2"></div>
-    <div id="map_3"></div>
-</div>
+  <div id="map"></div>
 
-<script>
-var simple = {
-  "version": 8,
-  "sources": {
-    "raster": {
-      "type": "raster",
-      "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
-      "tileSize": 256,
-      "maxzoom": 18
-    }
-  },
-  "layers": [{
-      "id": "raster",
-      "type": "raster",
-      "source": "raster"
-  }]
-};
+  <script type="module">
+    import { style as style_default } from './style-default.js'
+    import { style as style_background } from './style-background.js'
 
-var official = {
-  "version": 8,
-  "sources": {
-    "raster": {
-      "type": "raster",
-      "tiles": ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      "tileSize": 256,
-      "maxzoom": 18
-    }
-  },
-  "layers": [{
-      "id": "raster",
-      "type": "raster",
-      "source": "raster"
-  }]
-};
+    const styles = {
+      style_default, style_background
+    };
 
-const water = "#bbd3f9";
-const rail = "#5b5b5b";
-// const pedestrian = "#ff0000";
-const pedestrian = "#fcfcfc";
+    const style = (/[&|#]style=(.*?)(&|$)/g.exec(window.location.href) || [])[1] || "default";
 
-const sport = "#a4b1bc";
-const sport_outline = "#94a7b7";
-
-// const building = "#ff0000";
-const building = "#d8d8d8";
-const building_outline = "#c1c1c1";
-
-
-var custom = {
-    "version": 8,
-    "sources": {
-        "osm": {
-            "type": "vector",
-            "tiles": ["http://han:8888/{z}/{x}/{y}.mvt"],
-            "maxzoom": 20
+    new mapboxgl.Map({
+      container: 'map',
+      style: styles["style_" + style] || style_default,
+      zoom: 14,
+      center: [8.6671065, 49.8747541],
+      hash: "location",
+      transformRequest: (url, resourceType) => {
+        if (url.startsWith('/')) {
+          return { url: `${window.location.origin}${url}` }
         }
-    },
-    "glyphs": "http://han:8888/font/{fontstack}/{range}.pbf",
-    "layers": [
-        {
-            "id": "background",
-            "type": "background",
-            "paint": { "background-color": "#dddddd" }
-        }, {
-            "id": "coastline",
-            "type": "fill",
-            "source": "osm",
-            "source-layer": "coastline",
-            "paint": {"fill-color": water}
-        }, {
-            "id": "landuse",
-            "type": "fill",
-            "source": "osm",
-            "source-layer": "landuse",
-            "paint": {
-                "fill-color": ["match", ["get", "landuse"],
-                    "complex", "#efe7d0",
-                    "commercial", "#f1e3f4",
-                    "industrial", "#eadfce",
-                    "residential", "#edebd5",
-                    "retail", "#f2dae7",
-                    "construction", "#aaa69d",
-
-                    "nature_light", "#d7f2e1",
-                    "nature_heavy", "#c0dbbe",
-                    "park", "#e6f4d4",
-                    "cemetery", "#bedbd1",
-                    "beach", "#fffcd3",
-
-                    "#ff0000"]
-            }
-        }, {
-            "id": "water",
-            "type": "fill",
-            "source": "osm",
-            "source-layer": "water",
-            "paint": {"fill-color": water}
-        }, {
-            "id": "sport",
-            "type": "fill",
-            "source": "osm",
-            "source-layer": "sport",
-            "paint": {
-                "fill-color": sport,
-                "fill-outline-color": sport_outline
-
-            }
-        }, {
-            "id": "pedestrian",
-            "type": "fill",
-            "source": "osm",
-            "source-layer": "pedestrian",
-            "paint": {"fill-color": pedestrian}
-        }, {
-            "id": "waterway",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "waterway",
-            "paint": {"line-color": water}
-        }, {
-            "id": "road_back",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "road",
-            "filter": [
-              "!in",
-              "highway",
-              "footway", "track", "steps", "cycleway", "path", "unclassified"
-            ],
-            "layout": {
-              "line-cap": "round",
-            },
-            "paint": {
-              "line-color": "#a5a5a5",
-              "line-opacity": 0.5,
-              "line-width": [
-                "let",
-                "base", ["match", ["get", "highway"],
-                  "motorway", 4,
-                  ["trunk", "motorway_link"], 3.5,
-                  ["primary", "secondary", "aeroway", "trunk_link"], 3,
-                  ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
-                  "residential", 1.5,
-                0.75],
-                ["interpolate", ["linear"], ["zoom"],
-                  5,  ["+", ["*", ["var", "base"], 0.1], 1],
-                  9,  ["+", ["*", ["var", "base"], 0.4], 1],
-                  12, ["+", ["*", ["var", "base"], 1], 1],
-                  16, ["+", ["*", ["var", "base"], 4], 1],
-                  20, ["+", ["*", ["var", "base"], 8], 1]
-                ]
-              ]
-            }
-        }, {
-            "id": "road",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "road",
-            "layout": {
-              "line-cap": "round",
-            },
-            "paint": {
-              "line-color": "#ffffff",
-              "line-opacity": ["match", ["get", "highway"],
-                ["footway", "track", "steps", "cycleway", "path", "unclassified"], 0.66,
-                1],
-              "line-width": [
-                "let",
-                "base", ["match", ["get", "highway"],
-                  "motorway", 4,
-                  ["trunk", "motorway_link"], 3.5,
-                  ["primary", "secondary", "aeroway", "trunk_link"], 3,
-                  ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
-                  "residential", 1.5,
-                0.75],
-                ["interpolate", ["linear"], ["zoom"],
-                  5,  ["*", ["var", "base"], 0.1],
-                  9,  ["*", ["var", "base"], 0.4],
-                  12, ["*", ["var", "base"], 1],
-                  16, ["*", ["var", "base"], 4],
-                  20, ["*", ["var", "base"], 8]
-                ]
-              ]
-            }
-        }, {
-            "id": "rail_old",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "rail",
-            "filter": ["==", "rail", "old"],
-            "paint": {
-                "line-color": rail,
-            }
-        }, {
-            "id": "rail_detail",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "rail",
-            "filter": ["==", "rail", "detail"],
-            "paint": {
-                "line-color": rail,
-            }
-        }, {
-            "id": "rail_secondary",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "rail",
-            "filter": ["==", "rail", "secondary"],
-            "paint": {
-                "line-color": rail,
-                "line-width": 1.15
-            }
-        }, {
-            "id": "rail_primary",
-            "type": "line",
-            "source": "osm",
-            "source-layer": "rail",
-            "filter": ["==", "rail", "primary"],
-            "paint": {
-                "line-color": rail,
-                "line-width": 1.3
-            }
-        }, {
-            "id": "building",
-            "type": "fill",
-            "source": "osm",
-            "source-layer": "building",
-            "paint": {
-                "fill-color": building,
-                "fill-outline-color": building_outline
-            }
-        }, {
-            "id": "road-ref-shield",
-            "type": "symbol",
-            "source": "osm",
-            "source-layer": "road",
-            "minzoom": 6,
-            "filter": ["any", ["==", ["get", "highway"], "motorway"],
-                              ["==", ["get", "highway"], "trunk"],
-                              ["==", ["get", "highway"], "secondary"],
-                              [">", ["zoom"], 11]],
-            "layout": {
-              "symbol-placement": "line",
-              "text-field": ["get", "ref"],
-              "text-font": ["Noto Sans Display Regular"],
-              "text-size": 10,
-              "text-rotation-alignment": "viewport"
-            },
-            "paint": {
-              "text-halo-width": 10,
-              "text-halo-color": "white",
-              "text-color": "#333333"
-            }
-        }, {
-            "id": "road-name-text",
-            "type": "symbol",
-            "source": "osm",
-            "source-layer": "road",
-            "minzoom": 15,
-            "layout": {
-              "symbol-placement": "line",
-              "text-field": ["get", "name"],
-              "text-font": ["Noto Sans Display Regular"],
-              "text-size": 9,
-            },
-            "paint": {
-              "text-halo-width": 11,
-              "text-halo-color": "white",
-              "text-color": "#333333"
-            }
-        }, {
-
-            "id": "towns",
-            "type": "symbol",
-            "source": "osm",
-            "source-layer": "cities",
-            "filter": ["!=", ["get", "place"], "city"],
-            "layout": {
-              // "symbol-sort-key": ["get", "population"],
-              "text-field": ["get", "name"],
-              "text-font": ["Noto Sans Display Regular"],
-              "text-size": 12
-            },
-            "paint": {
-              "text-halo-width": 1,
-              "text-halo-color": "white",
-              "text-color": "#333333"
-            }
-        }, {
-            "id": "cities",
-            "type": "symbol",
-            "source": "osm",
-            "source-layer": "cities",
-            "filter": ["==", ["get", "place"], "city"],
-            "layout": {
-              // "symbol-sort-key": ["get", "population"],
-              "text-field": ["get", "name"],
-              "text-font": ["Noto Sans Display Bold"],
-              "text-size": 18
-            },
-            "paint": {
-              "text-halo-width": 2,
-              "text-halo-color": "white",
-              "text-color": "#111111"
-            }
-        }
-    ]
-};
-
-
-const locationStr = location.hash.substr(1) || "[14, [8.6671065, 49.8747541]]";
-let [zoom, center] = JSON.parse(locationStr);
-center = mapboxgl.LngLat.convert(center);
-
-const updateHash = () => {
-  location.hash =  JSON.stringify([zoom, center.toArray()]);
-};
-updateHash();
-
-let maps = [];
-const addMap = (container, style) => {
-  let map = new mapboxgl.Map({container, style, zoom, center, dragRotate:false});
-  map.on('move', e => {
-    if(e.proj === true) return;
-    center = map.getCenter();
-    maps.forEach(m => {
-      if(m === map) return;
-      m.setCenter(center, {proj: true});
+      }
     });
-    updateHash();
-  });
-  map.on('zoom', e => {
-    if(e.proj === true) return;
-    zoom = map.getZoom();
-    maps.forEach(m => {
-      if(m === map) return;
-      m.setZoom(zoom, {proj: true});
-    });
-    updateHash();
-  });
-  maps.push(map);
-  return map;
-};
 
-addMap('map_1', simple);
-addMap('map_2', custom);
-addMap('map_3', official);
-</script>
-
+  </script>
 </body>
+
 </html>

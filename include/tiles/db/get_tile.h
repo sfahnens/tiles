@@ -193,19 +193,21 @@ std::optional<std::string> get_tile(tile_db_handle& handle, lmdb::txn& txn,
     }
 
     if (ctx.seaside_tiles_.contains(tile)) {
-      return get_tile(ctx, tile, [](auto&&) {}, pc);
+      return get_tile(
+          ctx, tile, [](auto&&) {}, pc);
     }
 
     return std::nullopt;
   }
 
-  return get_tile(ctx, tile,
-                  [&](auto&& fn) {
-                    pack_records_foreach(
-                        features_cursor, tile,
-                        [&](auto t, auto r) { fn(t, pack_handle.get(r)); });
-                  },
-                  pc);
+  return get_tile(
+      ctx, tile,
+      [&](auto&& fn) {
+        pack_records_foreach(features_cursor, tile, [&](auto t, auto r) {
+          fn(t, pack_handle.get(r));
+        });
+      },
+      pc);
 }
 
 template <typename PerfCounter>

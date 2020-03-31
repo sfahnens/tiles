@@ -96,9 +96,19 @@ function process_way(way)
            way:has_tag("waterway", "drain") then
       way:set_approved_min(15)
     end
-  end
+  -- elseif way:has_tag("boundary", "administrative") and
+  --        not way:has_tag("maritime", "yes") then
+  --   if way:has_tag("admin_level", "2") then
+  --     way:set_target_layer("border")
+  --     way:set_approved_full()
+  --     way:add_tag_as_integer("admin_level")
+  --   elseif way:has_tag("admin_level", "4") then
+  --     way:set_target_layer("border")
+  --     way:set_approved_full()
+  --     way:add_tag_as_integer("admin_level")
+  --   end
+  -- end
 end
-
 
 function process_area(area)
   if area:has_any_tag("building") then

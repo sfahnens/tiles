@@ -15,6 +15,7 @@
 #include "tiles/fixed/io/dump.h"
 
 #include "tiles/bin_utils.h"
+#include "tiles/get_tile.h"
 #include "tiles/mvt/encode_geometry.h"
 #include "tiles/mvt/tags.h"
 #include "tiles/util.h"
@@ -25,9 +26,9 @@ namespace ttm = tiles::tags::mvt;
 namespace tiles {
 
 struct layer_builder {
-  layer_builder(std::string const& name, tile_spec const& spec,
-                tile_builder::config cfg)
-      : spec_(spec), config_(cfg), has_geometry_(false), buf_(), pb_(buf_) {
+  layer_builder(render_ctx const& ctx, std::string const& name,
+                tile_spec const& spec)
+      : ctx_{ctx}, spec_(spec), has_geometry_(false), buf_(), pb_(buf_) {
     pb_.add_uint32(ttm::Layer::required_uint32_version, 2);
     pb_.add_string(ttm::Layer::required_string_name, name);
     pb_.add_uint32(ttm::Layer::optional_uint32_extent, 4096);
@@ -148,8 +149,8 @@ struct layer_builder {
     return buf_;
   }
 
+  render_ctx const& ctx_;
   tile_spec const& spec_;
-  tile_builder::config config_;
 
   bool has_geometry_;
 
@@ -163,16 +164,14 @@ struct layer_builder {
 };
 
 struct tile_builder::impl {
-  impl(geo::tile const& tile, std::vector<std::string> const& layer_names,
-       tile_builder::config const& cfg)
-      : spec_{tile}, layer_names_{layer_names}, config_{cfg} {}
+  impl(render_ctx const& ctx, geo::tile const& tile) : ctx_{ctx}, spec_{tile} {}
 
   void add_feature(feature const& f) {
-    utl::verify(f.layer_ < layer_names_.size(), "invalid layer in db");
+    utl::verify(f.layer_ < ctx_.layer_names_.size(), "invalid layer in db");
 
     utl::get_or_create(builders_, f.layer_, [&] {
-      return std::make_unique<layer_builder>(layer_names_.at(f.layer_), spec_,
-                                             config_);
+      return std::make_unique<layer_builder>(
+          ctx_, ctx_.layer_names_.at(f.layer_), spec_);
     })->add_feature(f);
   }
 
@@ -185,7 +184,7 @@ struct tile_builder::impl {
         continue;
       }
 
-      if (config_.render_debug_info_) {
+      if (ctx_.tb_render_debug_info_) {
         pair.second->render_debug_info();
       }
 
@@ -195,17 +194,13 @@ struct tile_builder::impl {
     return buf;
   }
 
+  render_ctx const& ctx_;
   tile_spec spec_;
-  std::vector<std::string> const& layer_names_;
-  tile_builder::config config_;
-
   std::map<size_t, std::unique_ptr<layer_builder>> builders_;
 };
 
-tile_builder::tile_builder(geo::tile const& tile,
-                           std::vector<std::string> const& layer_names,
-                           config cfg)
-    : impl_(std::make_unique<impl>(tile, layer_names, cfg)) {}
+tile_builder::tile_builder(render_ctx const& ctx, geo::tile const& tile)
+    : impl_(std::make_unique<impl>(ctx, tile)) {}
 
 tile_builder::~tile_builder() = default;
 

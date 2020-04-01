@@ -17,8 +17,8 @@
 
 #include "utl/parser/mmap_reader.h"
 
-#include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/get_tile.h"
 #include "tiles/perf_counter.h"
 #include "tiles/util.h"
 

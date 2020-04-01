@@ -9,8 +9,8 @@
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 
-#include "tiles/db/get_tile.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/get_tile.h"
 #include "tiles/perf_counter.h"
 
 namespace tiles {

@@ -30,9 +30,11 @@ struct render_ctx {
   bool compress_result_ = true;
   bool ignore_prepared_ = false;
   bool ignore_fully_seaside_ = false;
+
+  bool tb_render_debug_info_ = false;
 };
 
-render_ctx make_render_ctx(tile_db_handle& db_handle) {
+inline render_ctx make_render_ctx(tile_db_handle& db_handle) {
   auto txn = db_handle.make_txn();
   auto meta_dbi = db_handle.meta_dbi(txn);
 
@@ -138,7 +140,7 @@ std::optional<std::string> get_tile(render_ctx const& ctx,
                                     PerfCounter& pc) {
   start<perf_task::GET_TILE_RENDER>(pc);
 
-  tile_builder builder{tile, ctx.layer_names_};
+  tile_builder builder{ctx, tile};
   render_seaside(builder, ctx, tile, pc);
   auto const rendered_features = render_features(
       builder, ctx, tile, std::forward<ForeachPack>(foreach_pack), pc);

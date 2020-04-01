@@ -7,10 +7,10 @@
 
 #include "geo/tile.h"
 
-#include "tiles/db/get_tile.h"
 #include "tiles/db/pack_file.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/db/tile_index.h"
+#include "tiles/get_tile.h"
 #include "tiles/perf_counter.h"
 #include "tiles/util.h"
 
@@ -155,15 +155,15 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
         for (auto& task : batch) {
           using namespace std::chrono;
           auto start = steady_clock::now();
-          task.result_ =
-              get_tile(render_ctx, task.tile_,
-                       [&](auto&& fn) {
-                         std::for_each(begin(task.packs_), end(task.packs_),
-                                       [&](auto const& p) {
-                                         fn(p.first, pack_handle.get(p.second));
-                                       });
-                       },
-                       npc);
+          task.result_ = get_tile(
+              render_ctx, task.tile_,
+              [&](auto&& fn) {
+                std::for_each(begin(task.packs_), end(task.packs_),
+                              [&](auto const& p) {
+                                fn(p.first, pack_handle.get(p.second));
+                              });
+              },
+              npc);
           auto finish = steady_clock::now();
 
           m.finish(task.tile_, task.result_ ? task.result_->size() : 0,

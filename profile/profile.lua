@@ -107,7 +107,7 @@ function process_way(way)
   --     way:set_approved_full()
   --     way:add_tag_as_integer("admin_level")
   --   end
-  -- end
+  end
 end
 
 function process_area(area)

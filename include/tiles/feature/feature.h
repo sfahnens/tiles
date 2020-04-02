@@ -42,6 +42,8 @@ struct metadata {
   std::string key_, value_;
 };
 
+constexpr auto const kInvalidFeatureId = std::numeric_limits<uint64_t>::max();
+
 struct feature {
   uint64_t id_;
   size_t layer_;

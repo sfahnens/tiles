@@ -93,6 +93,8 @@ int main(int argc, char const** argv) {
     auto features_dbi = db_handle.features_dbi(txn);
     auto features_cursor = lmdb::cursor{txn, features_dbi};
 
+    render_ctx.tb_aggregate_lines_ = true;
+
     tiles::perf_counter pc;
     auto const rendered_tile = tiles::get_tile(
         db_handle, txn, features_cursor, pack_handle, render_ctx, tile, pc);

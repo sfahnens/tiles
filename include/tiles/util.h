@@ -103,6 +103,25 @@ struct scoped_timer final {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
+template <typename Container, typename Fn>
+void transform_erase(Container& c, Fn&& fn) {
+  if (c.empty()) {
+    return;
+  }
+
+  auto it = std::begin(c);
+  fn(*it);
+
+  for (auto it2 = std::next(it); it2 != std::end(c); ++it2) {
+    fn(*it2);
+    if (!(*it == *it2)) {
+      *++it = std::move(*it2);
+    }
+  }
+
+  c.erase(++it, std::end(c));
+}
+
 struct printable_num {
   explicit printable_num(double n) : n_{n} {}
   explicit printable_num(uint64_t n) : n_{static_cast<double>(n)} {}

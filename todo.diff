@@ -32,7 +32,7 @@
 + render: fix get_tile bottleneck: iteration/skip is slower than rendering (z>=11)
 + render: use clipper for geometry clipping
 + render: deduplicate features on higher zoom levels
-- render: connect consecutive ways with same metadata
++ render: connect consecutive ways with same metadata
 - render: multipolygons https://www.openstreetmap.org/relation/5429059 -> sandbank under water?
 - render: combine seaside on higer z levels
 - render: order shapes by area

@@ -32,6 +32,7 @@ struct render_ctx {
   bool ignore_fully_seaside_ = false;
 
   bool tb_render_debug_info_ = false;
+  bool tb_aggregate_lines_ = false;
 };
 
 inline render_ctx make_render_ctx(tile_db_handle& db_handle) {
@@ -123,7 +124,7 @@ size_t render_features(tile_builder& builder, render_ctx const& ctx,
       stop<perf_task::RENDER_TILE_DESER_FEATURE_OKAY>(pc);
 
       start<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
-      builder.add_feature(*feature);
+      builder.add_feature(std::move(*feature));
       ++added_features;
       stop<perf_task::RENDER_TILE_ADD_FEATURE>(pc);
     });

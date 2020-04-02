@@ -50,7 +50,7 @@ void encode(pz::pbf_builder<ttm::Feature>& pb, fixed_point const& point,
 template <bool ClosePath, typename Container>
 void encode_path(pz::packed_field_uint32& sw, delta_encoder& x_enc,
                  delta_encoder& y_enc, Container const& c) {
-  utl::verify(c.size() > 1, "container polyline");
+  utl::verify(c.size() > 1, "encode_path: container polyline");
 
   sw.add_element(encode_command(MOVE_TO, 1));
   sw.add_element(encode_zigzag32(x_enc.encode(c.front().x())));
@@ -59,8 +59,11 @@ void encode_path(pz::packed_field_uint32& sw, delta_encoder& x_enc,
   auto const limit = ClosePath ? c.size() - 2 : c.size() - 1;
   sw.add_element(encode_command(LINE_TO, limit));
   for (auto i = 1u; i <= limit; ++i) {
-    sw.add_element(encode_zigzag32(x_enc.encode(c[i].x())));
-    sw.add_element(encode_zigzag32(y_enc.encode(c[i].y())));
+    auto x = x_enc.encode(c[i].x());
+    auto y = y_enc.encode(c[i].y());
+    utl::verify(x != 0 || y != 0, "encode_path: both deltas are zero");
+    sw.add_element(encode_zigzag32(x));
+    sw.add_element(encode_zigzag32(y));
   }
 
   if (ClosePath) {

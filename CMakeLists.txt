@@ -17,6 +17,7 @@ include(cmake/pkg.cmake)
 
 file(GLOB_RECURSE tiles-files
   src/db/*.cc
+  src/feature/*.cc
   src/fixed/*.cc
   src/mvt/*.cc
   src/tile_database.cc

@@ -20,7 +20,11 @@ using fixed_coord_t = signed long long int;
 
 using fixed_xy = boost::geometry::model::d2::point_xy<fixed_coord_t>;
 
+const fixed_xy invalid_xy{std::numeric_limits<fixed_coord_t>::max(),
+                          std::numeric_limits<fixed_coord_t>::max()};
+
 using fixed_box = boost::geometry::model::box<fixed_xy>;
+using fixed_line = boost::geometry::model::linestring<fixed_xy>;
 using fixed_simple_polygon = boost::geometry::model::polygon<fixed_xy>;
 using fixed_ring = fixed_simple_polygon::ring_type;
 
@@ -35,8 +39,7 @@ using fixed_delta_t = signed long long int;
 
 using fixed_null = std::monostate;
 using fixed_point = boost::geometry::model::multi_point<fixed_xy>;
-using fixed_polyline = boost::geometry::model::multi_linestring<
-    boost::geometry::model::linestring<fixed_xy>>;
+using fixed_polyline = boost::geometry::model::multi_linestring<fixed_line>;
 using fixed_polygon =
     boost::geometry::model::multi_polygon<fixed_simple_polygon>;
 

@@ -9,12 +9,12 @@
 #include "utl/get_or_create.h"
 #include "utl/get_or_create_index.h"
 
+#include "tiles/bin_utils.h"
+#include "tiles/feature/aggregate_line_features.h"
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
 #include "tiles/fixed/io/deserialize.h"
 #include "tiles/fixed/io/dump.h"
-
-#include "tiles/bin_utils.h"
 #include "tiles/get_tile.h"
 #include "tiles/mvt/encode_geometry.h"
 #include "tiles/mvt/tags.h"
@@ -34,10 +34,7 @@ struct layer_builder {
     pb_.add_uint32(ttm::Layer::optional_uint32_extent, 4096);
   }
 
-  void add_feature(feature const& f) {
-    std::string feature_buf;
-    pbf_builder<ttm::Feature> feature_pb(feature_buf);
-
+  void add_feature(feature f) {
     if ((mpark::holds_alternative<fixed_point>(f.geometry_) &&
          !node_ids_.insert(f.id_).second) ||
         (mpark::holds_alternative<fixed_polyline>(f.geometry_) &&
@@ -47,25 +44,35 @@ struct layer_builder {
       return;
     }
 
-    if (write_geometry(feature_pb, f)) {
-      has_geometry_ = true;
+    f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
+    if (mpark::holds_alternative<fixed_null>(f.geometry_)) {
+      return;
+    }
 
-      feature_pb.add_uint64(ttm::Feature::optional_uint64_id, f.id_);
-      write_metadata(feature_pb, f.meta_);
-      pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
+    if (ctx_.tb_aggregate_lines_ &&
+        mpark::holds_alternative<fixed_polyline>(f.geometry_)) {
+      line_buffer_.emplace_back(std::move(f));
+    } else {
+      write_feature(std::move(f));
     }
   }
 
-  bool write_geometry(pbf_builder<ttm::Feature>& pb, feature const& f) {
-    auto geometry = clip(f.geometry_, spec_.draw_bounds_);
-
-    if (mpark::holds_alternative<fixed_null>(geometry)) {
-      return false;
+  void write_feature(feature f) {
+    f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
+    if (mpark::holds_alternative<fixed_null>(f.geometry_)) {
+      return;
     }
 
-    shift(geometry, spec_.tile_.z_);
-    encode_geometry(pb, geometry, spec_);
-    return true;
+    has_geometry_ = true;
+
+    std::string feature_buf;
+    pbf_builder<ttm::Feature> feature_pb(feature_buf);
+
+    encode_geometry(feature_pb, f.geometry_, spec_);
+
+    feature_pb.add_uint64(ttm::Feature::optional_uint64_id, f.id_);
+    write_metadata(feature_pb, f.meta_);
+    pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
   }
 
   void write_metadata(pbf_builder<ttm::Feature>& pb,
@@ -84,24 +91,17 @@ struct layer_builder {
     pb.add_packed_uint32(ttm::Feature::packed_uint32_tags, begin(t), end(t));
   }
 
-  void render_debug_info() {
-    auto const& min = spec_.px_bounds_.min_corner();
-    auto const& max = spec_.px_bounds_.max_corner();
-    fixed_geometry line = fixed_polyline{{{min.x(), min.y()},
-                                          {min.x(), max.y()},
-                                          {max.x(), max.y()},
-                                          {max.x(), min.y()},
-                                          {min.x(), min.y()}}};
-    {
-      std::string feature_buf;
-      pbf_builder<ttm::Feature> feature_pb(feature_buf);
-
-      encode_geometry(feature_pb, line, spec_);
-      pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
+  void aggregate_geometry() {
+    if (ctx_.tb_aggregate_lines_ && !line_buffer_.empty()) {
+      for (auto&& f :
+           aggregate_line_features(std::move(line_buffer_), spec_.tile_.z_)) {
+        write_feature(std::move(f));
+      }
     }
   }
 
   std::string finish() {
+
     std::vector<std::string const*> keys(meta_key_cache_.size());
     for (auto const& pair : meta_key_cache_) {
       keys[pair.second] = &pair.first;
@@ -154,6 +154,8 @@ struct layer_builder {
 
   bool has_geometry_;
 
+  std::vector<feature> line_buffer_;
+
   std::string buf_;
   pbf_builder<ttm::Layer> pb_;
 
@@ -180,15 +182,53 @@ struct tile_builder::impl {
     pbf_builder<ttm::Tile> pb(buf);
 
     for (auto const& pair : builders_) {
-      if (!pair.second->has_geometry_) {
-        continue;
+      pair.second->aggregate_geometry();
+
+      if (pair.second->has_geometry_) {
+        pb.add_message(ttm::Tile::repeated_Layer_layers, pair.second->finish());
+      }
+    }
+
+    if (ctx_.tb_render_debug_info_) {
+      layer_builder lb{ctx_, "tiles_debug_info", spec_};
+      auto const& min = spec_.px_bounds_.min_corner();
+      auto const& max = spec_.px_bounds_.max_corner();
+
+      {
+        std::string feature_buf;
+        pbf_builder<ttm::Feature> feature_pb(feature_buf);
+
+        std::string buf;
+        append(buf, metadata_value_t::string);
+        buf.append(fmt::format("[x={}, y={}, z={}]", spec_.tile_.x_,
+                               spec_.tile_.y_, spec_.tile_.z_));
+
+        std::vector<uint32_t> t{static_cast<uint32_t>(utl::get_or_create_index(
+                                    lb.meta_key_cache_, "tile_id")),
+                                static_cast<uint32_t>(utl::get_or_create_index(
+                                    lb.meta_value_cache_, buf))};
+        feature_pb.add_packed_uint32(ttm::Feature::packed_uint32_tags, begin(t),
+                                     end(t));
+
+        fixed_geometry pt = fixed_point{{min.x() + (max.x() - min.x()) / 2,
+                                         min.y() + (max.y() - min.y()) / 2}};
+        encode_geometry(feature_pb, pt, spec_);
+        lb.pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
+      }
+      {
+        std::string feature_buf;
+        pbf_builder<ttm::Feature> feature_pb(feature_buf);
+
+        fixed_geometry line = fixed_polyline{{{min.x(), min.y()},
+                                              {min.x(), max.y()},
+                                              {max.x(), max.y()},
+                                              {max.x(), min.y()},
+                                              {min.x(), min.y()}}};
+        encode_geometry(feature_pb, line, spec_);
+        lb.pb_.add_message(ttm::Layer::repeated_Feature_features, feature_buf);
       }
 
-      if (ctx_.tb_render_debug_info_) {
-        pair.second->render_debug_info();
-      }
-
-      pb.add_message(ttm::Tile::repeated_Layer_layers, pair.second->finish());
+      pb.add_message(ttm::Tile::repeated_Layer_layers, lb.finish());
     }
 
     return buf;
@@ -204,7 +244,7 @@ tile_builder::tile_builder(render_ctx const& ctx, geo::tile const& tile)
 
 tile_builder::~tile_builder() = default;
 
-void tile_builder::add_feature(feature const& f) { impl_->add_feature(f); }
+void tile_builder::add_feature(feature f) { impl_->add_feature(std::move(f)); }
 
 std::string tile_builder::finish() { return impl_->finish(); }
 

@@ -162,24 +162,23 @@ export const style = {
           "source": "osm",
           "source-layer": "rail",
           "filter": ["==", "rail", "old"],
-          "paint": {
-              "line-color": rail,
-          }
+          "layout": { "line-cap": "round", },
+          "paint": { "line-color": rail, }
       }, {
           "id": "rail_detail",
           "type": "line",
           "source": "osm",
           "source-layer": "rail",
           "filter": ["==", "rail", "detail"],
-          "paint": {
-              "line-color": rail,
-          }
+          "layout": { "line-cap": "round", },
+          "paint": { "line-color": rail, }
       }, {
           "id": "rail_secondary",
           "type": "line",
           "source": "osm",
           "source-layer": "rail",
           "filter": ["==", "rail", "secondary"],
+          "layout": { "line-cap": "round", },
           "paint": {
               "line-color": rail,
               "line-width": 1.15
@@ -190,6 +189,7 @@ export const style = {
           "source": "osm",
           "source-layer": "rail",
           "filter": ["==", "rail", "primary"],
+          "layout": { "line-cap": "round", },
           "paint": {
               "line-color": ["interpolate-hcl", ["linear"], ["zoom"],
                               6, rail_overvew, 9, rail],
@@ -254,7 +254,6 @@ export const style = {
             "text-color": "#333333"
           }
       }, {
-
           "id": "towns",
           "type": "symbol",
           "source": "osm",
@@ -294,6 +293,30 @@ export const style = {
             "text-halo-color": "white",
             "text-color": "hsl(0, 0%, 20%)"
           }
+      // }, {
+      //    "id": "tiles_debug_info_bound",
+      //    "type": "line",
+      //    "source": "osm",
+      //    "source-layer": "tiles_debug_info",
+      //    "paint": {
+      //      "line-color": "magenta",
+      //      "line-width": 1
+      //    }
+      // }, {
+      //     "id": "tiles_debug_info_name",
+      //     "type": "symbol",
+      //     "source": "osm",
+      //     "source-layer": "tiles_debug_info",
+      //     "layout": {
+      //       "text-field": ["get", "tile_id"],
+      //       "text-font": ["Noto Sans Display Bold"],
+      //       "text-size": 16,
+      //     },
+      //     "paint": {
+      //       "text-halo-width": 2,
+      //       "text-halo-color": "white",
+      //       "text-color": "hsl(0, 0%, 20%)"
+      //     }
       }
   ]
 };

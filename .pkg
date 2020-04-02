@@ -15,9 +15,9 @@
   branch=master
   commit=c748245847abf12fd9d3b4c04f2a3b9c9a1ae590
 [geo]
-  url=git@git.motis-project.de:lib/geo.git
+  url=git@github.com:motis-project/geo.git
   branch=master
-  commit=6cdf77876c02703d6e5a5f050b65c21c14b1fc35
+  commit=512ea92ad1468022150ca61ec947a8cd523b72d7
 [lmdb]
   url=git@git.motis-project.de:lib/lmdb.git
   branch=master

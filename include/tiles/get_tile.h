@@ -33,6 +33,7 @@ struct render_ctx {
 
   bool tb_render_debug_info_ = false;
   bool tb_aggregate_lines_ = false;
+  bool tb_print_stats_ = false;
 };
 
 inline render_ctx make_render_ctx(tile_db_handle& db_handle) {

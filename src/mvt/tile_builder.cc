@@ -26,11 +26,17 @@ namespace ttm = tiles::tags::mvt;
 namespace tiles {
 
 struct layer_builder {
-  layer_builder(render_ctx const& ctx, std::string const& name,
+  layer_builder(render_ctx const& ctx, std::string layer_name,
                 tile_spec const& spec)
-      : ctx_{ctx}, spec_(spec), has_geometry_(false), buf_(), pb_(buf_) {
+      : ctx_{ctx},
+        layer_name_{std::move(layer_name)},
+        spec_(spec),
+        has_geometry_(false),
+        buf_(),
+        pb_(buf_) {
+
     pb_.add_uint32(ttm::Layer::required_uint32_version, 2);
-    pb_.add_string(ttm::Layer::required_string_name, name);
+    pb_.add_string(ttm::Layer::required_string_name, layer_name_);
     pb_.add_uint32(ttm::Layer::optional_uint32_extent, 4096);
   }
 
@@ -43,6 +49,8 @@ struct layer_builder {
          !poly_ids_.insert(f.id_).second)) {
       return;
     }
+
+    ++features_added_;
 
     f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
     if (mpark::holds_alternative<fixed_null>(f.geometry_)) {
@@ -64,6 +72,7 @@ struct layer_builder {
     }
 
     has_geometry_ = true;
+    ++features_written_;
 
     std::string feature_buf;
     pbf_builder<ttm::Feature> feature_pb(feature_buf);
@@ -101,7 +110,6 @@ struct layer_builder {
   }
 
   std::string finish() {
-
     std::vector<std::string const*> keys(meta_key_cache_.size());
     for (auto const& pair : meta_key_cache_) {
       keys[pair.second] = &pair.first;
@@ -146,10 +154,18 @@ struct layer_builder {
       }
     }
 
+    if (ctx_.tb_print_stats_) {
+      fmt::print("tile layer: {:<10} added:{} written:{} ({})\n", layer_name_,
+                 printable_num{features_added_},
+                 printable_num{features_written_},
+                 printable_bytes{buf_.size()});
+    }
+
     return buf_;
   }
 
   render_ctx const& ctx_;
+  std::string layer_name_;
   tile_spec const& spec_;
 
   bool has_geometry_;
@@ -163,6 +179,9 @@ struct layer_builder {
   std::map<std::string, size_t> meta_value_cache_;
 
   std::unordered_set<uint64_t> node_ids_, line_ids_, poly_ids_;
+
+  size_t features_added_{0};
+  size_t features_written_{0};
 };
 
 struct tile_builder::impl {

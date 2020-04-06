@@ -18,6 +18,7 @@
 #include "tiles/fixed/algo/area.h"
 #include "tiles/fixed/algo/bounding_box.h"
 #include "tiles/fixed/algo/clip.h"
+#include "tiles/fixed/clipper.h"
 #include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/mvt/tile_spec.h"
@@ -83,24 +84,6 @@ std::ostream& operator<<(std::ostream& os, fixed_box const& box) {
             << ")";
 }
 
-fixed_box bounding_box(cl::Paths const& geo) {
-  auto min_x = std::numeric_limits<fixed_coord_t>::max();
-  auto min_y = std::numeric_limits<fixed_coord_t>::max();
-  auto max_x = std::numeric_limits<fixed_coord_t>::min();
-  auto max_y = std::numeric_limits<fixed_coord_t>::min();
-
-  for (auto const& path : geo) {
-    for (auto const& pt : path) {
-      min_x = std::min(min_x, pt.X);
-      min_y = std::min(min_y, pt.Y);
-      max_x = std::max(max_x, pt.X);
-      max_y = std::max(max_y, pt.Y);
-    }
-  }
-
-  return fixed_box{{min_x, min_y}, {max_x, max_y}};
-}
-
 bool touches(fixed_box const& a, fixed_box const& b) {
   return !(a.min_corner().x() > b.max_corner().x() ||
            a.max_corner().x() < b.min_corner().x()) &&
@@ -113,53 +96,6 @@ bool within(fixed_box const& outer, fixed_box const& inner) {
          outer.max_corner().x() >= inner.max_corner().x() &&
          outer.min_corner().y() <= inner.min_corner().y() &&
          outer.max_corner().y() >= inner.max_corner().y();
-}
-
-cl::Path box_to_path(fixed_box const& box) {
-  return {{box.min_corner().x(), box.min_corner().y()},
-          {box.max_corner().x(), box.min_corner().y()},
-          {box.max_corner().x(), box.max_corner().y()},
-          {box.min_corner().x(), box.max_corner().y()}};
-}
-
-cl::Paths intersection(cl::Paths const& subject, cl::Path const& clip) {
-  cl::Clipper clpr;
-  utl::verify(clpr.AddPaths(subject, cl::ptSubject, true), "AddPath failed");
-  utl::verify(clpr.AddPath(clip, cl::ptClip, true), "AddPaths failed");
-
-  cl::Paths solution;
-  utl::verify(clpr.Execute(cl::ctIntersection, solution, cl::pftEvenOdd,
-                           cl::pftEvenOdd),
-              "Execute failed");
-  return solution;
-}
-
-void to_fixed_polygon(fixed_polygon& polygon, cl::PolyNodes const& nodes) {
-  auto const path_to_ring = [](auto const& path) {
-    utl::verify(!path.empty(), "path empty");
-    fixed_ring ring;
-    ring.reserve(path.size() + 1);
-    for (auto const& pt : path) {
-      ring.emplace_back(pt.X, pt.Y);
-    }
-    ring.emplace_back(path[0].X, path[0].Y);
-    return ring;
-  };
-
-  for (auto const* outer : nodes) {
-    utl::verify(!outer->IsHole(), "outer ring is hole");
-    fixed_simple_polygon simple;
-    simple.outer() = path_to_ring(outer->Contour);
-
-    for (auto const* inner : outer->Childs) {
-      utl::verify(inner->IsHole(), "inner ring is no hole");
-      simple.inners().emplace_back(path_to_ring(inner->Contour));
-
-      to_fixed_polygon(polygon, inner->Childs);
-    }
-
-    polygon.emplace_back(std::move(simple));
-  }
 }
 
 std::optional<std::string> finalize_tile(
@@ -182,7 +118,7 @@ std::optional<std::string> finalize_tile(
   }
 
   fixed_polygon polygon;
-  to_fixed_polygon(polygon, solution.Childs);
+  to_fixed_polygon(solution.Childs, polygon);
 
   boost::geometry::correct(polygon);
   return serialize_feature({0ul,
@@ -258,20 +194,11 @@ void load_coastlines(tile_db_handle& db_handle, feature_inserter_mt& inserter,
   db_queue_t db_queue;
   coastline_stats stats;
 
-  auto convert_path = [](auto const& in) {
-    return utl::to_vec(in, [](auto const& pt) {
-      return cl::IntPoint{pt.x(), pt.y()};
-    });
-  };
-
   {
     std::vector<coastline_ptr> coastlines;
     auto coastline_handler = [&](fixed_simple_polygon geo) {
       cl::Paths coastline;
-      coastline.emplace_back(convert_path(geo.outer()));
-      for (auto const& inner : geo.inners()) {
-        coastline.emplace_back(convert_path(inner));
-      }
+      to_clipper_paths(geo, coastline);
       coastlines.emplace_back(std::make_shared<struct coastline>(
           bounding_box(geo), std::move(coastline)));
     };

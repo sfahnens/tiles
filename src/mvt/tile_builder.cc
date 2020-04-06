@@ -11,6 +11,7 @@
 
 #include "tiles/bin_utils.h"
 #include "tiles/feature/aggregate_line_features.h"
+#include "tiles/feature/aggregate_polygon_features.h"
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
 #include "tiles/fixed/io/deserialize.h"
@@ -60,6 +61,9 @@ struct layer_builder {
     if (ctx_.tb_aggregate_lines_ &&
         mpark::holds_alternative<fixed_polyline>(f.geometry_)) {
       line_buffer_.emplace_back(std::move(f));
+    } else if (ctx_.tb_aggregate_polygons_ &&
+               mpark::holds_alternative<fixed_polygon>(f.geometry_)) {
+      polygon_buffer_.emplace_back(std::move(f));
     } else {
       write_feature(std::move(f));
     }
@@ -101,6 +105,20 @@ struct layer_builder {
   }
 
   void aggregate_geometry() {
+    if (ctx_.tb_aggregate_polygons_ && !polygon_buffer_.empty()) {
+      if (layer_name_ == "building") {
+        for (auto& f : polygon_buffer_) {
+          write_feature(std::move(f));
+        }
+      } else {
+        for (auto&& f : aggregate_polygon_features(std::move(polygon_buffer_),
+                                                   spec_.tile_.z_)) {
+          f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
+          write_feature(std::move(f));
+        }
+      }
+    }
+
     if (ctx_.tb_aggregate_lines_ && !line_buffer_.empty()) {
       for (auto&& f :
            aggregate_line_features(std::move(line_buffer_), spec_.tile_.z_)) {
@@ -170,7 +188,7 @@ struct layer_builder {
 
   bool has_geometry_;
 
-  std::vector<feature> line_buffer_;
+  std::vector<feature> line_buffer_, polygon_buffer_;
 
   std::string buf_;
   pbf_builder<ttm::Layer> pb_;

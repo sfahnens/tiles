@@ -94,6 +94,7 @@ int main(int argc, char const** argv) {
     auto features_cursor = lmdb::cursor{txn, features_dbi};
 
     render_ctx.tb_aggregate_lines_ = true;
+    render_ctx.tb_aggregate_polygons_ = true;
     render_ctx.tb_print_stats_ = true;
 
     tiles::perf_counter pc;

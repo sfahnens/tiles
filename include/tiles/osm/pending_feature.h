@@ -5,7 +5,7 @@
 
 #include "osmium/osm.hpp"
 
-#include "sol.hpp"
+#include "sol/sol.hpp"
 
 #include "utl/erase_duplicates.h"
 

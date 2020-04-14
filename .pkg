@@ -1,64 +1,64 @@
+[catch]
+  url=git@github.com:motis-project/Catch2.git
+  branch=master
+  commit=e5c9a58d66ff0780e956b5447573af9d6b9b2ca3
 [clipper]
-  url=git@git.motis-project.de:lib/clipper.git
+  url=git@github.com:motis-project/clipper.git
   branch=master
   commit=904f0e6644c7f01c176443613be8f7788d59c658
 [concurrentqueue]
-  url=git@git.motis-project.de:lib/concurrentqueue.git
+  url=git@github.com:motis-project/concurrentqueue.git
   branch=master
-  commit=b11bbfc1f8e3891d425c7045146cfc8d34e32906
+  commit=ef2227ada6f76cd65e517b7a6e902964443c0ffc
 [conf]
-  url=git@git.motis-project.de:lib/conf.git
+  url=git@github.com:motis-project/conf.git
   branch=master
-  commit=5125043d5e295a70f3a0e0fb41ca80487816b2bf
+  commit=7897a6cd02ad9a47ff1c36722354e3638fb17000
 [fmt]
-  url=git@git.motis-project.de:lib/fmt.git
+  url=git@github.com:motis-project/fmt.git
   branch=master
-  commit=c748245847abf12fd9d3b4c04f2a3b9c9a1ae590
+  commit=6117fab8ab38a9b7d9ec26bf0fbfc06d0e27a375
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
   commit=512ea92ad1468022150ca61ec947a8cd523b72d7
 [lmdb]
-  url=git@git.motis-project.de:lib/lmdb.git
+  url=git@github.com:motis-project/lmdb.git
   branch=master
-  commit=22276cdaf4945444a9847e57175d728f55a44cdb
+  commit=39d8127e5697b1323a67e61c3ad8f087384c7429
 [lua]
-  url=git@git.motis-project.de:lib/lua.git
+  url=git@github.com:motis-project/lua.git
   branch=master
-  commit=f410081ee2eac25ac9a15f73269033700419bd4c
+  commit=f33872490a19655ff7c5623246a90d851446dc79
 [miniz]
-  url=git@git.motis-project.de:lib/miniz.git
+  url=git@github.com:motis-project/miniz.git
   branch=master
-  commit=f5d1cf73092133260fd705b1ff9128cae59a2e27
-[net-old]
-  url=git@git.motis-project.de:lib/net-old.git
-  branch=net-old
-  commit=255e7a265d85cef560e2ef7399e75fb05af6ffb9
+  commit=b2dc9a422f0f146ac0fb941e6f3c990cb50bca76
 [osmium]
-  url=git@git.motis-project.de:lib/osmium.git
+  url=git@github.com:motis-project/libosmium.git
   branch=master
-  commit=5c5e2d61b2defb4bb065fa31b4270e6f96293e71
+  commit=672690671b26a38eb163c2487012f50100b7ee74
 [pbf-sdf-fonts]
-  url=git@git.motis-project.de:lib/pbf-sdf-fonts.git
+  url=git@github.com:motis-project/pbf-sdf-fonts.git
   branch=master
-  commit=b79064ed492acb57347f3911b36e0e49eb3f75c0
+  commit=3195ca21451256714276a869cc4fb71dc7e1fd51
 [protozero]
-  url=git@git.motis-project.de:lib/protozero.git
+  url=git@github.com:motis-project/protozero.git
   branch=tiles
-  commit=855ce94a2d1441db7e48a8e5505eac742777759b
+  commit=8c9f3fa97c2cfdceef86d0b61818ae98e9328f29
 [res]
-  url=git@git.motis-project.de:lib/res.git
-  branch=explicit-targets
-  commit=fb2514e683179669c7298af14dbf0c25599c4a18
+  url=git@github.com:motis-project/res.git
+  branch=master
+  commit=9ed3053a8aa0ce6edcf609bfa280cc627c892511
 [sol2]
-  url=git@git.motis-project.de:lib/sol2.git
-  branch=v2.20.6-mod
-  commit=4c0fd7069ac78f44cb422a1733ee892ce0546832
+  url=git@github.com:motis-project/sol2.git
+  branch=master
+  commit=ad819d443cd71e3b0b413b77616a5571851285ef
 [utl]
-  url=git@git.motis-project.de:lib/utl.git
+  url=git@github.com:motis-project/utl.git
   branch=master
-  commit=87b56b2bbfea1b021c70277ada6e034c122fb820
+  commit=4f6963e369852bd48e376f4c93a2eb2956b460b0
 [zlib]
-  url=git@git.motis-project.de:lib/zlib.git
+  url=git@github.com:motis-project/zlib.git
   branch=master
-  commit=412ab9a1f440f4ce1331d4226b6c814470524e19
+  commit=8e7c86d3a0e49101b9a67d74c4a07345dcb0e485

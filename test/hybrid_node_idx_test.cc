@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "catch2/catch.hpp"
 
 #include "osmium/index/detail/tmpfile.hpp"
 #include "osmium/io/pbf_input.hpp"

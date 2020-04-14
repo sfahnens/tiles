@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "miniz/miniz.h"
+#include "miniz.h"
 
 #include "utl/parser/buffer.h"
 #include "utl/parser/file.h"

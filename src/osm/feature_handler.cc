@@ -1,6 +1,6 @@
 #include "tiles/osm/feature_handler.h"
 
-#include "sol.hpp"
+#include "sol/sol.hpp"
 
 #include "tiles/db/feature_inserter_mt.h"
 #include "tiles/db/layer_names.h"

@@ -267,8 +267,10 @@ std::vector<feature> aggregate_line_features(std::vector<feature> features,
         f.meta_ = std::move(lb->meta_);
 
         f.geometry_ = aggregate_geometry(std::move(lines));
-        f.geometry_ =
-            simplify(std::move(f.geometry_), 1UL << (kMaxZoomLevel - z));
+        if (z <= kMaxZoomLevel) {
+          f.geometry_ =
+              simplify(std::move(f.geometry_), 1UL << (kMaxZoomLevel - z));
+        }
 
         result.emplace_back((f));
       });

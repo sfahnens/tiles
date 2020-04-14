@@ -22,7 +22,8 @@ TEST_CASE("at_antimeridian") {
 
   std::string ser = tiles::serialize_feature(f);
 
-  auto packed = tiles::pack_features(tile, {}, {ser});
+  auto quick_pack = tiles::pack_features({ser});
+  auto optimal_pack = tiles::pack_features(tile, {}, {quick_pack});
 
-  CHECK(!packed.empty());
+  CHECK(!optimal_pack.empty());
 }

@@ -235,31 +235,45 @@ int main(int argc, char const** argv) {
     static tiles::regex_matcher matcher{"^\\/(.+)$"};
     auto const match = matcher.match(tiles::url_decode(req));
     if (!match && req.target() != "/") {
+      res.result(http::status::not_found);
       return false;
     }
 
+    bool found = false;
     auto fname = match ? match->at(1) : "index.html";
     if (opt.res_dname_.size() != 0) {
       auto p = boost::filesystem::path{opt.res_dname_} / fname;
       if (boost::filesystem::exists(p)) {
         utl::mmap_reader mem{p.c_str()};
         res.body() = std::string{mem.m_.ptr(), mem.m_.size()};
+        found = true;
+      }
+    }
+
+    if (!found) {
+      try {
+        auto const mem = tiles_server_res::get_resource(fname);
+        res.body() =
+            std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+        found = true;
+      } catch (std::out_of_range const&) {
+        // tough luck
+      }
+    }
+
+    if (found) {
+      res.result(http::status::ok);
+      if (boost::algorithm::ends_with(fname, ".html")) {
+        res.set(http::field::content_type, "text/html");
+      } else if (boost::algorithm::ends_with(fname, ".css")) {
+        res.set(http::field::content_type, "text/css");
+      } else if (boost::algorithm::ends_with(fname, ".js")) {
+        res.set(http::field::content_type, "text/javascript");
       }
     } else {
-      auto const mem = tiles_server_res::get_resource(fname);
-      res.body() =
-          std::string{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      res.result(http::status::not_found);
     }
 
-    if (boost::algorithm::ends_with(fname, ".html")) {
-      res.set(http::field::content_type, "text/html");
-    } else if (boost::algorithm::ends_with(fname, ".css")) {
-      res.set(http::field::content_type, "text/css");
-    } else if (boost::algorithm::ends_with(fname, ".js")) {
-      res.set(http::field::content_type, "text/javascript");
-    }
-
-    res.result(http::status::ok);
     return true;
   };
 

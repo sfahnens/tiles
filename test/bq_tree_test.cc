@@ -147,7 +147,7 @@ TEST_CASE("bq_tree_all_leafs") {
     auto const tiles =
         std::vector<geo::tile>{{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}};
 
-    for (auto i = 0u; i < tiles.size(); ++i) {
+    for (auto i = 0ULL; i < tiles.size(); ++i) {
       auto const& tut = tiles.at(i);
 
       auto tree = tiles::make_bq_tree({tut});
@@ -160,8 +160,8 @@ TEST_CASE("bq_tree_all_leafs") {
       return std::find(begin(v), end(v), e) != end(v);
     };
 
-    for (auto i = 0u; i < tiles.size(); ++i) {
-      for (auto j = 0u; j < tiles.size(); ++j) {
+    for (auto i = 0ULL; i < tiles.size(); ++i) {
+      for (auto j = 0ULL; j < tiles.size(); ++j) {
         if (i == j) {
           continue;
         }
@@ -176,9 +176,9 @@ TEST_CASE("bq_tree_all_leafs") {
       }
     }
 
-    for (auto i = 0u; i < tiles.size(); ++i) {
-      for (auto j = 0u; j < tiles.size(); ++j) {
-        for (auto k = 0u; k < tiles.size(); ++k) {
+    for (auto i = 0ULL; i < tiles.size(); ++i) {
+      for (auto j = 0ULL; j < tiles.size(); ++j) {
+        for (auto k = 0ULL; k < tiles.size(); ++k) {
           if (i == j || i == k || j == k) {
             continue;
           }

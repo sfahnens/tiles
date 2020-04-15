@@ -83,7 +83,7 @@ void walk_quad_tree(char const* tree, geo::tile const& root,
 
     auto const curr = read_nth<quad_entry_t>(tree, offset);
     offset = curr & kQuadOffsetMask;
-    for (auto i = 0u; i < next_tile.quad_pos(); ++i) {
+    for (auto i = 0ULL; i < next_tile.quad_pos(); ++i) {
       if (bit_set(curr, i + kQuadChildOffset)) {
         offset += 4;  // four entries per node
       }

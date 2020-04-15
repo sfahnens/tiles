@@ -28,7 +28,7 @@ struct cache_bucket {
 };
 
 struct feature_inserter_mt {
-  static constexpr size_t kCacheThresholdUpper = 1024ull * 1024 * 1024;
+  static constexpr size_t kCacheThresholdUpper = 1024ULL * 1024 * 1024;
   static constexpr size_t kCacheThresholdLower = kCacheThresholdUpper / 4 * 3;
 
   feature_inserter_mt(dbi_handle dbi_handle, pack_handle& pack_handle)
@@ -37,7 +37,7 @@ struct feature_inserter_mt {
         cache_((1 << kTileDefaultIndexZoomLvl) *
                (1 << kTileDefaultIndexZoomLvl)) {
     auto it = geo::tile_iterator{kTileDefaultIndexZoomLvl};
-    for (auto i = 0ul; i < cache_.size(); ++i) {
+    for (auto i = 0ULL; i < cache_.size(); ++i) {
       utl::verify(it->z_ == kTileDefaultIndexZoomLvl, "it broken");
       cache_[i].tile_ = *it;
       ++it;

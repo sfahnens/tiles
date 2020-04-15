@@ -29,7 +29,7 @@ struct tile_record_single {
   pack_record record_;
 };
 
-constexpr size_t const kRepackInFlightMemory = 1024ul * 1024 * 1024;
+constexpr size_t const kRepackInFlightMemory = 1024ULL * 1024 * 1024;
 constexpr auto kRepackBatchSize = 32;
 
 template <typename PackHandle>
@@ -83,8 +83,8 @@ struct repack_memory_manager {
     {
       size_t used_space = 0;
       size_t largest_record = 0;
-      for (auto i = 0UL; i < tasks_.size(); ++i) {
-        for (auto j = 0UL; j < tasks_[i].records_.size(); ++j) {
+      for (auto i = 0ULL; i < tasks_.size(); ++i) {
+        for (auto j = 0ULL; j < tasks_[i].records_.size(); ++j) {
           auto& record = tasks_[i].records_[j];
           used_space += record.size_;
           largest_record = std::max(largest_record, record.size_);
@@ -107,10 +107,10 @@ struct repack_memory_manager {
 
     auto const total_records = q_frag.size();
 
-    auto task_idx = 0UL;
-    auto record_idx = 0UL;
+    auto task_idx = 0ULL;
+    auto record_idx = 0ULL;
 
-    auto q_frag_idx = 0UL;
+    auto q_frag_idx = 0ULL;
     auto refresh_defrag_queue =
         [&, last_task_idx = std::numeric_limits<size_t>::max(),
          last_record_idx = std::numeric_limits<size_t>::max()]() mutable {
@@ -171,7 +171,7 @@ struct repack_memory_manager {
     };
     auto defrag_insert_offset = [&] {
       refresh_defrag_queue();
-      return q_defrag.empty() ? 0UL : q_defrag.back().record_->end_offset();
+      return q_defrag.empty() ? 0ULL : q_defrag.back().record_->end_offset();
     };
     auto begin_space = [&] {
       refresh_defrag_queue();
@@ -192,7 +192,7 @@ struct repack_memory_manager {
     auto end_space = [&] {
       refresh_defrag_queue();
       return end_offset -
-             (q_frag.empty() ? 0UL : q_frag.back().record_->end_offset());
+             (q_frag.empty() ? 0ULL : q_frag.back().record_->end_offset());
     };
 
     for (; task_idx < tasks_.size(); ++task_idx) {
@@ -235,7 +235,7 @@ struct repack_memory_manager {
         // move the element
         end_offset -= record.size_;
         record = pack_handle_.move(end_offset, record);
-        utl::verify(record.offset_ != 0UL, "moved to front (2)");
+        utl::verify(record.offset_ != 0ULL, "moved to front (2)");
       }
     }
 
@@ -293,7 +293,7 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
       });
 
       return std::accumulate(
-          begin(task.records_), end(task.records_), 0ul,
+          begin(task.records_), end(task.records_), 0ULL,
           [](auto acc, auto const& r) { return acc + r.size_; });
     };
 

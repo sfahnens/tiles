@@ -127,7 +127,7 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
     }
     ++curr_id;
 
-    for (auto i = 1ul; i < (span_size + 1); ++i) {
+    for (auto i = 1ULL; i < (span_size + 1); ++i) {
       auto x = x_dec.decode(
           pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
       auto y = y_dec.decode(
@@ -373,7 +373,7 @@ struct hybrid_node_idx_builder::impl {
 
     delta_encoder x_enc{0};
     delta_encoder y_enc{0};
-    for (auto i = 0u; i < span_.size();) {
+    for (auto i = 0ULL; i < span_.size();) {
       x_enc.reset(span_[i].x());
       y_enc.reset(span_[i].y());
 
@@ -407,7 +407,7 @@ struct hybrid_node_idx_builder::impl {
       }
 
       ++stat_spans_;
-      for (auto k = 0u; k < kStatSpanCumSizeLimits.size(); ++k) {
+      for (auto k = 0ULL; k < kStatSpanCumSizeLimits.size(); ++k) {
         if (span_size <= kStatSpanCumSizeLimits[k]) {
           ++stat_span_cum_sizes_[k];
         }
@@ -433,16 +433,16 @@ struct hybrid_node_idx_builder::impl {
   }
 
   void push_fixed(uint32_t v) {
-    for (auto i = 0u; i < sizeof(v); ++i) {
+    for (auto i = 0ULL; i < sizeof(v); ++i) {
       dat_.push_back(char(v & 0xffu));
-      v >>= 8u;
+      v >>= 8ULL;
     }
   }
 
   static inline uint32_t get_varint_size(uint64_t value) {
     uint32_t n = 1;
-    while (value >= 0x80u) {
-      value >>= 7u;
+    while (value >= 0x80ULL) {
+      value >>= 7ULL;
       ++n;
     }
     return n;
@@ -455,11 +455,11 @@ struct hybrid_node_idx_builder::impl {
     tiles::t_log("builder: nodes {}", stat_nodes_);
     tiles::t_log("builder: spans {}", stat_spans_);
 
-    for (auto i = 0u; i < stat_coord_chars_.size(); ++i) {
+    for (auto i = 0ULL; i < stat_coord_chars_.size(); ++i) {
       tiles::t_log("builder: coord chars {} {}", i, stat_coord_chars_[i]);
     }
 
-    for (auto i = 0u; i < kStatSpanCumSizeLimits.size(); ++i) {
+    for (auto i = 0ULL; i < kStatSpanCumSizeLimits.size(); ++i) {
       tiles::t_log("builder: cum spans <= {:>5} {:>12}",
                    kStatSpanCumSizeLimits[i], stat_span_cum_sizes_[i]);
     }

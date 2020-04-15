@@ -142,7 +142,7 @@ struct queue_wrapper {
 struct queue_processor {
   explicit queue_processor(queue_wrapper<std::function<void()>>& queue)
       : queue_{queue}, shutdown_{false} {
-    for (auto i = 0u; i < std::thread::hardware_concurrency(); ++i) {
+    for (auto i = 0ULL; i < std::thread::hardware_concurrency(); ++i) {
       threads_.emplace_back([&, this] {
         while (true) {
           if (shutdown_) {

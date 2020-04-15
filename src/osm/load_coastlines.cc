@@ -29,7 +29,7 @@ namespace sc = std::chrono;
 
 namespace tiles {
 
-static_assert(std::is_same_v<cl::cInt, fixed_coord_t>, "coord type problem");
+static_assert(sizeof(cl::cInt) == sizeof(fixed_coord_t), "coord type problem");
 
 struct coastline {
   coastline(fixed_box box, cl::Paths geo)
@@ -91,10 +91,10 @@ fixed_box bounding_box(cl::Paths const& geo) {
 
   for (auto const& path : geo) {
     for (auto const& pt : path) {
-      min_x = std::min(min_x, pt.X);
-      min_y = std::min(min_y, pt.Y);
-      max_x = std::max(max_x, pt.X);
-      max_y = std::max(max_y, pt.Y);
+      min_x = std::min(min_x, static_cast<fixed_coord_t>(pt.X));
+      min_y = std::min(min_y, static_cast<fixed_coord_t>(pt.Y));
+      max_x = std::max(max_x, static_cast<fixed_coord_t>(pt.X));
+      max_y = std::max(max_y, static_cast<fixed_coord_t>(pt.Y));
     }
   }
 
@@ -185,7 +185,7 @@ std::optional<std::string> finalize_tile(
   to_fixed_polygon(polygon, solution.Childs);
 
   boost::geometry::correct(polygon);
-  return serialize_feature({0ul,
+  return serialize_feature({0ULL,
                             kLayerCoastlineIdx,
                             std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
                             {},
@@ -277,7 +277,7 @@ void load_coastlines(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     };
     load_shapefile(fname, coastline_handler);
 
-    constexpr auto const kInitialZoomlevel = 4u;
+    constexpr auto const kInitialZoomlevel = 4ULL;
     auto it = geo::tile_iterator(kInitialZoomlevel);
     while (it->z_ == kInitialZoomlevel) {
       geo_queue.enqueue(geo_task{*it, coastlines});
@@ -291,7 +291,7 @@ void load_coastlines(tile_db_handle& db_handle, feature_inserter_mt& inserter,
   // auto const num_workers = 1;
   auto const num_workers = std::thread::hardware_concurrency();
   std::vector<std::thread> threads;
-  for (auto i = 0u; i < num_workers; ++i) {
+  for (auto i = 0ULL; i < num_workers; ++i) {
     threads.emplace_back([&] {
       while (!geo_queue.finished()) {
         geo_task task;

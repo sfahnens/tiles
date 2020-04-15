@@ -13,7 +13,7 @@
 
 namespace tiles {
 
-constexpr auto const kLayerCoastlineIdx = 0ull;
+constexpr auto const kLayerCoastlineIdx = 0ULL;
 constexpr auto const kLayerCoastlineName = "coastline";
 
 template <typename Vec>

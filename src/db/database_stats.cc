@@ -113,7 +113,7 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
       if (index_offset != 0) {
         auto idx_ptr = pack.data() + index_offset;
         auto const end_ptr = pack.data() + pack.size();
-        auto tree_offset = 0ull;
+        auto tree_offset = 0ULL;
         while (idx_ptr < end_ptr && tree_offset == 0) {
           tree_offset = protozero::decode_varint(&idx_ptr, end_ptr);
         }
@@ -172,10 +172,10 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
     tile_sizes.at(tile.z_).emplace_back(el->second.size());
   }
 
-  auto total = std::accumulate(begin(pack_sizes), end(pack_sizes), 0ull);
-  for (auto z = 0u; z < tile_sizes.size(); ++z) {
+  auto total = std::accumulate(begin(pack_sizes), end(pack_sizes), 0ULL);
+  for (auto z = 0ULL; z < tile_sizes.size(); ++z) {
     print_sizes(fmt::format("tiles[z={:0>2}]", z), tile_sizes[z]);
-    total += std::accumulate(begin(tile_sizes[z]), end(tile_sizes[z]), 0ull);
+    total += std::accumulate(begin(tile_sizes[z]), end(tile_sizes[z]), 0ULL);
   }
 
   std::cout << "====\n";

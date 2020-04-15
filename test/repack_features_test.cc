@@ -65,7 +65,7 @@ TEST_CASE("repack_features", "[!hide]") {
   std::vector<tiles::tile_record> tasks((1 << tiles::kTileDefaultIndexZoomLvl) *
                                         (1 << tiles::kTileDefaultIndexZoomLvl));
   auto it = geo::tile_iterator{tiles::kTileDefaultIndexZoomLvl};
-  for (auto i = 0ul; i < tasks.size(); ++i) {
+  for (auto i = 0ULL; i < tasks.size(); ++i) {
     utl::verify(it->z_ == tiles::kTileDefaultIndexZoomLvl, "it broken");
     tasks[i].tile_ = *it;
     ++it;
@@ -77,7 +77,7 @@ TEST_CASE("repack_features", "[!hide]") {
   std::normal_distribution size_dist(10000., 10000.);
 
   size_t initial_packs = 0;
-  while (handle.size() < 1024UL * 1024 * 1024 * 40) {
+  while (handle.size() < 1024ULL * 1024 * 1024 * 40) {
     size_t size = std::fabs(size_dist(rand));
     if (size > kMaxRecordSize / 100 || size == 0) {
       continue;
@@ -95,7 +95,7 @@ TEST_CASE("repack_features", "[!hide]") {
         static std::normal_distribution dist{1.1, 0.1};
 
         size_t size = std::accumulate(
-            begin(packs), end(packs), 0ul,
+            begin(packs), end(packs), 0ULL,
             [](auto const& acc, auto const& p) { return acc + p.size(); });
         size *= std::fabs(dist(rand));
         size = std::min(size, kMaxRecordSize);

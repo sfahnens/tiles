@@ -255,9 +255,9 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_NOTHROW(builder.push(42, {2, 3}));
 
     CHECK_THROWS(
-        builder.push(43, {1ull + std::numeric_limits<uint32_t>::max(), 3}));
+        builder.push(43, {1ULL + std::numeric_limits<uint32_t>::max(), 3}));
     CHECK_THROWS(
-        builder.push(43, {2, 1ull + std::numeric_limits<uint32_t>::max()}));
+        builder.push(43, {2, 1ULL + std::numeric_limits<uint32_t>::max()}));
   }
 
   SECTION("missing nodes") {

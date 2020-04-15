@@ -29,7 +29,7 @@ namespace tiles {
 struct packer {
   explicit packer(uint32_t feature_count) {
     tiles::append<uint32_t>(buf_, feature_count);  // write feature count
-    tiles::append<uint32_t>(buf_, 0u);  // reserve space for the index ptr
+    tiles::append<uint32_t>(buf_, 0U);  // reserve space for the index ptr
   }
 
   void write_index_offset(uint32_t const offset) {
@@ -46,7 +46,7 @@ struct packer {
       buf_.append(it->data(), it->size());
     }
     // null terminated list
-    protozero::write_varint(std::back_inserter(buf_), 0ul);
+    protozero::write_varint(std::back_inserter(buf_), 0ULL);
 
     return offset;
   }
@@ -177,14 +177,14 @@ std::string pack_features(geo::tile const& tile,
         [](auto const& a, auto const& b) { return a.quad_key_ < b.quad_key_; },
         [&](auto const& lb, auto const& ub) {
           quad_tree_input.push_back(
-              {lb->best_tile_, p.append_span(lb, ub), 1u});
+              {lb->best_tile_, p.append_span(lb, ub), 1ULL});
         });
 
     quad_trees.emplace_back(make_quad_tree(tile, quad_tree_input));
   }
   p.write_index_offset(
       p.append_packed(utl::to_vec(quad_trees, [&](auto const& quad_tree) {
-        return quad_tree.empty() ? 0u : p.append(quad_tree);
+        return quad_tree.empty() ? 0U : p.append(quad_tree);
       })));
   return p.buf_;
 }

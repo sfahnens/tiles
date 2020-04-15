@@ -110,7 +110,7 @@ utl::buffer load_buffer(std::string const& fname) {
   raii_helper ar_deleter{[&ar] { mz_zip_reader_end(&ar); }};
 
   auto n = mz_zip_reader_get_num_files(&ar);
-  for (auto i = 0u; i < n; ++i) {
+  for (auto i = 0ULL; i < n; ++i) {
     mz_zip_archive_file_stat stat{};
     utl::verify(mz_zip_reader_file_stat(&ar, i, &stat),
                 "shp: unable to stat zip entry");

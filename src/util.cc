@@ -29,7 +29,7 @@ struct regex_matcher::impl {
     if (std::regex_match(target, match, regex_)) {
       std::vector<std::string> matches;
       matches.reserve(match.size());
-      for (auto i = 0UL; i < match.size(); ++i) {
+      for (auto i = 0ULL; i < match.size(); ++i) {
         matches.push_back(std::string{match[i].first, match[i].second});
       }
       return matches;

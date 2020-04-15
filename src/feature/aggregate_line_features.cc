@@ -38,7 +38,7 @@ std::vector<line_handle> make_line_handles(FeatureIt lb, FeatureIt ub) {
     utl::verify(l.size() < std::numeric_limits<uint32_t>::max(),
                 "make_line_handles: too many features");
 
-    for (auto i = 0U; i < l.size(); ++i) {
+    for (auto i = 0ULL; i < l.size(); ++i) {
       lines.emplace_back(std::make_unique<line>());
       lines.back()->from_ = l[i].front();
       lines.back()->to_ = l[i].back();
@@ -269,7 +269,7 @@ std::vector<feature> aggregate_line_features(std::vector<feature> features,
         f.geometry_ = aggregate_geometry(std::move(lines));
         if (z <= kMaxZoomLevel) {
           f.geometry_ =
-              simplify(std::move(f.geometry_), 1UL << (kMaxZoomLevel - z));
+              simplify(std::move(f.geometry_), 1ULL << (kMaxZoomLevel - z));
         }
 
         result.emplace_back((f));

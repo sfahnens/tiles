@@ -80,7 +80,7 @@ std::pair<std::optional<bool>, bq_node_t> bq_tree::find_parent_leaf(
     }
 
     auto offset = curr & kOffsetMask;
-    for (auto i = 0u; i < tile.quad_pos(); ++i) {
+    for (auto i = 0ULL; i < tile.quad_pos(); ++i) {
       if (!bit_set(curr, i + kFalseOffset) && !bit_set(curr, i + kTrueOffset)) {
         ++offset;
       }
@@ -114,7 +114,7 @@ std::vector<geo::tile> bq_tree::all_leafs(geo::tile const& q) const {
 
     auto child_tile_it = tile.as_tile_range().begin();
     auto child_count = 0;
-    for (auto i = 0u; i < 4u; ++i) {
+    for (auto i = 0ULL; i < 4ULL; ++i) {
       auto const& child_tile = *(++child_tile_it);
 
       if (bit_set(node, child_tile.quad_pos() + kTrueOffset)) {
@@ -139,8 +139,8 @@ std::string_view bq_tree::string_view() const {
 
 void bq_tree::dump() const {
   std::cout << "bq_tree with " << nodes_.size() << " nodes:\n";
-  for (auto i = 0u; i < nodes_.size(); ++i) {
-    printf("%i | %08x\n", i, nodes_[i]);
+  for (auto i = 0ULL; i < nodes_.size(); ++i) {
+    printf("%llu | %08x\n", i, nodes_[i]);
   }
   std::cout << "---" << std::endl;
 }
@@ -161,7 +161,7 @@ bq_tree serialize_bq_tree(bq_tmp_node_t const& root) {
     auto const [offset, node] = stack.top();  // copy required!
     stack.pop();
 
-    for (auto i = 0u; i < 4u; ++i) {
+    for (auto i = 0ULL; i < 4ULL; ++i) {
       auto& storage = vec.at(offset);  // emplace_back invalidates maybe!
       auto const* child = node->children_[i];
 

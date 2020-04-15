@@ -40,7 +40,7 @@ void unpack_features(std::string_view const& string, Fn&& fn) {
 
   auto ptr = string.data() + 2 * sizeof(uint32_t);
   auto const end = string.data() + string.size();
-  for (auto i = 0u; i < feature_count; ++i) {
+  for (auto i = 0ULL; i < feature_count; ++i) {
     uint64_t size = 0;
     while (size == 0) {  // skip zero elements (= span terminators)
       size = protozero::decode_varint(&ptr, end);
@@ -73,7 +73,7 @@ void unpack_features(geo::tile const& root, std::string_view const& string,
         string.data() + tree_offset, root, tile,
         [&](auto const span_offset, auto const span_count) {
           auto span_ptr = string.data() + span_offset;
-          for (auto i = 0u; i < span_count; ++i) {
+          for (auto i = 0ULL; i < span_count; ++i) {
             uint64_t size;
             while ((size = protozero::decode_varint(&span_ptr, end)) != 0) {
               fn(std::string_view{span_ptr, size});

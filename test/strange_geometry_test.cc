@@ -18,7 +18,7 @@ TEST_CASE("at_antimeridian") {
       {tiles::latlng_to_fixed({-16.7935583, 180.0000000}),
        tiles::latlng_to_fixed({-16.7936245, 179.9997797})}};
 
-  tiles::feature f{42ul, 1, {0u, 20u}, {}, west_coast_road};
+  tiles::feature f{42ULL, 1, {0U, 20U}, {}, west_coast_road};
 
   std::string ser = tiles::serialize_feature(f);
 

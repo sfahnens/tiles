@@ -25,7 +25,7 @@ struct default_decoder {
     auto const size = get_next();
     out.reserve(size);
 
-    for (auto i = 0u; i < size; ++i) {
+    for (auto i = 0LL; i < size; ++i) {
       // do not inline -> undefined execution order
       auto const x_val = x_decoder_.decode(get_next());
       auto const y_val = y_decoder_.decode(get_next());
@@ -69,7 +69,7 @@ struct simplifying_decoder : public default_decoder {
     utl::verify(size == reader.size_, "simplify mask size mismatch");
 
     out.reserve(size);
-    for (auto i = 0u; i < size; ++i) {
+    for (auto i = 0LL; i < size; ++i) {
       if (reader.get_bit(i)) {
         // do not inline -> undefined execution order
         auto const x_val = x_decoder_.decode(get_next());
@@ -111,7 +111,7 @@ fixed_polyline deserialize_polyline(Decoder&& decoder) {
 
   fixed_polyline polyline;
   polyline.resize(count);
-  for (auto i = 0u; i < count; ++i) {
+  for (auto i = 0LL; i < count; ++i) {
     decoder.deserialize_points(polyline[i]);
   }
   return polyline;
@@ -123,12 +123,12 @@ fixed_geometry deserialize_polygon(Decoder&& decoder) {
 
   fixed_polygon polygon;
   polygon.resize(count);
-  for (auto i = 0u; i < count; ++i) {
+  for (auto i = 0LL; i < count; ++i) {
     decoder.deserialize_points(polygon[i].outer());
 
     auto const inner_count = decoder.get_next();
     polygon[i].inners().resize(inner_count);
-    for (auto j = 0u; j < inner_count; ++j) {
+    for (auto j = 0LL; j < inner_count; ++j) {
       decoder.deserialize_points(polygon[i].inners()[j]);
     }
   }

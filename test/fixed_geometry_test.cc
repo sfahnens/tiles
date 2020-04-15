@@ -16,7 +16,7 @@ TEST_CASE("fixed point io") {
   std::mt19937 gen{0};
   std::uniform_int_distribution<fixed_coord_t> dist{kFixedCoordMin,
                                                     kFixedCoordMax};
-  for (auto i = 0u; i < 10000; ++i) {
+  for (auto i = 0; i < 10000; ++i) {
     test_cases.push_back({{dist(gen), dist(gen)}});
   }
 
@@ -44,12 +44,12 @@ TEST_CASE("fixed polyline io") {
                                                           kFixedCoordMax};
   std::uniform_int_distribution<fixed_coord_t> len_dist{1, 10000};
 
-  for (auto i = 0u; i < 1000; ++i) {
+  for (auto i = 0; i < 1000; ++i) {
     auto len = len_dist(gen);
 
     fixed_polyline line;
     line.emplace_back();
-    for (auto j = 0u; j < len; ++j) {
+    for (auto j = 0LL; j < len; ++j) {
       line[0].emplace_back(coord_dist(gen), coord_dist(gen));
     }
     test_cases.emplace_back(std::move(line));

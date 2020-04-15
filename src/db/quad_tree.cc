@@ -42,8 +42,8 @@ tmp_quad_tree_t make_tmp_quad_tree(geo::tile const& root,
                          .insert({tile.parent(),
                                   {{nullptr, nullptr, nullptr, nullptr},
                                    std::numeric_limits<uint32_t>::max(),
-                                   0u,
-                                   0u}})
+                                   0ULL,
+                                   0ULL}})
                          .first->second;
 
       parent.children_[tile.quad_pos()] = &pair.second;
@@ -64,10 +64,10 @@ std::vector<quad_entry_t> serialize_quad_tree(tmp_quad_node_t const root) {
   auto const allocate_and_enqueue = [&](auto const* node) {
     stack.emplace(vec.size(), node);
 
-    vec.emplace_back(0);  // allocate: child ptr
-    vec.emplace_back(0);  // allocate: range/offset
-    vec.emplace_back(0);  // allocate: range/size_self
-    vec.emplace_back(0);  // allocate: range/size_subtree
+    vec.emplace_back(0U);  // allocate: child ptr
+    vec.emplace_back(0U);  // allocate: range/offset
+    vec.emplace_back(0U);  // allocate: range/size_self
+    vec.emplace_back(0U);  // allocate: range/size_subtree
   };
 
   allocate_and_enqueue(&root);
@@ -79,7 +79,7 @@ std::vector<quad_entry_t> serialize_quad_tree(tmp_quad_node_t const root) {
     vec.at(offset + 2) = node->size_self_;  // set: range/size_self
     vec.at(offset + 3) = node->size_subtree_;  // set: range/size_subtree
 
-    for (auto i = 0u; i < 4u; ++i) {
+    for (auto i = 0ULL; i < 4ULL; ++i) {
       auto& storage = vec.at(offset);  // emplace_back invalidates maybe!
       auto const* child = node->children_[i];
 
@@ -88,7 +88,7 @@ std::vector<quad_entry_t> serialize_quad_tree(tmp_quad_node_t const root) {
           storage = vec.size();  // set: child_ptr
         }
 
-        storage |= 1 << (i + kQuadChildOffset);
+        storage |= 1U << (i + kQuadChildOffset);
         allocate_and_enqueue(child);
       }
     }
@@ -100,10 +100,10 @@ std::string make_quad_tree(geo::tile const& root,
                            std::vector<quad_tree_input> const& input) {
   std::string buf;
   if (input.empty()) {
-    append<quad_entry_t>(buf, 0u);  // child_ptr
-    append<quad_entry_t>(buf, 0u);  // range/offset
-    append<quad_entry_t>(buf, 0u);  // range/size_self
-    append<quad_entry_t>(buf, 0u);  // range/size_subtree
+    append<quad_entry_t>(buf, 0U);  // child_ptr
+    append<quad_entry_t>(buf, 0U);  // range/offset
+    append<quad_entry_t>(buf, 0U);  // range/size_self
+    append<quad_entry_t>(buf, 0U);  // range/size_subtree
     return buf;
   }
 

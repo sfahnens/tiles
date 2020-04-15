@@ -58,7 +58,7 @@ void encode_path(pz::packed_field_uint32& sw, delta_encoder& x_enc,
 
   auto const limit = ClosePath ? c.size() - 2 : c.size() - 1;
   sw.add_element(encode_command(LINE_TO, limit));
-  for (auto i = 1u; i <= limit; ++i) {
+  for (auto i = 1ULL; i <= limit; ++i) {
     auto x = x_enc.encode(c[i].x());
     auto y = y_enc.encode(c[i].y());
     utl::verify(x != 0 || y != 0, "encode_path: both deltas are zero");

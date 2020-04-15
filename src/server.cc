@@ -131,7 +131,7 @@ void serve_forever(std::string const& address, uint16_t port, callback_t cb) {
         [&](boost::system::error_code const&, int) { ioc.stop(); });
 
     std::vector<std::thread> threads;
-    for (auto i = 1u; i < std::thread::hardware_concurrency(); ++i) {
+    for (auto i = 1ULL; i < std::thread::hardware_concurrency(); ++i) {
       threads.emplace_back([&ioc] { ioc.run(); });
     }
     ioc.run();

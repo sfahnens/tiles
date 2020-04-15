@@ -13,7 +13,7 @@ void dump(fixed_point const& geo) {
 
 void dump(fixed_polyline const& geo) {
   std::cout << "polyline geometry: " << geo.size() << "\n";
-  for (auto i = 0u; i < geo.size(); ++i) {
+  for (auto i = 0ULL; i < geo.size(); ++i) {
     std::cout << "  " << i << " ";
     for (auto const& pt : geo[i]) {
       std::cout << pt.x() << "," << pt.y() << " ";
@@ -24,14 +24,14 @@ void dump(fixed_polyline const& geo) {
 
 void dump(fixed_polygon const& geo) {
   std::cout << "polygon geometry: " << geo.size() << "\n";
-  for (auto i = 0u; i < geo.size(); ++i) {
+  for (auto i = 0ULL; i < geo.size(); ++i) {
     std::cout << "## " << i << " o ";
     for (auto const& pt : geo[i].outer()) {
       std::cout << pt.x() << "," << pt.y() << " ";
     }
     std::cout << std::endl;
 
-    for (auto j = 0u; j < geo[i].inners().size(); ++j) {
+    for (auto j = 0ULL; j < geo[i].inners().size(); ++j) {
       std::cout << "## " << i << " " << j << " ";
       for (auto const& pt : geo[i].outer()) {
         std::cout << pt.x() << "," << pt.y() << " ";

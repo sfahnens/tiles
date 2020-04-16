@@ -22,10 +22,18 @@ if(NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/deps")
   endif()
 
   message(STATUS ${pkg-bin})
-  execute_process(
-    COMMAND ${pkg-bin} -l
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
+
+  if(DEFINED ENV{GITHUB_ACTIONS})
+    execute_process(
+      COMMAND ${pkg-bin} -l -h
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+  else()
+    execute_process(
+      COMMAND ${pkg-bin} -l
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+  endif()
 endif()
 
 if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps")

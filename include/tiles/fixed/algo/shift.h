@@ -7,7 +7,7 @@
 
 namespace tiles {
 
-inline void shift(fixed_null&, uint32_t const) {}
+inline fixed_geometry shift(fixed_null, uint32_t const) { return fixed_null{}; }
 
 inline void shift(fixed_xy& pt, uint32_t const z) {
   uint32_t delta_z = 20 - z;
@@ -30,7 +30,7 @@ inline fixed_geometry shift(fixed_point multi_point, uint32_t const z) {
   if (multi_point.empty()) {
     return fixed_null{};
   } else {
-    return std::move(multi_point);
+    return multi_point;
   }
 }
 
@@ -44,7 +44,7 @@ inline fixed_geometry shift(fixed_polyline multi_polyline, uint32_t const z) {
   if (multi_polyline.empty()) {
     return fixed_null{};
   } else {
-    return std::move(multi_polyline);
+    return multi_polyline;
   }
 }
 
@@ -64,7 +64,7 @@ inline fixed_geometry shift(fixed_polygon multi_polygon, uint32_t const z) {
   if (multi_polygon.empty()) {
     return fixed_null{};
   } else {
-    return std::move(multi_polygon);
+    return multi_polygon;
   }
 }
 

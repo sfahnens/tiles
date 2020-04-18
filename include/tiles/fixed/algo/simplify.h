@@ -9,7 +9,7 @@ namespace tiles {
 inline void simplify(fixed_null&, uint32_t const) {}
 
 inline fixed_geometry simplify(fixed_point multi_point, uint32_t const) {
-  return std::move(multi_point);
+  return multi_point;
 }
 
 inline fixed_geometry simplify(fixed_polyline multi_polyline,
@@ -17,11 +17,11 @@ inline fixed_geometry simplify(fixed_polyline multi_polyline,
   for (auto& polyline : multi_polyline) {
     geo::simplify(polyline, z);
   }
-  return std::move(multi_polyline);
+  return multi_polyline;
 }
 
 inline fixed_geometry simplify(fixed_polygon multi_polygon, uint32_t const) {
-  return std::move(multi_polygon);
+  return multi_polygon;
 }
 
 inline fixed_geometry simplify(fixed_geometry geometry, uint32_t const z) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <time.h>
+#include <atomic>
 #include <charconv>
 #include <chrono>
 #include <functional>

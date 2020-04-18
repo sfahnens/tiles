@@ -1,9 +1,9 @@
 #pragma once
 
 #include <time.h>
-#include <atomic>
 #include <charconv>
 #include <chrono>
+#include <atomic>
 #include <functional>
 #include <iomanip>
 #include <iostream>

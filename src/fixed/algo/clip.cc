@@ -7,7 +7,6 @@
 #include "utl/erase_if.h"
 #include "utl/verify.h"
 
-#include "tiles/fixed/io/to_svg.h"
 #include "tiles/util.h"
 
 namespace cl = ClipperLib;

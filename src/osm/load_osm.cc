@@ -29,8 +29,8 @@ namespace ou = osmium::util;
 namespace oeb = osmium::osm_entity_bits;
 
 void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
-              std::string const& fname) {
-  oio::File input_file{fname};
+              std::string const& osm_fname_, std::string const& osm_profile) {
+  oio::File input_file{osm_fname_};
 
   oa::MultipolygonManager<oa::Assembler> mp_manager{
       oa::Assembler::config_type{}};
@@ -73,9 +73,9 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     std::atomic_size_t next_handlers_slot{0};
     std::vector<std::pair<std::thread::id, feature_handler>> handlers;
     for (auto i = 0; i < thread_count; ++i) {
-      handlers.emplace_back(
-          std::thread::id{},
-          feature_handler{inserter, names_builder, metadata_builder});
+      handlers.emplace_back(std::thread::id{},
+                            feature_handler{osm_profile, inserter,
+                                            names_builder, metadata_builder});
     }
     auto const get_handler = [&]() -> feature_handler& {
       auto const thread_id = std::this_thread::get_id();

@@ -19,13 +19,14 @@ struct import_settings : public conf::configuration {
   import_settings() : conf::configuration("tiles-import options", "") {
     param(db_fname_, "db_fname", "/path/to/tiles.mdb");
     param(osm_fname_, "osm_fname", "/path/to/latest.osm.pbf");
+    param(osm_profile_, "osm_profile", "/path/to/profile.lua");
     param(coastlines_fname_, "coastlines_fname", "/path/to/coastlines.zip");
     param(tasks_, "tasks",
           "'all' or any combination of: 'coastlines', "
           "'features', 'stats', 'pack', 'tiles'");
   }
 
-  bool has_any_task(std::vector<std::string> const& query) {
+  bool has_any_task(std::vector<std::string> const& query) const {
     return std::find(begin(tasks_), end(tasks_), "all") != end(tasks_) ||
            std::any_of(begin(query), end(query), [this](auto const& q) {
              return std::find(begin(tasks_), end(tasks_), q) != end(tasks_);
@@ -34,6 +35,7 @@ struct import_settings : public conf::configuration {
 
   std::string db_fname_{"tiles.mdb"};
   std::string osm_fname_{"planet-latest.osm.pbf"};
+  std::string osm_profile_{"../profile/profile.lua"};
   std::string coastlines_fname_{"land-polygons-complete-4326.zip"};
   std::vector<std::string> tasks_{{"all"}};
 };
@@ -82,7 +84,7 @@ int main(int argc, char const** argv) {
 
     if (opt.has_any_task({"features"})) {
       tiles::t_log("load features");
-      tiles::load_osm(db_handle, inserter, opt.osm_fname_);
+      tiles::load_osm(db_handle, inserter, opt.osm_fname_, opt.osm_profile_);
     }
   }
 

@@ -11,8 +11,8 @@ struct layer_names_builder;
 struct shared_metadata_builder;
 
 struct feature_handler : public osmium::handler::Handler {
-  feature_handler(feature_inserter_mt&, layer_names_builder&,
-                  shared_metadata_builder&);
+  feature_handler(std::string const& osm_profile, feature_inserter_mt&,
+                  layer_names_builder&, shared_metadata_builder&);
 
   feature_handler(feature_handler&&) noexcept;
   feature_handler(feature_handler const&) = delete;

@@ -12,8 +12,8 @@
 namespace tiles {
 
 struct feature_handler::script_runner {
-  script_runner() {
-    lua_.script_file("../profile/profile.lua");
+  script_runner(std::string const& osm_profile) {
+    lua_.script_file(osm_profile);
     lua_.open_libraries(sol::lib::base, sol::lib::package);
 
     lua_.new_usertype<pending_feature>(  //
@@ -48,9 +48,10 @@ struct feature_handler::script_runner {
 };
 
 feature_handler::feature_handler(
-    feature_inserter_mt& inserter, layer_names_builder& layer_names_builder,
+    std::string const& osm_profile, feature_inserter_mt& inserter,
+    layer_names_builder& layer_names_builder,
     shared_metadata_builder& shared_metadata_builder)
-    : runner_{std::make_unique<feature_handler::script_runner>()},
+    : runner_{std::make_unique<feature_handler::script_runner>(osm_profile)},
       inserter_{inserter},
       layer_names_builder_{layer_names_builder},
       shared_metadata_builder_{shared_metadata_builder} {}

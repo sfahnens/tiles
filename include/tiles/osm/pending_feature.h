@@ -80,30 +80,19 @@ struct pending_feature {
   }
 
   void add_bool(std::string tag, bool v) {
-    std::string buf;
-    append(buf, v ? metadata_value_t::bool_true : metadata_value_t::bool_false);
-    metadata_.emplace_back(tag, std::move(buf));
+    metadata_.emplace_back(tag, encode_bool(v));
   }
 
   void add_string(std::string tag, std::string v) {
-    std::string buf;
-    append(buf, metadata_value_t::string);
-    buf.append(v);
-    metadata_.emplace_back(tag, std::move(buf));
+    metadata_.emplace_back(tag, encode_string(v));
   }
 
   void add_numeric(std::string tag, double v) {
-    std::string buf;
-    append(buf, metadata_value_t::numeric);
-    append(buf, v);
-    metadata_.emplace_back(tag, std::move(buf));
+    metadata_.emplace_back(tag, encode_numeric(v));
   }
 
   void add_integer(std::string tag, int64_t v) {
-    std::string buf;
-    append(buf, metadata_value_t::integer);
-    append(buf, v);
-    metadata_.emplace_back(tag, std::move(buf));
+    metadata_.emplace_back(tag, encode_integer(v));
   }
 
   void add_tag_as_bool(std::string tag) {

@@ -6,6 +6,7 @@
 
 #include "protozero/types.hpp"
 
+#include "tiles/feature/metadata.h"
 #include "tiles/fixed/fixed_geometry.h"
 
 namespace tiles {
@@ -13,34 +14,6 @@ namespace tiles {
 constexpr uint32_t kInvalidZoomLevel = 0x3F;  // 63; max for one byte in svarint
 constexpr fixed_coord_t kInvalidBoxHint =
     std::numeric_limits<fixed_coord_t>::max();
-
-enum class metadata_value_t : uint8_t {
-  bool_false = 0,
-  bool_true = 1,
-  string = 2,
-  numeric = 3,
-  integer = 4
-};
-
-struct metadata {
-  metadata() = default;
-  metadata(std::string key, std::string value)
-      : key_{std::move(key)}, value_{std::move(value)} {}
-
-  friend bool operator==(metadata const& lhs, metadata const& rhs) {
-    return std::tie(lhs.key_, lhs.value_) == std::tie(rhs.key_, rhs.value_);
-  }
-
-  friend bool operator!=(metadata const& lhs, metadata const& rhs) {
-    return std::tie(lhs.key_, lhs.value_) != std::tie(rhs.key_, rhs.value_);
-  }
-
-  friend bool operator<(metadata const& lhs, metadata const& rhs) {
-    return std::tie(lhs.key_, lhs.value_) < std::tie(rhs.key_, rhs.value_);
-  }
-
-  std::string key_, value_;
-};
 
 constexpr auto const kInvalidFeatureId = std::numeric_limits<uint64_t>::max();
 

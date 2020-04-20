@@ -130,6 +130,7 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
   auto render_ctx = make_render_ctx(db_handle);
   render_ctx.ignore_fully_seaside_ = true;
   render_ctx.tb_aggregate_lines_ = true;
+  render_ctx.tb_aggregate_polygons_ = true;
   null_perf_counter npc;
 
   std::vector<std::thread> threads;

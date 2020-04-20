@@ -11,6 +11,8 @@
 
 #include "tiles/bin_utils.h"
 #include "tiles/feature/aggregate_line_features.h"
+#include "tiles/feature/aggregate_polygon_features.h"
+#include "tiles/fixed/algo/area.h"
 #include "tiles/fixed/algo/clip.h"
 #include "tiles/fixed/algo/shift.h"
 #include "tiles/fixed/io/deserialize.h"
@@ -25,6 +27,12 @@ namespace ttm = tiles::tags::mvt;
 
 namespace tiles {
 
+constexpr auto const kVectorTileExtend = 4096;
+constexpr auto const kRasterTileExtend = 256;
+constexpr auto const kScreenPixelArea =
+    (kVectorTileExtend / kRasterTileExtend) *
+    (kVectorTileExtend / kRasterTileExtend);
+
 struct layer_builder {
   layer_builder(render_ctx const& ctx, std::string layer_name,
                 tile_spec const& spec)
@@ -37,7 +45,7 @@ struct layer_builder {
 
     pb_.add_uint32(ttm::Layer::required_uint32_version, 2);
     pb_.add_string(ttm::Layer::required_string_name, layer_name_);
-    pb_.add_uint32(ttm::Layer::optional_uint32_extent, 4096);
+    pb_.add_uint32(ttm::Layer::optional_uint32_extent, kVectorTileExtend);
   }
 
   void add_feature(feature f) {
@@ -51,8 +59,6 @@ struct layer_builder {
     }
 
     ++features_added_;
-
-    f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
     if (mpark::holds_alternative<fixed_null>(f.geometry_)) {
       return;
     }
@@ -60,13 +66,17 @@ struct layer_builder {
     if (ctx_.tb_aggregate_lines_ &&
         mpark::holds_alternative<fixed_polyline>(f.geometry_)) {
       line_buffer_.emplace_back(std::move(f));
+    } else if (ctx_.tb_aggregate_polygons_ &&
+               mpark::holds_alternative<fixed_polygon>(f.geometry_)) {
+      polygon_buffer_.emplace_back(std::move(f));
     } else {
+      f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
+      f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
       write_feature(std::move(f));
     }
   }
 
   void write_feature(feature f) {
-    f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
     if (mpark::holds_alternative<fixed_null>(f.geometry_)) {
       return;
     }
@@ -101,9 +111,29 @@ struct layer_builder {
   }
 
   void aggregate_geometry() {
+    if (ctx_.tb_aggregate_polygons_ && !polygon_buffer_.empty()) {
+      //   for (auto&& f :
+      //   aggregate_polygon_features(std::move(polygon_buffer_),
+      //                                              spec_.tile_.z_)) {
+
+      for (auto& f : polygon_buffer_) {
+        f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
+        f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
+
+        if (ctx_.tb_drop_subpixel_polygons_ &&
+            area(f.geometry_) < kScreenPixelArea) {
+          continue;
+        }
+
+        write_feature(std::move(f));
+      }
+    }
+
     if (ctx_.tb_aggregate_lines_ && !line_buffer_.empty()) {
-      for (auto&& f :
+      for (auto& f :
            aggregate_line_features(std::move(line_buffer_), spec_.tile_.z_)) {
+        f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
+        f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
         write_feature(std::move(f));
       }
     }
@@ -170,7 +200,7 @@ struct layer_builder {
 
   bool has_geometry_;
 
-  std::vector<feature> line_buffer_;
+  std::vector<feature> line_buffer_, polygon_buffer_;
 
   std::string buf_;
   pbf_builder<ttm::Layer> pb_;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <regex>
 #include <optional>
+#include <regex>
 
 #include "geo/tile.h"
 

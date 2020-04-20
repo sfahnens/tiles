@@ -44,16 +44,18 @@ function process_way(way)
            way:has_tag("highway", "secondary_link") or
            way:has_tag("highway", "tertiary_link") or
            way:has_tag("highway", "unclassified") or
-           way:has_tag("highway", "service") or
-           way:has_tag("highway", "footway") or
+           way:has_tag("highway", "service") then
+      way:set_approved_min(12)
+
+    elseif way:has_tag("highway", "footway") or
            way:has_tag("highway", "track") or
            way:has_tag("highway", "steps") or
            way:has_tag("highway", "cycleway") or
            way:has_tag("highway", "path") then
-      way:set_approved_min(12)
+      way:set_approved_min(14)
     end
 
-  elseif way:has_any_tag("railway", "rail", "subway", "tram") then
+  elseif way:has_any_tag("railway", "rail", "light_rail", "subway", "tram", "narrow_gauge") then
     if way:has_tag("railway", "disused") or
        way:has_tag("railway", "abandoned") then
       way:set_target_layer("rail")
@@ -73,7 +75,9 @@ function process_way(way)
       way:add_string("rail", "detail")
 
     elseif way:has_tag("railway", "subway") or
-           way:has_tag("railway", "tram") then
+           way:has_tag("railway", "tram") or 
+           way:has_tag("railway", "light_rail") or
+           way:has_tag("railway", "narrow_gauge") then
       way:set_target_layer("rail")
       way:set_approved_min(10)
       way:add_string("rail", "secondary")
@@ -117,19 +121,19 @@ function process_area(area)
                                   12, 1e10,
                                   10, -1)
 
-  elseif area:has_any_tag("landuse", "residential", "retail", "industrial", "commercial") then
-    area:set_target_layer("landuse")
-    area:add_tag_as_string("landuse")
-    area:set_approved_min_by_area(14, 1e8,
-                                  10, 1e10,
-                                   8, -1)
+  -- elseif area:has_any_tag("landuse", "residential", "retail", "industrial", "commercial") then
+  --   area:set_target_layer("landuse")
+  --   area:add_tag_as_string("landuse")
+  --   area:set_approved_min_by_area(14, 1e8,
+  --                                 10, 1e10,
+  --                                  8, -1)
 
-  elseif area:has_any_tag("landuse", "quarry", "farmyard", "railway") then
-    area:set_target_layer("landuse")
-    area:add_string("landuse", "industrial")
-    area:set_approved_min_by_area(14, 1e8,
-                                  10, 1e10,
-                                   8, -1)
+  -- elseif area:has_any_tag("landuse", "quarry", "farmyard", "railway") then
+  --   area:set_target_layer("landuse")
+  --   area:add_string("landuse", "industrial")
+  --   area:set_approved_min_by_area(14, 1e8,
+  --                                 10, 1e10,
+  --                                  8, -1)
 
   elseif area:has_tag("leisure", "sports_centre") or
          area:has_tag("amenity", "hospital") or
@@ -145,40 +149,40 @@ function process_area(area)
                                   10, 1e10,
                                    8, -1)
 
-  elseif area:has_tag("landuse", "forest") or
-         area:has_tag("natural", "wood") or
-         area:has_tag("natural", "oarchard") or
-         area:has_tag("natural", "scrub") then
-    area:set_target_layer("landuse")
-    area:add_string("landuse", "nature_heavy")
-    area:set_approved_min_by_area(14, 1e8,
-                                  10, 1e10,
-                                   8, -1)
+  -- elseif area:has_tag("landuse", "forest") or
+  --        area:has_tag("natural", "wood") or
+  --        area:has_tag("natural", "oarchard") or
+  --        area:has_tag("natural", "scrub") then
+  --   area:set_target_layer("landuse")
+  --   area:add_string("landuse", "nature_heavy")
+  --   area:set_approved_min_by_area(14, 1e8,
+  --                                 10, 1e10,
+  --                                  8, -1)
 
-  elseif area:has_tag("landuse", "farmland") or
-         area:has_tag("landuse", "vineyard") or
-         area:has_tag("landuse", "plant_nursery") or
-         area:has_tag("landuse", "meadow") or
-         area:has_tag("natural", "grassland") or
-         area:has_tag("landuse", "grass") then
-    area:set_target_layer("landuse")
-    area:add_string("landuse", "nature_light")
-    area:set_approved_min_by_area(14, 1e8,
-                                  10, 1e10,
-                                   8, -1)
+  -- elseif area:has_tag("landuse", "farmland") or
+  --        area:has_tag("landuse", "vineyard") or
+  --        area:has_tag("landuse", "plant_nursery") or
+  --        area:has_tag("landuse", "meadow") or
+  --        area:has_tag("natural", "grassland") or
+  --        area:has_tag("landuse", "grass") then
+  --   area:set_target_layer("landuse")
+  --   area:add_string("landuse", "nature_light")
+  --   area:set_approved_min_by_area(14, 1e8,
+  --                                 10, 1e10,
+  --                                  8, -1)
 
-  elseif area:has_tag("leisure", "park") or
-         area:has_tag("leisure", "garden") or
-         area:has_tag("leisure", "playground") or
-         area:has_tag("leisure", "stadium") or
-         area:has_tag("landuse", "recreation_ground") or
-         area:has_tag("landuse", "greenhouse_horticulture") or
-         area:has_tag("landuse", "allotments") then
-    area:set_target_layer("landuse")
-    area:add_string("landuse", "park")
-    area:set_approved_min_by_area(14, 1e8,
-                                  10, 1e10,
-                                   8, -1)
+  -- elseif area:has_tag("leisure", "park") or
+  --        area:has_tag("leisure", "garden") or
+  --        area:has_tag("leisure", "playground") or
+  --        area:has_tag("leisure", "stadium") or
+  --        area:has_tag("landuse", "recreation_ground") or
+  --        area:has_tag("landuse", "greenhouse_horticulture") or
+  --        area:has_tag("landuse", "allotments") then
+  --   area:set_target_layer("landuse")
+  --   area:add_string("landuse", "park")
+  --   area:set_approved_min_by_area(14, 1e8,
+  --                                 10, 1e10,
+  --                                  8, -1)
 
   elseif area:has_tag("landuse", "cemetery") then
     area:set_target_layer("landuse")

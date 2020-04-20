@@ -194,7 +194,7 @@ export const style = {
               "line-color": ["interpolate-hcl", ["linear"], ["zoom"],
                               6, rail_overvew, 9, rail],
               "line-width": ["interpolate", ["linear"], ["zoom"],
-              6, 1, 9, 1.3],
+              6, .7, 9, 1.25],
           }
       }, {
           "id": "building",

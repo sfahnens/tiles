@@ -41,7 +41,7 @@
 [pbf-sdf-fonts]
   url=git@github.com:motis-project/pbf-sdf-fonts.git
   branch=master
-  commit=3195ca21451256714276a869cc4fb71dc7e1fd51
+  commit=91b369e4eb8a618e0a83b0c04b1b08632ea872c4
 [protozero]
   url=git@github.com:motis-project/protozero.git
   branch=tiles

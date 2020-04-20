@@ -107,31 +107,34 @@ struct pending_feature {
   }
 
   void add_tag_as_bool(std::string tag) {
-    auto const* v = obj_.get_value_by_key(tag.c_str(), "");
-    add_bool(std::move(tag), std::strcmp("true", v) != 0);
+    if (auto const* v = obj_.get_value_by_key(tag.c_str()); v != nullptr) {
+      add_bool(std::move(tag), std::strcmp("true", v) != 0);
+    }
   }
 
   void add_tag_as_string(std::string tag) {
-    auto v = std::string{obj_.get_value_by_key(tag.c_str(), "")};
-    add_string(std::move(tag), std::move(v));
+    if (auto const* v = obj_.get_value_by_key(tag.c_str()); v != nullptr) {
+      add_string(std::move(tag), std::string(v));
+    }
   }
 
   void add_tag_as_numeric(std::string tag) {
-    try {
-      // from_chars for double is still not supported in 2020 :(
-      double parsed =
-          std::stod(std::string{obj_.get_value_by_key(tag.c_str(), "")});
-      add_numeric(std::move(tag), parsed);
-    } catch (...) {
+    if (auto const* v = obj_.get_value_by_key(tag.c_str()); v != nullptr) {
+      try {
+        // from_chars for double is still not supported in 2020 :(
+        add_numeric(std::move(tag), std::stod(std::string(v)));
+      } catch (...) {
+      }
     }
   }
 
   void add_tag_as_integer(std::string tag) {
-    auto const* v = obj_.get_value_by_key(tag.c_str(), "");
-    int64_t parsed{0};
-    if (auto [p, ec] = std::from_chars(v, v + std::strlen(v), parsed);
-        ec == std::errc()) {
-      add_numeric(std::move(tag), parsed);
+    if (auto const* v = obj_.get_value_by_key(tag.c_str()); v != nullptr) {
+      int64_t parsed{0};
+      if (auto [p, ec] = std::from_chars(v, v + std::strlen(v), parsed);
+          ec == std::errc()) {
+        add_numeric(std::move(tag), parsed);
+      }
     }
   }
 

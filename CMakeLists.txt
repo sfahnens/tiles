@@ -1,6 +1,11 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.15)
 project(tiles)
 
+if (MSVC)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_MULTITHREADED ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
+endif()
 find_package(Boost REQUIRED COMPONENTS system filesystem)
 find_package(Threads)
 
@@ -9,6 +14,7 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
 if (MSVC)
   set(TILES_WARNINGS "/W4")
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
   set(TILES_WARNINGS "-Wall" "-Wextra")
 endif()

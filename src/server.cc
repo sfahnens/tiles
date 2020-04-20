@@ -244,7 +244,7 @@ int main(int argc, char const** argv) {
     if (opt.res_dname_.size() != 0) {
       auto p = boost::filesystem::path{opt.res_dname_} / fname;
       if (boost::filesystem::exists(p)) {
-        utl::mmap_reader mem{p.c_str()};
+        utl::mmap_reader mem{p.string().c_str()};
         res.body() = std::string{mem.m_.ptr(), mem.m_.size()};
         found = true;
       }

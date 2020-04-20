@@ -120,9 +120,8 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
 
             mp_queue.process_in_order(idx, std::move(buf), [&](auto buf2) {
               o::apply(buf2, mp_manager.handler([&](auto&& mp_buffer) {
-                pool.submit([mp_buffer = std::move(mp_buffer), &get_handler] {
-                  o::apply(mp_buffer, get_handler());
-                });
+                auto p = std::make_shared<om::Buffer>(std::move(mp_buffer));
+                pool.submit([p, &get_handler] { o::apply(*p, get_handler()); });
               }));
             });
           }

@@ -1,20 +1,31 @@
 function process_node(node)
   if node:has_any_tag("place") then
-    if node:has_tag("place", "city") then
-      node:set_approved_min(5)
+    if node:has_tag("place", "country") then
+      node:set_approved_min(3)
+      node:set_target_layer("region")
+
+    elseif node:has_any_tag("place", "state", "region", "province") then
+      node:set_approved_min(7)
+      node:set_target_layer("region")
+
+    elseif node:has_tag("place", "city") then
+      node:set_approved_min(6)
+      node:set_target_layer("cities")
+
     elseif node:has_tag("place", "town") or
            node:has_tag("place", "borough") then
       node:set_approved_min(9)
+      node:set_target_layer("cities")
+
     elseif node:has_tag("place", "suburb") or
            node:has_tag("place", "village") then
       node:set_approved_min(11)
+      node:set_target_layer("cities")
     end
 
-    node:set_target_layer("cities")
     node:add_tag_as_string("place")
     node:add_tag_as_string("name")
     node:add_tag_as_integer("population")
-
   end
 end
 

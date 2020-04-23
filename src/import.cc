@@ -10,6 +10,7 @@
 #include "tiles/db/pack_file.h"
 #include "tiles/db/prepare_tiles.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/osm/feature_handler.h"
 #include "tiles/osm/load_coastlines.h"
 #include "tiles/osm/load_osm.h"
 
@@ -60,6 +61,10 @@ int main(int argc, char const** argv) {
   } catch (std::exception const& e) {
     std::cout << "options error: " << e.what() << "\n";
     return 1;
+  }
+
+  if (opt.has_any_task({"features"})) {
+    tiles::check_profile(opt.osm_profile_);
   }
 
   if (opt.has_any_task({"coastlines", "features"})) {

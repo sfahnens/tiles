@@ -74,6 +74,7 @@
 + server: remove net-old -> boost beast minimal http example?
 + server: parallelize
 + server: check if database file does exist
++ server: make port configurable
 - server: add rtl text plugin in mapboxgl
 - server: better live statistics (wait some time to aggregate multiple requests)
 

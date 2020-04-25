@@ -134,6 +134,8 @@ void serve_forever(std::string const& address, uint16_t port, callback_t cb) {
     for (auto i = 1ULL; i < std::thread::hardware_concurrency(); ++i) {
       threads.emplace_back([&ioc] { ioc.run(); });
     }
+
+    t_log("tiles-server started on {}:{}", address, port);
     ioc.run();
 
     std::for_each(begin(threads), end(threads), [](auto& t) { t.join(); });
@@ -148,10 +150,12 @@ struct server_settings : public conf::configuration {
   server_settings() : configuration("tiles-server options", "") {
     param(db_fname_, "db_fname", "/path/to/tiles.mdb");
     param(res_dname_, "res_dname", "/path/to/res");
+    param(port_, "port", "the http port of the server");
   }
 
   std::string db_fname_{"tiles.mdb"};
   std::string res_dname_;
+  uint16_t port_{8888};
 };
 
 int main(int argc, char const** argv) {
@@ -280,7 +284,7 @@ int main(int argc, char const** argv) {
     return true;
   };
 
-  tiles::serve_forever("0.0.0.0", 8888, [&](auto const& req, auto& res) {
+  tiles::serve_forever("0.0.0.0", opt.port_, [&](auto const& req, auto& res) {
     switch (req.method()) {
       case http::verb::options:
         res.result(http::status::no_content);

@@ -232,12 +232,12 @@ inline uint32_t stou(std::string_view sv) {
 }
 
 struct regex_matcher {
-  using match_result_t = std::optional<std::vector<std::string>>;
+  using match_result_t = std::optional<std::vector<std::string_view>>;
 
   explicit regex_matcher(std::string pattern);
   ~regex_matcher();
 
-  match_result_t match(std::string) const;
+  match_result_t match(std::string_view) const;
 
   struct impl;
   std::unique_ptr<impl> impl_;

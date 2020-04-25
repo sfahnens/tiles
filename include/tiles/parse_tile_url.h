@@ -1,22 +1,27 @@
 #pragma once
 
 #include <optional>
-#include <regex>
 
 #include "geo/tile.h"
 
+#include "tiles/util.h"
+
 namespace tiles {
 
+template <typename RegexResult>
+geo::tile url_match_to_tile(RegexResult const& rr) {
+  utl::verify(rr.size() == 4, "url_match_to_tile: invalid input");
+  return geo::tile{stou(rr[2]), stou(rr[3]), stou(rr[1])};
+}
+
 inline std::optional<geo::tile> parse_tile_url(std::string const& url) {
-  std::regex regex{"/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
-  std::smatch match;
-  if (!std::regex_search(url, match, regex) || match.size() != 4) {
+  static regex_matcher matcher{"\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
+  auto match = matcher.match(url);
+  if (!match) {
     return {};
   }
 
-  return geo::tile{static_cast<uint32_t>(std::stoul(match[2])),
-                   static_cast<uint32_t>(std::stoul(match[3])),
-                   static_cast<uint32_t>(std::stoul(match[1]))};
+  return url_match_to_tile(*match);
 }
 
 }  // namespace tiles

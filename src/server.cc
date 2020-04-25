@@ -19,6 +19,7 @@
 
 #include "tiles/db/tile_database.h"
 #include "tiles/get_tile.h"
+#include "tiles/parse_tile_url.h"
 #include "tiles/perf_counter.h"
 #include "tiles/util.h"
 
@@ -144,8 +145,6 @@ void serve_forever(std::string const& address, uint16_t port, callback_t cb) {
   }
 }
 
-}  // namespace tiles
-
 struct server_settings : public conf::configuration {
   server_settings() : configuration("tiles-server options", "") {
     param(db_fname_, "db_fname", "/path/to/tiles.mdb");
@@ -158,7 +157,7 @@ struct server_settings : public conf::configuration {
   uint16_t port_{8888};
 };
 
-int main(int argc, char const** argv) {
+int run_tiles_server(int argc, char const** argv) {
   server_settings opt;
 
   try {
@@ -181,14 +180,15 @@ int main(int argc, char const** argv) {
   utl::verify(boost::filesystem::is_regular_file(opt.db_fname_.c_str()),
               "tiles database file not found: {}", opt.db_fname_);
 
-  lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
-  tiles::tile_db_handle handle{db_env};
+  lmdb::env db_env = make_tile_database(opt.db_fname_.c_str());
+  tile_db_handle handle{db_env};
   auto const render_ctx = make_render_ctx(handle);
-  tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
+  pack_handle pack_handle{opt.db_fname_.c_str()};
 
   auto const maybe_serve_tile = [&](auto const& req, auto& res) -> bool {
-    static tiles::regex_matcher matcher{"^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
-    auto const match = matcher.match(tiles::url_decode(req));
+    static regex_matcher matcher{"^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
+    auto const decoded_url = url_decode(req);
+    auto const match = matcher.match(decoded_url);
     if (!match) {
       return false;
     }
@@ -199,15 +199,12 @@ int main(int argc, char const** argv) {
       return true;
     }
 
-    tiles::t_log("received a request: {}", req.target());
-    auto const tile =
-        geo::tile{tiles::stou(match->at(2)), tiles::stou(match->at(3)),
-                  tiles::stou(match->at(1))};
+    t_log("received a request: {}", req.target());
+    auto const tile = url_match_to_tile(*match);
 
-    tiles::perf_counter pc;
-    auto rendered_tile =
-        tiles::get_tile(handle, pack_handle, render_ctx, tile, pc);
-    tiles::perf_report_get_tile(pc);
+    perf_counter pc;
+    auto rendered_tile = get_tile(handle, pack_handle, render_ctx, tile, pc);
+    perf_report_get_tile(pc);
 
     if (rendered_tile) {
       res.body() = std::move(*rendered_tile);
@@ -220,8 +217,9 @@ int main(int argc, char const** argv) {
   };
 
   auto const maybe_serve_font = [&](auto const& req, auto& res) -> bool {
-    static tiles::regex_matcher matcher{"^\\/font/(.+)$"};
-    auto const match = matcher.match(tiles::url_decode(req));
+    static regex_matcher matcher{"^\\/font/(.+)$"};
+    auto const decoded_url = url_decode(req);
+    auto const match = matcher.match(decoded_url);
     if (!match) {
       return false;
     }
@@ -239,15 +237,16 @@ int main(int argc, char const** argv) {
   };
 
   auto const maybe_serve_file = [&](auto const& req, auto& res) -> bool {
-    static tiles::regex_matcher matcher{"^\\/(.+)$"};
-    auto const match = matcher.match(tiles::url_decode(req));
+    static regex_matcher matcher{"^\\/(.+)$"};
+    auto const decoded_url = url_decode(req);
+    auto const match = matcher.match(decoded_url);
     if (!match && req.target() != "/") {
       res.result(http::status::not_found);
       return false;
     }
 
     bool found = false;
-    auto fname = match ? match->at(1) : "index.html";
+    std::string fname(match ? match->at(1) : "index.html");
     if (opt.res_dname_.size() != 0) {
       auto p = boost::filesystem::path{opt.res_dname_} / fname;
       if (boost::filesystem::exists(p)) {
@@ -284,7 +283,7 @@ int main(int argc, char const** argv) {
     return true;
   };
 
-  tiles::serve_forever("0.0.0.0", opt.port_, [&](auto const& req, auto& res) {
+  serve_forever("0.0.0.0", opt.port_, [&](auto const& req, auto& res) {
     switch (req.method()) {
       case http::verb::options:
         res.result(http::status::no_content);
@@ -305,4 +304,20 @@ int main(int argc, char const** argv) {
       default: res.result(http::status::method_not_allowed);
     }
   });
+
+  return 0;
+}
+
+}  // namespace tiles
+
+int main(int argc, char const** argv) {
+  try {
+    return tiles::run_tiles_server(argc, argv);
+  } catch (std::exception const& e) {
+    tiles::t_log("exception caught: {}", e.what());
+    return 1;
+  } catch (...) {
+    tiles::t_log("unknown exception caught");
+    return 1;
+  }
 }

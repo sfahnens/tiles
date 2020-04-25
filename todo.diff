@@ -1,6 +1,7 @@
 + coastline: shapefile base
 + coastline: shapefile parallel
 + coastline: fix coastline on tiles with features
+- coastline: improve clipping performance (clipper -> custom box code)
 
 + db: store gzipped tiles
 + db: auto clean database
@@ -24,6 +25,7 @@
 - misc: proper feature wraparound 180/-180 <-> artifacts on island?!
 - misc: some tiles mising on lower z for full coastlines
 - misc: improve geometry clipping: compute unclipped z-range
+- misc: investigate srtm data for hillshading
 
 + render: metadata completed zoom levels
 + render: fast bounding box check in deserialize (same as zoomlevel)
@@ -38,6 +40,7 @@
 - render: multipolygons https://www.openstreetmap.org/relation/5429059 -> sandbank under water?
 - render: combine seaside on higer z levels
 - render: order shapes by area
+- render: respect osm z-index
 - render: skip simplify for simple features (polygon with 4 points -> binary)
 - render: merge nearby shapes with equal properties
 
@@ -55,11 +58,13 @@
 + profile: error if layer ist not set?!
 - profile: handling of railway zoom levels / way types
 - profile: simplified grayish profile for background use
-- profile: administrative features
+- profile: administrative features / borders
+- profile: administrative features / region names
 - profile: respect Key:layer
 - profile: road oneway direction arrows
 - profile: air road
 - profile: tram
+- profile: bridges and tunnels
 - profile: scotland greens
 - profile: milano roadside greens
 - profile: improve landuse railway

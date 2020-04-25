@@ -20,6 +20,7 @@
 
 + misc: update conf library
 + misc: clean up and improve perf logging
++ misc: top-level error handling
 - misc: proper feature wraparound 180/-180 <-> artifacts on island?!
 - misc: some tiles mising on lower z for full coastlines
 - misc: improve geometry clipping: compute unclipped z-range

@@ -27,10 +27,8 @@ struct benchmark_settings : public conf::configuration {
   bool compress_{true};
 };
 
-}  // namespace tiles
-
-int main(int argc, char const** argv) {
-  tiles::benchmark_settings opt;
+int run_tiles_benchmark(int argc, char const** argv) {
+  benchmark_settings opt;
 
   try {
     conf::options_parser parser({&opt});
@@ -49,9 +47,9 @@ int main(int argc, char const** argv) {
     return 1;
   }
 
-  lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
-  tiles::tile_db_handle db_handle{db_env};
-  tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
+  lmdb::env db_env = make_tile_database(opt.db_fname_.c_str());
+  tile_db_handle db_handle{db_env};
+  pack_handle pack_handle{opt.db_fname_.c_str()};
 
   auto render_ctx = make_render_ctx(db_handle);
   render_ctx.ignore_prepared_ = true;
@@ -75,13 +73,13 @@ int main(int argc, char const** argv) {
       auto features_dbi = db_handle.features_dbi(txn);
       auto features_cursor = lmdb::cursor{txn, features_dbi};
 
-      tiles::perf_counter pc;
+      perf_counter pc;
       for (auto const& tile : geo::make_tile_range(p1, p2, z)) {
-        auto rendered_tile = tiles::get_tile(db_handle, txn, features_cursor,
-                                             pack_handle, render_ctx, tile, pc);
+        auto rendered_tile = get_tile(db_handle, txn, features_cursor,
+                                      pack_handle, render_ctx, tile, pc);
         // break;
       }
-      tiles::perf_report_get_tile(pc);
+      perf_report_get_tile(pc);
     }
 
   } else {
@@ -98,9 +96,25 @@ int main(int argc, char const** argv) {
     render_ctx.tb_drop_subpixel_polygons_ = true;
     render_ctx.tb_print_stats_ = true;
 
-    tiles::perf_counter pc;
-    auto const rendered_tile = tiles::get_tile(
-        db_handle, txn, features_cursor, pack_handle, render_ctx, tile, pc);
-    tiles::perf_report_get_tile(pc);
+    perf_counter pc;
+    auto const rendered_tile = get_tile(db_handle, txn, features_cursor,
+                                        pack_handle, render_ctx, tile, pc);
+    perf_report_get_tile(pc);
+  }
+
+  return 0;
+}
+
+}  // namespace tiles
+
+int main(int argc, char const** argv) {
+  try {
+    return tiles::run_tiles_benchmark(argc, argv);
+  } catch (std::exception const& e) {
+    tiles::t_log("exception caught: {}", e.what());
+    return 1;
+  } catch (...) {
+    tiles::t_log("unknown exception caught");
+    return 1;
   }
 }

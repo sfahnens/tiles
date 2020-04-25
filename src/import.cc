@@ -41,10 +41,8 @@ struct import_settings : public conf::configuration {
   std::vector<std::string> tasks_{{"all"}};
 };
 
-}  // namespace tiles
-
-int main(int argc, char const** argv) {
-  tiles::import_settings opt;
+int run_tiles_import(int argc, char const** argv) {
+  import_settings opt;
 
   try {
     conf::options_parser parser({&opt});
@@ -64,48 +62,62 @@ int main(int argc, char const** argv) {
   }
 
   if (opt.has_any_task({"features"})) {
-    tiles::check_profile(opt.osm_profile_);
+    check_profile(opt.osm_profile_);
   }
 
   if (opt.has_any_task({"coastlines", "features"})) {
-    tiles::t_log("clear database");
-    tiles::clear_database(opt.db_fname_);
-    tiles::clear_pack_file(opt.db_fname_.c_str());
+    t_log("clear database");
+    clear_database(opt.db_fname_);
+    clear_pack_file(opt.db_fname_.c_str());
   }
 
-  lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
-  tiles::tile_db_handle db_handle{db_env};
-  tiles::pack_handle pack_handle{opt.db_fname_.c_str()};
+  lmdb::env db_env = make_tile_database(opt.db_fname_.c_str());
+  tile_db_handle db_handle{db_env};
+  pack_handle pack_handle{opt.db_fname_.c_str()};
 
   {
-    tiles::feature_inserter_mt inserter{
-        tiles::dbi_handle{db_handle, db_handle.features_dbi_opener()},
-        pack_handle};
+    feature_inserter_mt inserter{
+        dbi_handle{db_handle, db_handle.features_dbi_opener()}, pack_handle};
 
     if (opt.has_any_task({"coastlines"})) {
-      tiles::scoped_timer t{"load coastlines"};
-      tiles::load_coastlines(db_handle, inserter, opt.coastlines_fname_);
+      scoped_timer t{"load coastlines"};
+      load_coastlines(db_handle, inserter, opt.coastlines_fname_);
     }
 
     if (opt.has_any_task({"features"})) {
-      tiles::t_log("load features");
-      tiles::load_osm(db_handle, inserter, opt.osm_fname_, opt.osm_profile_);
+      t_log("load features");
+      load_osm(db_handle, inserter, opt.osm_fname_, opt.osm_profile_);
     }
   }
 
   if (opt.has_any_task({"stats"})) {
-    tiles::database_stats(db_handle, pack_handle);
+    database_stats(db_handle, pack_handle);
   }
 
   if (opt.has_any_task({"pack"})) {
-    tiles::t_log("pack features");
-    tiles::pack_features(db_handle, pack_handle);
+    t_log("pack features");
+    pack_features(db_handle, pack_handle);
   }
 
   if (opt.has_any_task({"tiles"})) {
-    tiles::t_log("prepare tiles");
-    tiles::prepare_tiles(db_handle, pack_handle, 10);
+    t_log("prepare tiles");
+    prepare_tiles(db_handle, pack_handle, 10);
   }
 
-  tiles::t_log("import done!");
+  t_log("import done!");
+  return 0;
+}
+
+}  // namespace tiles
+
+int main(int argc, char const** argv) {
+  try {
+    return tiles::run_tiles_import(argc, argv);
+  } catch (std::exception const& e) {
+    tiles::t_log("exception caught: {}", e.what());
+    return 1;
+  } catch (...) {
+    tiles::t_log("unknown exception caught");
+    return 1;
+  }
 }

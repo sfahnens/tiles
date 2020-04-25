@@ -75,6 +75,9 @@ void handle_feature(feature_inserter_mt& inserter,
     return;
   }
 
+  utl::verify(!pf.target_layer_.empty(),
+              "feature_handler: non-empty target required for all features");
+
   if (!pf.geometry_) {
     pf.geometry_ = read_osm_geometry(obj);
   }

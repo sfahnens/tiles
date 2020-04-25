@@ -51,7 +51,7 @@
 
 + profile: zoomlevel depends on area
 + profile: road names
-- profile: warning if layer ist not set?!
++ profile: error if layer ist not set?!
 - profile: handling of railway zoom levels / way types
 - profile: simplified grayish profile for background use
 - profile: administrative features

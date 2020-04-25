@@ -174,6 +174,9 @@ int main(int argc, char const** argv) {
     return 1;
   }
 
+  utl::verify(boost::filesystem::is_regular_file(opt.db_fname_.c_str()),
+              "tiles database file not found: {}", opt.db_fname_);
+
   lmdb::env db_env = tiles::make_tile_database(opt.db_fname_.c_str());
   tiles::tile_db_handle handle{db_env};
   auto const render_ctx = make_render_ctx(handle);

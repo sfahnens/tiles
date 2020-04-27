@@ -10,15 +10,15 @@ Project Status: Basic functionality works, performance (import and server) is go
 
 * All-in-one backend solution
   * Standalone server for standard/background maps
-  * Easily embeddable for application specific geometry
+  * Easily embeddable for application specific datasets
 * Serves vector tiles https://github.com/mapbox/vector-tile-spec (consumable with any compatible rendering library e.g. https://github.com/mapbox/mapbox-gl-js)
 * Read Openstreetmap geometry from standard .osm.pbf files
 * Read Openstreetmap coastline data from shapfiles
-* Lua scripting for map profiles.
+* Lua scripting for map profiles
 
 ## Quickstart
 
-On Ubuntu 2020 LTS:
+On Ubuntu 20.04 LTS:
 
 ```
 sudo apt update

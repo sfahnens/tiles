@@ -6,7 +6,7 @@ if (MSVC)
   set(Boost_USE_MULTITHREADED ON)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
-find_package(Boost REQUIRED COMPONENTS system filesystem)
+find_package(Boost 1.70.0 REQUIRED COMPONENTS system filesystem)
 find_package(Threads)
 
 link_directories(${Boost_LIBRARY_DIRS})

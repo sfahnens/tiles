@@ -26,12 +26,10 @@ struct regex_matcher::impl {
 
   match_result_t match(std::string_view target) const {
     std::cmatch match;
-    if (std::regex_match<char const*>(begin(target), end(target), match,
+    if (std::regex_match<char const*>(&*begin(target), &*end(target), match,
                                       regex_)) {
       std::vector<std::string_view> matches;
       matches.reserve(match.size());
-      static std::mutex m;
-      std::lock_guard<std::mutex> l(m);
       for (auto i = 0ULL; i < match.size(); ++i) {
         matches.push_back(std::string_view{
             match[i].first, static_cast<size_t>(match[i].length())});

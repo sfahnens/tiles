@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: microsoft/setup-msbuild@v1.0.0
+  
+      - name: env
+        run: echo "::set-env name=BOOST_ROOT::$env:BOOST_ROOT_1_72_0"
 
       - name: CMake
         run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build

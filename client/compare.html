@@ -114,8 +114,15 @@ import { style as style_background } from './style-background.js'
 
 
 addMap('map_1', simple);
-addMap('map_2', style_background);
 addMap('map_3', official);
+
+let map = addMap('map_2', {
+  version: 8,
+  sources: {},
+  layers: [],
+});
+map.on('load', () => style_background(map));
+
 </script>
 
 </body>

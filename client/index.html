@@ -22,15 +22,13 @@
     import { style as style_default } from './style-default.js'
     import { style as style_background } from './style-background.js'
 
-    const styles = {
-      style_default, style_background
-    };
-
-    const style = (/[&|#]style=(.*?)(&|$)/g.exec(window.location.href) || [])[1] || "default";
-
-    new mapboxgl.Map({
+    let map = new mapboxgl.Map({
       container: 'map',
-      style: styles["style_" + style] || style_default,
+      style: {
+        version: 8,
+        sources: {},
+        layers: [],
+      },
       zoom: 14,
       center: [8.6671065, 49.8747541],
       hash: "location",
@@ -41,6 +39,11 @@
       }
     });
 
+    const styles = { style_default, style_background };
+    const style = (/[&|#]style=(.*?)(&|$)/g.exec(window.location.href) || [])[1] || "default";
+
+    map.on('load', () =>
+      (styles["style_" + style] || style_default)(map));
   </script>
 </body>
 

@@ -26,7 +26,8 @@ struct regex_matcher::impl {
 
   match_result_t match(std::string_view target) const {
     std::cmatch match;
-    if (std::regex_match(begin(target), end(target), match, regex_)) {
+    if (std::regex_match<char const*>(begin(target), end(target), match,
+                                      regex_)) {
       std::vector<std::string_view> matches;
       matches.reserve(match.size());
       static std::mutex m;

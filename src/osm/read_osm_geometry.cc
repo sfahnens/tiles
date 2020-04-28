@@ -48,32 +48,41 @@ fixed_geometry read_osm_geometry(osmium::Way const& way) {
 
 fixed_geometry read_osm_geometry(osmium::Area const& area) {
   fixed_polygon polygon;
-
-  // TODO check first is not last!
-
   for (auto const& item : area) {
     switch (item.type()) {
-      case osmium::item_type::outer_ring:
-        polygon.emplace_back();
-        nodes_to_fixed(*reinterpret_cast<osmium::OuterRing const*>(item.data()),
-                       polygon.back().outer());
-        if (polygon.back().outer().size() < 3) {
+      case osmium::item_type::outer_ring: {
+        auto const& osm_r =
+            *reinterpret_cast<osmium::OuterRing const*>(item.data());
+
+        auto& fixed_r = polygon.emplace_back().outer();
+        nodes_to_fixed(osm_r, fixed_r);
+
+        if (!fixed_r.empty() && !(fixed_r.front() == fixed_r.back())) {
+          fixed_r.push_back(fixed_r.front());
+        }
+
+        if (fixed_r.size() < 3) {
           return fixed_null{};
         }
 
-        break;
-      case osmium::item_type::inner_ring:
+      } break;
+      case osmium::item_type::inner_ring: {
         utl::verify(!polygon.empty(), "inner ring first!");
+        auto const& osm_r =
+            *reinterpret_cast<osmium::InnerRing const*>(item.data());
 
-        polygon.back().inners().emplace_back();
-        nodes_to_fixed(*reinterpret_cast<osmium::InnerRing const*>(item.data()),
-                       polygon.back().inners().back());
+        auto& fixed_r = polygon.back().inners().emplace_back();
+        nodes_to_fixed(osm_r, fixed_r);
 
-        if (polygon.back().inners().back().size() < 3) {
+        if (!fixed_r.empty() && !(fixed_r.front() == fixed_r.back())) {
+          fixed_r.push_back(fixed_r.front());
+        }
+
+        if (fixed_r.size() < 3) {
           polygon.back().inners().back().pop_back();
         }
 
-        break;
+      } break;
       default: break;
     }
   }

@@ -67,7 +67,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
   {
     t_log("Pass 2...");
     auto const thread_count =
-        static_cast<int>(std::thread::hardware_concurrency());
+        std::max(2, static_cast<int>(std::thread::hardware_concurrency()));
 
     // poor mans thread local (we dont know the threads themselves)
     std::atomic_size_t next_handlers_slot{0};
@@ -103,7 +103,6 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
       return reader.read();
     }};
 
-    // TODO check pool size (leave at least one free for)
     std::vector<std::future<void>> workers;
     for (auto i = 0; i < thread_count / 2; ++i) {
       workers.emplace_back(pool.submit([&] {

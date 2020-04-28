@@ -88,6 +88,11 @@ TEST_CASE("repack_features", "[!hide]") {
   std::cout << "initial packs: " << initial_packs << std::endl;
   std::shuffle(begin(tasks), end(tasks), rand);
 
+  size_t const initial_task_count =
+      std::count_if(begin(tasks), end(tasks),
+                    [](auto const& t) { return !t.records_.empty(); });
+
+  size_t finished_task_count = 0;
   tiles::repack_features(
       handle, tasks,
       [&](auto, auto const& packs) {
@@ -101,9 +106,7 @@ TEST_CASE("repack_features", "[!hide]") {
         size = std::min(size, kMaxRecordSize);
         return std::string(size, '\0');
       },
-      [&](auto const&) {
-        // std::cout << "updates " << updates.size() << std::endl;
-      });
+      [&](auto const& updates) { finished_task_count += updates.size(); });
 
-  // TODO add some sanity checks
+  CHECK(initial_task_count == finished_task_count);
 }

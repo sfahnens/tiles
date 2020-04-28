@@ -120,35 +120,4 @@ struct dbi_handle {
   lmdb::dbi_flags flags_;
 };
 
-// TODO use dbi_handle
-struct batch_inserter {
-  batch_inserter(tile_db_handle& handle,
-                 lmdb::txn::dbi (tile_db_handle::*dbi_opener)(lmdb::txn&,
-                                                              lmdb::dbi_flags),
-                 lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
-      : txn_{handle.env_},
-        dbi_{(handle.*dbi_opener)(txn_, flags)},
-        done_{false} {}
-
-  batch_inserter(lmdb::env& env, char const* dbname,
-                 lmdb::dbi_flags flags = lmdb::dbi_flags::CREATE)
-      : txn_{env}, dbi_{txn_.dbi_open(dbname, flags)}, done_{false} {}
-
-  ~batch_inserter() {
-    if (!txn_.committed_ && !done_) {
-      done_ = true;
-      txn_.commit();
-    }
-  }
-
-  template <typename... T>
-  void insert(T&&... t) {
-    txn_.put(dbi_, std::forward<T>(t)...);
-  }
-
-  lmdb::txn txn_;
-  lmdb::txn::dbi dbi_;
-  bool done_;
-};
-
 }  // namespace tiles

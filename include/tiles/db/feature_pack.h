@@ -10,7 +10,6 @@
 
 // feature pack "wire format" specification
 //
-//  1b : header?! TODO implement this
 //  4b : feature count uint32_t
 //  4b : offset of index
 // var : payload [serialized_feature | \0]

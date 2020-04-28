@@ -25,7 +25,6 @@ struct pending_feature {
   int64_t get_id() const { return obj_.id(); }
 
   bool has_tag(std::string const& key, std::string const& value) {
-    // TODO call .tags() and cache the result
     return value == obj_.get_value_by_key(key.c_str(), "");
   }
 

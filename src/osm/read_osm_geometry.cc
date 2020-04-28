@@ -33,8 +33,6 @@ void nodes_to_fixed(In const& in, Out& out) {
 }
 
 fixed_geometry read_osm_geometry(osmium::Way const& way) {
-  // TODO utl::verify( that distances fit into int32_t (or clipping will not
-  // work)
   fixed_polyline polyline;
   polyline.emplace_back();
   nodes_to_fixed(way.nodes(), polyline.back());

@@ -89,7 +89,7 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
   auto const& idx = nodes.impl_->idx_;
   auto const& dat = nodes.impl_->dat_;
 
-  if (idx.empty()) {  // XXX very unlikely in prod
+  if (idx.empty()) {  // very unlikely in prod
     return std::nullopt;
   }
   auto it =

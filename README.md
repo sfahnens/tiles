@@ -8,13 +8,14 @@ Project Status: Basic functionality works, performance (import and server) is go
 
 ## Features
 
-* All-in-one backend solution
+* All-in-one backend solution:
   * Standalone server for standard/background maps
   * Easily embeddable for application specific datasets
 * Serves vector tiles https://github.com/mapbox/vector-tile-spec (consumable with any compatible rendering library e.g. https://github.com/mapbox/mapbox-gl-js)
 * Read OpenStreetMap geometry from standard .osm.pbf files
 * Read OpenStreetMap coastline data from shapfiles
 * Lua scripting for map profiles
+* Matching mapboxgl-js styles
 
 ## Executables / Entry Points:
 * tiles-import ([src/import.cc](src/import.cc)) takes OpenStreetMap data and produces the database.
@@ -48,11 +49,6 @@ wget https://download.geofabrik.de/europe/germany-latest.osm.pbf
 
 # Now, go to localhost:8888 in your browser.
 ```
-
-## Performance
-
-(Coming soon.)
-
 
 ## License
 

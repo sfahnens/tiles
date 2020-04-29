@@ -12,9 +12,15 @@ Project Status: Basic functionality works, performance (import and server) is go
   * Standalone server for standard/background maps
   * Easily embeddable for application specific datasets
 * Serves vector tiles https://github.com/mapbox/vector-tile-spec (consumable with any compatible rendering library e.g. https://github.com/mapbox/mapbox-gl-js)
-* Read Openstreetmap geometry from standard .osm.pbf files
-* Read Openstreetmap coastline data from shapfiles
+* Read OpenStreetMap geometry from standard .osm.pbf files
+* Read OpenStreetMap coastline data from shapfiles
 * Lua scripting for map profiles
+
+## Executables / Entry Points:
+* tiles-import ([src/import.cc](src/import.cc)) takes OpenStreetMap data and produces the database.
+* tiles-server ([src/server.cc](src/server.cc)) takes the database and serves vector tiles (and the ui).
+* tiles-benchmark ([src/benchmark.cc](src/benchmark.cc)) measures performance (and builds single tiles for dev/debugging).
+* tiles-test ([test](test)) executes the tests.
 
 ## Quickstart
 
@@ -33,7 +39,7 @@ ninja tiles-import tiles-server
 # download coastline data
 wget https://osmdata.openstreetmap.de/download/land-polygons-complete-4326.zip
 
-# download openstreetmap germany dataset
+# download OpenStreetMap germany dataset
 wget https://download.geofabrik.de/europe/germany-latest.osm.pbf
 
 ./tiles-import --osm_fname germany-latest.osm.pbf --coastlines_fname land-polygons-complete-4326.zip

@@ -15,7 +15,7 @@ Project Status: Basic functionality works, performance (import and server) is go
 * Read OpenStreetMap geometry from standard .osm.pbf files
 * Read OpenStreetMap coastline data from shapfiles
 * Lua scripting for map profiles
-* Matching mapboxgl-js styles
+* Example mapboxgl-js styles
 
 ## Executables / Entry Points:
 * tiles-import ([src/import.cc](src/import.cc)) takes OpenStreetMap data and produces the database.

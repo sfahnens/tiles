@@ -9,6 +9,18 @@ void append(std::string& buf, T const& t) {
   buf.append(reinterpret_cast<char const*>(&t), sizeof(T));
 }
 
+inline void append_network_byte_order16(std::string& buf, uint16_t value) {
+  append<uint8_t>(buf, (value >> 8) & 0xFF);
+  append<uint8_t>(buf, (value >> 0) & 0xFF);
+}
+
+inline void append_network_byte_order32(std::string& buf, uint32_t value) {
+  append<uint8_t>(buf, (value >> 24) & 0xFF);
+  append<uint8_t>(buf, (value >> 16) & 0xFF);
+  append<uint8_t>(buf, (value >> 8) & 0xFF);
+  append<uint8_t>(buf, (value >> 0) & 0xFF);
+}
+
 template <typename T>
 void write(char* data, size_t offset, T const& t) {
   std::memcpy(data + offset, reinterpret_cast<char const*>(&t), sizeof(T));

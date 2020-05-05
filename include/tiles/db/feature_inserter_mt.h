@@ -47,15 +47,18 @@ struct feature_inserter_mt {
 
   ~feature_inserter_mt() { flush(0, 0); }
 
-  void insert(feature const& f) {
+  geo::tile insert(feature const& f) {
     auto const box = bounding_box(f.geometry_);
-    auto const value = serialize_feature(f);
+    auto const range = make_tile_range(box);
+    utl::verify(range.begin() != range.end(), "inserter: no tile for feature");
 
-    for (auto const& tile : make_tile_range(box)) {
+    auto const value = serialize_feature(f);
+    for (auto const& tile : range) {
       insert(tile, value);
     }
 
     flush();
+    return *range.begin();
   }
 
   void insert(geo::tile const& tile, std::string const& value) {

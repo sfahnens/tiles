@@ -120,6 +120,19 @@ struct feature_packer {
   std::map<uint8_t, uint32_t> segment_offsets_;
 };
 
+inline std::optional<uint32_t> find_segment_offset(std::string_view const pack,
+                                                   uint8_t const segment_id) {
+  std::optional<uint32_t> offset;
+  auto const segment_count = read_nth<uint8_t>(pack.data(), 4);
+  for (auto i = 0ULL; i < segment_count; ++i) {
+    auto const base = (1 + i) * 5;
+    if (read<uint8_t>(pack.data(), base) == segment_id) {
+      offset = {read<uint32_t>(pack.data(), base + 1)};
+    }
+  }
+  return offset;
+}
+
 template <typename Fn>
 void unpack_features(std::string_view const& string, Fn&& fn) {
   utl::verify(string.size() >= 5, "unpack_features: invalid feature_pack");
@@ -142,22 +155,13 @@ template <typename Fn>
 void unpack_features(geo::tile const& root, std::string_view const& string,
                      geo::tile const& tile, Fn&& fn) {
   utl::verify(string.size() >= 5, "unpack_features: invalid feature_pack");
-  auto const segment_count = read_nth<uint8_t>(string.data(), 4);
-
-  uint32_t idx_offset = 0;
-  for (auto i = 0ULL; i < segment_count; ++i) {
-    auto const base = (1 + i) * 5;
-    if (read<uint8_t>(string.data(), base) == kQuadTreeFeatureIndexId) {
-      idx_offset = read<uint32_t>(string.data(), base + 1);
-    }
-  }
-
-  if (idx_offset == 0) {
+  auto const idx_offset = find_segment_offset(string, kQuadTreeFeatureIndexId);
+  if (!idx_offset) {
     return unpack_features(string, fn);  // no quad tree available, fallback
   }
 
-  utl::verify(string.size() >= idx_offset, "invalid feature_pack idx_offset");
-  auto idx_ptr = string.data() + idx_offset;
+  utl::verify(string.size() >= *idx_offset, "invalid feature_pack idx_offset");
+  auto idx_ptr = string.data() + *idx_offset;
   auto const end = string.data() + string.size();
   for (auto z = root.z_; z <= std::max(root.z_, tile.z_); ++z) {
     auto const tree_offset = protozero::decode_varint(&idx_ptr, end);

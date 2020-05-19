@@ -52,21 +52,32 @@ target_link_libraries(tiles
 )
 
 file(GLOB_RECURSE tiles-import-files src/osm/*.cc)
+
+add_library(tiles-import-library EXCLUDE_FROM_ALL
+  ${tiles-import-files})
+set_property(TARGET tiles-import-library PROPERTY CXX_STANDARD 17)
+target_compile_options(tiles-import-library PRIVATE ${TILES_WARNINGS})
+target_include_directories(tiles-import-library PUBLIC include)
+target_link_libraries(tiles-import-library
+  ${Boost_LIBRARIES}
+  geo
+  lmdb
+  lua
+  tiles
+)
+
 file(GLOB tiles-import-main-files src/import.cc)
 
 add_executable(tiles-import EXCLUDE_FROM_ALL
-  ${tiles-import-main-files}
-  ${tiles-import-files})
+  ${tiles-import-main-files})
 set_property(TARGET tiles-import PROPERTY CXX_STANDARD 17)
 target_compile_options(tiles-import PRIVATE ${TILES_WARNINGS})
 target_include_directories(tiles-import PUBLIC include)
 target_link_libraries(tiles-import
   ${Boost_LIBRARIES}
   conf
-  geo
   lmdb
-  lua
-  tiles
+  tiles-import-library
 )
 
 add_executable(tiles-server EXCLUDE_FROM_ALL src/server.cc)

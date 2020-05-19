@@ -27,9 +27,9 @@ inline void t_log(Args&&... args) {
 #else
   gmtime_r(&now, &tmp);
 #endif
-  std::cout << std::put_time(&tmp, "%FT%TZ") << " | ";
-  fmt::print(std::cout, std::forward<Args>(args)...);
-  std::cout << std::endl;
+  std::clog << std::put_time(&tmp, "%FT%TZ") << " | ";
+  fmt::print(std::clog, std::forward<Args>(args)...);
+  std::clog << std::endl;
 }
 
 std::string compress_deflate(std::string const&);
@@ -51,16 +51,25 @@ struct progress_tracker {
     log_progress_maybe();
   }
 
-  void inc() {
-    ++curr_;
+  void inc(size_t i = 1) {
+    curr_ += i;
     log_progress_maybe();
   }
 
   void log_progress_maybe() {
+#ifdef MOTIS_IMPORT_PROGRESS_FORMAT
+    size_t curr_pos = static_cast<size_t>(100. * curr_ / total_);
+#else
     size_t curr_pos = static_cast<size_t>(100. * curr_ / total_ / 5) * 5;
+#endif
+
     size_t prev_pos = pos_.exchange(curr_pos);
     if (prev_pos != curr_pos) {
       t_log("{} : {:>3}%", label_, curr_pos);
+
+#ifdef MOTIS_IMPORT_PROGRESS_FORMAT
+      std::clog << '\0' << curr_pos << '\0' << std::flush;
+#endif
     }
   }
 
@@ -81,7 +90,7 @@ struct raii_helper {
 struct scoped_timer final {
   explicit scoped_timer(std::string label)
       : label_{std::move(label)}, start_{std::chrono::steady_clock::now()} {
-    std::cout << "|> start: " << label_ << "\n";
+    std::clog << "|> start: " << label_ << "\n";
   }
 
   ~scoped_timer() {
@@ -90,14 +99,14 @@ struct scoped_timer final {
     auto const now = steady_clock::now();
     double dur = duration_cast<microseconds>(now - start_).count() / 1000.0;
 
-    std::cout << "|> done: " << label_ << " (";
+    std::clog << "|> done: " << label_ << " (";
     if (dur < 1000) {
-      std::cout << std::setw(6) << std::setprecision(4) << dur << "ms";
+      std::clog << std::setw(6) << std::setprecision(4) << dur << "ms";
     } else {
       dur /= 1000;
-      std::cout << std::setw(6) << std::setprecision(4) << dur << "s";
+      std::clog << std::setw(6) << std::setprecision(4) << dur << "s";
     }
-    std::cout << ")" << std::endl;
+    std::clog << ")" << std::endl;
   }
 
   std::string label_;

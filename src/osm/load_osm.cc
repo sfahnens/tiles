@@ -32,6 +32,9 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
               std::string const& osm_fname_, std::string const& osm_profile) {
   oio::File input_file{osm_fname_};
 
+  progress_tracker reader_progress{"load osm features",
+                                   2 * oio::Reader{input_file}.file_size()};
+
   oa::MultipolygonManager<oa::Assembler> mp_manager{
       oa::Assembler::config_type{}};
 
@@ -42,9 +45,9 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     t_log("Pass 1...");
     hybrid_node_idx_builder node_idx_builder{node_idx};
 
-    oio::ReaderWithProgressBar reader{true, input_file,
-                                      oeb::node | oeb::relation};
+    oio::Reader reader{input_file, oeb::node | oeb::relation};
     while (auto buffer = reader.read()) {
+      reader_progress.update(reader.offset());
       o::apply(buffer, node_idx_builder, mp_manager);
     }
     reader.close();
@@ -52,7 +55,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
 
     mp_manager.prepare_for_lookup();
     t_log("Multipolygon Manager Memory:");
-    orel::print_used_memory(std::cout, mp_manager.used_memory());
+    orel::print_used_memory(std::clog, mp_manager.used_memory());
 
     node_idx_builder.finish();
     t_log("Hybrid Node Index Statistics:");
@@ -95,11 +98,9 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     osmium::thread::Pool pool{thread_count,
                               static_cast<size_t>(thread_count * 8)};
 
-    // use reader with progress bar or something
     oio::Reader reader{input_file, pool};
-    progress_tracker reader_progress{"load osm features", reader.file_size()};
     sequential_until_finish<om::Buffer> seq_reader{[&] {
-      reader_progress.update(reader.offset());
+      reader_progress.update(reader.file_size() + reader.offset());
       return reader.read();
     }};
 
@@ -125,10 +126,10 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
             });
           }
         } catch (std::exception const& e) {
-          std::cout << "EX " << std::this_thread::get_id() << " " << e.what()
+          std::clog << "EX " << std::this_thread::get_id() << " " << e.what()
                     << "\n";
         } catch (...) {
-          std::cout << "EX " << std::this_thread::get_id() << "\n";
+          std::clog << "EX " << std::this_thread::get_id() << "\n";
         }
       }));
     }
@@ -144,7 +145,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     t_log("Pass 2 done");
 
     t_log("Multipolygon Manager Memory:");
-    orel::print_used_memory(std::cout, mp_manager.used_memory());
+    orel::print_used_memory(std::clog, mp_manager.used_memory());
   }
 
   {

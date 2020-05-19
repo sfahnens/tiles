@@ -59,6 +59,10 @@ struct prepare_manager {
       if (curr_range_.begin() == curr_range_.end()) {
         ++curr_zoomlevel_;
         curr_range_ = geo::tile_range_on_z(base_range_, curr_zoomlevel_);
+
+#ifdef MOTIS_IMPORT_PROGRESS_FORMAT
+        std::clog << '\0' << curr_zoomlevel_ << '\0' << std::flush;
+#endif
       }
     }
     return batch;

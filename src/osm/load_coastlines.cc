@@ -49,31 +49,23 @@ using geo_queue_t = queue_wrapper<geo_task>;
 using db_queue_t = queue_wrapper<std::pair<geo::tile, std::string>>;
 
 struct coastline_stats {
-  coastline_stats() : progress_{0}, fully_dirtside_{0}, fully_seaside_{0} {}
+  static constexpr uint64_t kTotal = (1 << 10) * (1 << 10);
+
+  coastline_stats()
+      : progress_{"process coastline", kTotal},
+        fully_dirtside_{0},
+        fully_seaside_{0} {}
 
   void report_progess(uint32_t z) {
-    auto increment = 1 << (10 - z) * 1 << (10 - z);
-
-    auto post = progress_ += increment;
-    auto pre = post - increment;
-
-    constexpr uint64_t kTotal = (1 << 10) * (1 << 10);
-
-    auto pre_percent = 100. * pre / kTotal;
-    auto post_percent = 100. * post / kTotal;
-
-    if (pre == 0 || post == kTotal ||
-        (static_cast<int>(pre_percent) / 5 !=
-         static_cast<int>(post_percent) / 5)) {
-      t_log("process coastline: {}%", static_cast<int>(post_percent) / 5 * 5);
-    }
+    auto const increment = 1ULL << (10 - z) * 1ULL << (10 - z);
+    progress_.inc(increment);
   }
 
   void summary() {
     t_log("fully:  seaside {}, dirtside {}", fully_seaside_, fully_dirtside_);
   }
 
-  std::atomic_uint64_t progress_;
+  progress_tracker progress_;
   std::atomic_uint64_t fully_dirtside_, fully_seaside_;
 };
 

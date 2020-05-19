@@ -99,7 +99,8 @@ struct repack_memory_manager {
                   "defragment: invalid input (more space used than "
                   "available)");
       utl::verify(largest_record < end_offset - used_space,
-                  "defragment: largest_record > working free space");
+                  "defragment: largest_record > working free space ({}, {}, {})",
+                  largest_record, end_offset, used_space);
 
       t_log("defragment : free space {}",
             printable_bytes{end_offset - used_space});

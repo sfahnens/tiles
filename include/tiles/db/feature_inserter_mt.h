@@ -126,8 +126,8 @@ struct feature_inserter_mt {
       }
     }
     {  // phase 2: write to pack_file and update database
-      auto [txn, dbi] = dbi_handle_.begin_txn();
-      lmdb::cursor c{txn, dbi};
+      auto txn_dbi = dbi_handle_.begin_txn();
+      lmdb::cursor c{txn_dbi.first, txn_dbi.second};
 
       for (auto const& [bucket_ptr, features] : queue) {
         auto key = make_feature_key(bucket_ptr->tile_);
@@ -141,7 +141,7 @@ struct feature_inserter_mt {
           c.put(key, pack_records_serialize(pack_record));
         }
       }
-      txn.commit();
+      txn_dbi.first.commit();
     }
 
     t_log("persisted {} packs with {} features ({}) in ({}, {} / {}, {})",

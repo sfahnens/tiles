@@ -284,15 +284,14 @@ int run_tiles_server(int argc, char const** argv) {
   };
 
   serve_forever("0.0.0.0", opt.port_, [&](auto const& req, auto& res) {
+    res.set(http::field::access_control_allow_origin, "*");
+    res.set(http::field::access_control_allow_headers,
+            "X-Requested-With, Content-Type, Accept, Authorization");
+    res.set(http::field::access_control_allow_methods,
+            "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+
     switch (req.method()) {
-      case http::verb::options:
-        res.result(http::status::no_content);
-        res.set(http::field::access_control_allow_origin, "*");
-        res.set(http::field::access_control_allow_headers,
-                "X-Requested-With, Content-Type, Accept, Authorization");
-        res.set(http::field::access_control_allow_methods,
-                "GET, POST, PUT, DELETE, OPTIONS, HEAD");
-        break;
+      case http::verb::options: res.result(http::status::no_content); break;
       case http::verb::get:
       case http::verb::head:
         if (!(maybe_serve_tile(req, res) ||  //

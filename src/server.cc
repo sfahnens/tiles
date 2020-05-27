@@ -216,8 +216,8 @@ int run_tiles_server(int argc, char const** argv) {
     return true;
   };
 
-  auto const maybe_serve_font = [&](auto const& req, auto& res) -> bool {
-    static regex_matcher matcher{"^\\/font/(.+)$"};
+  auto const maybe_serve_glyphs = [&](auto const& req, auto& res) -> bool {
+    static regex_matcher matcher{"^\\/glyphs/(.+)$"};
     auto const decoded_url = url_decode(req);
     auto const match = matcher.match(decoded_url);
     if (!match) {
@@ -295,7 +295,7 @@ int run_tiles_server(int argc, char const** argv) {
       case http::verb::get:
       case http::verb::head:
         if (!(maybe_serve_tile(req, res) ||  //
-              maybe_serve_font(req, res) ||  //
+              maybe_serve_glyphs(req, res) ||  //
               maybe_serve_file(req, res))) {
           res.result(http::status::not_found);
         }

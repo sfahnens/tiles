@@ -77,7 +77,7 @@ export const style = (map) => {
             "maxzoom": 20
         }
     },
-    "glyphs": "/font/{fontstack}/{range}.pbf",
+    "glyphs": "/glyphs/{fontstack}/{range}.pbf",
     "layers": [
         {
             "id": "background",

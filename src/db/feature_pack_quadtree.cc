@@ -116,4 +116,6 @@ uint32_t quadtree_feature_packer::serialize_and_append_span(
   return offset;
 }
 
+void quadtree_feature_packer::finish() { packer_.finish(); }
+
 }  // namespace tiles

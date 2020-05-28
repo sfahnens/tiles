@@ -106,6 +106,8 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
        el = fc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
     pack_records_foreach(el->second, [&](auto record) {
       auto const pack = pack_handle.get(record);
+      utl::verify(feature_pack_valid(pack),  //
+                  "have invalid feature pack {}", el->first);
 
       pack_sizes.push_back(pack.size());
 

@@ -9,7 +9,7 @@
 #include "tiles/bin_utils.h"
 #include "tiles/db/quad_tree.h"
 
-// FEATURE PACK "WIRE FORMAT" SPECIFICATION v2
+// FEATURE PACK "WIRE FORMAT" SPECIFICATION v2.1
 //
 // A feature pack is intended to hold serialized feature data for features in
 // one "bucket" of the toplevel geo index.
@@ -48,6 +48,8 @@
 // file). This guarantees that all features in the pack can be accesses
 // though a simple counting loop.
 //
+// The last four bytes of the feature pack are a crc32 checksum of the entire
+// feature pack (obviously excluding the checksum itself).
 
 namespace tiles {
 
@@ -116,9 +118,13 @@ struct feature_packer {
     return offset;
   }
 
+  void finish();
+
   std::string buf_;
   std::map<uint8_t, uint32_t> segment_offsets_;
 };
+
+bool feature_pack_valid(std::string_view);
 
 inline std::optional<uint32_t> find_segment_offset(std::string_view const pack,
                                                    uint8_t const segment_id) {

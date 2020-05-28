@@ -10,8 +10,9 @@
 TEST_CASE("feature_pack") {
   SECTION("empty") {
     auto const pack = tiles::pack_features({});
+    CHECK(tiles::feature_pack_valid(pack));
 
-    REQUIRE(pack.size() == 6ULL);
+    REQUIRE(pack.size() == 10ULL);
     CHECK(tiles::read_nth<uint32_t>(pack.data(), 0) == 0U);  // feature count
     CHECK(tiles::read_nth<uint8_t>(pack.data(), 4) == 0U);  // segment count
     CHECK(tiles::read_nth<uint8_t>(pack.data(), 5) == 0U);  // null terminator
@@ -35,6 +36,7 @@ TEST_CASE("feature_pack") {
 
     {
       auto const pack = tiles::pack_features({ser});
+      CHECK(tiles::feature_pack_valid(pack));
 
       REQUIRE(pack.size() > 5ULL);
       CHECK(tiles::read_nth<uint32_t>(pack.data(), 0) == 1U);  // feature count
@@ -52,6 +54,7 @@ TEST_CASE("feature_pack") {
     {
       auto const pack = tiles::pack_features({536, 347, 10}, {},
                                              {tiles::pack_features({ser})});
+      CHECK(tiles::feature_pack_valid(pack));
 
       REQUIRE(pack.size() > 5ULL);
       CHECK(tiles::read_nth<uint32_t>(pack.data(), 0) == 1U);  // feature count

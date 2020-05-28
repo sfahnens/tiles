@@ -44,6 +44,8 @@ struct quadtree_feature_packer {
   virtual uint32_t serialize_and_append_span(quadtree_feature_it,
                                              quadtree_feature_it);
 
+  void finish();
+
   geo::tile root_;
   shared_metadata_coder const& metadata_coder_;
 

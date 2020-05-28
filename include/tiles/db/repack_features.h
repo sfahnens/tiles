@@ -248,9 +248,9 @@ struct repack_memory_manager {
   void finish_back_stash() {
     utl::verify(tasks_.empty(), "finish_back_stash: tasks empty");
 
-    for (auto const& [tile, recod] : back_stash_) {
-      insert_offset_ += recod.size_;
-      updates_.emplace_back(tile, pack_handle_.move(insert_offset_, recod));
+    for (auto const& [tile, record] : back_stash_) {
+      updates_.emplace_back(tile, pack_handle_.move(insert_offset_, record));
+      insert_offset_ += record.size_;
     }
 
     back_stash_.clear();

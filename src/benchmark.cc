@@ -18,7 +18,9 @@ namespace tiles {
 struct benchmark_settings : public conf::configuration {
   benchmark_settings() : configuration("tiles-benchmark options", "") {
     param(db_fname_, "db_fname", "/path/to/tiles.mdb");
-    param(tile_, "tile", "xyz coords of a tile, if not present random smaple");
+    param(tile_, "tile",
+          "xyz coords of a single tile, z for all tiles on a certain zoom "
+          "level, if not present random smaple");
     param(compress_, "compress", "compress the tiles");
   }
 
@@ -81,11 +83,29 @@ int run_tiles_benchmark(int argc, char const** argv) {
       }
       perf_report_get_tile(pc);
     }
+  } else if (opt.tile_.size() == 1) {
+    auto const z = opt.tile_.front();
+    t_log("render entire zoom level: {}", z);
 
+    auto txn = db_handle.make_txn();
+    auto features_dbi = db_handle.features_dbi(txn);
+    auto features_cursor = lmdb::cursor{txn, features_dbi};
+
+    perf_counter pc;
+    for (auto const& tile : geo::make_tile_range(z)) {
+      try {
+        auto const rendered_tile = get_tile(db_handle, txn, features_cursor,
+                                            pack_handle, render_ctx, tile, pc);
+      } catch (...) {
+        t_log("problem in tile: {}", tile);
+        throw;
+      }
+    }
+    perf_report_get_tile(pc);
   } else {
     utl::verify(opt.tile_.size() == 3, "need exactly three coordinats: x y z");
     geo::tile tile{opt.tile_[0], opt.tile_[1], opt.tile_[2]};
-    std::cout << "render tile: " << tile << std::endl;
+    t_log("render tile: {}", tile);
 
     auto txn = db_handle.make_txn();
     auto features_dbi = db_handle.features_dbi(txn);

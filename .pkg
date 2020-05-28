@@ -21,7 +21,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=512ea92ad1468022150ca61ec947a8cd523b72d7
+  commit=92019571ceafb4e6016ecccbf9127cc673017038
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master

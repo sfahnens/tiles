@@ -44,7 +44,7 @@
   commit=91b369e4eb8a618e0a83b0c04b1b08632ea872c4
 [protozero]
   url=git@github.com:motis-project/protozero.git
-  branch=tiles
+  branch=master
   commit=8c9f3fa97c2cfdceef86d0b61818ae98e9328f29
 [res]
   url=git@github.com:motis-project/res.git

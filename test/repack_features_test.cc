@@ -1,118 +1,16 @@
 #include "catch2/catch.hpp"
 
 #include <random>
-#include <set>
 
 #include "utl/erase_if.h"
 
 #include "tiles/db/repack_features.h"
 #include "tiles/db/tile_index.h"
 
-namespace tiles {
-
-struct test_pack_handle {
-  explicit test_pack_handle(size_t max_record_size)
-      : buf_(max_record_size, '\0') {}
-
-  [[nodiscard]] size_t size() const { return size_; }
-  [[nodiscard]] size_t capacity() const { return capacity_; }
-
-  void resize(size_t const new_size) {
-    if (!records_.empty()) {
-      auto it = records_.lower_bound(pack_record{new_size, 0ULL});
-      if (it == end(records_)) {
-        --it;
-      }
-      utl::verify(it->offset_ + it->size_ <= new_size,
-                  "test_pack_handle.resize: new_size to small {} > {}",
-                  (it->offset_ + it->size_), new_size);
-    }
-
-    size_ = new_size;
-    capacity_ = std::max(capacity_, new_size);
-  }
-
-  std::string_view get(pack_record record) {
-    utl::verify(
-        record.offset_ < size_ && record.offset_ + record.size_ <= size_,
-        "pack_file: record not file [size={},record=({},{})", size_,
-        record.offset_, record.size_);
-
-    utl::verify(record.size_ < size_, "test_pack_handle: request to big");
-
-    check_extract(record);
-    return std::string_view{buf_.data(), record.size_};
-  }
-
-  pack_record move(size_t offset, pack_record from_record) {
-    pack_record to_record{offset, from_record.size_};
-    resize(std::max(size_, to_record.offset_ + to_record.size_));
-
-    check_extract(from_record);
-    check_insert(to_record);
-
-    return to_record;
-  }
-
-  pack_record insert(size_t offset, std::string_view dat) {
-    pack_record record{offset, dat.size()};
-    resize(std::max(size_, record.end_offset()));
-    check_insert(record);
-    return record;
-  }
-
-  pack_record append(std::string_view dat) { return insert(size_, dat); }
-
-  pack_record append(size_t dat_size) {
-    pack_record record{size_, dat_size};
-    resize(std::max(size_, record.offset_ + record.size_));
-    check_insert(record);
-    return record;
-  }
-
-  void check_extract(pack_record const record) {
-    auto it = records_.find(record);
-    utl::verify(it != end(records_), "test_pack_handle.move: unknown record");
-    records_.erase(it);
-  }
-
-  void check_insert(pack_record const record) {
-    if (!records_.empty()) {
-      auto it = records_.lower_bound(record);
-
-      // check previous entry, if exists
-      if (it != begin(records_)) {
-        utl::verify(std::prev(it)->end_offset() <= record.offset_,
-                    "test_pack_handle.insert : prev_end > offset : "
-                    "({}, {}, {}) > ({}, {}, {})",
-                    std::prev(it)->offset_, std::prev(it)->size_,
-                    std::prev(it)->end_offset(), record.offset_, record.size_,
-                    record.end_offset());
-      }
-
-      // check this (maybe succ), if exists
-      if (it != end(records_)) {
-        utl::verify(record.end_offset() <= it->offset_,
-                    "test_pack_handle.insert : end_offset > offset : {} > {}",
-                    record.end_offset(), it->offset_);
-      }
-    }
-
-    records_.insert(record);
-  }
-
-  std::string buf_;  // some backing memory which can be dereferenced
-  size_t size_{0};
-  size_t capacity_{0};
-
-  std::set<pack_record> records_;
-};
-
-}  // namespace tiles
+#include "test_pack_handle.h"
 
 TEST_CASE("repack_features", "[!hide]") {
-  constexpr size_t const kMaxRecordSize = 100 * 1024 * 1024;
-  tiles::test_pack_handle handle(kMaxRecordSize);
+  tiles::test_pack_handle handle;
 
   std::vector<tiles::tile_record> tasks((1 << tiles::kTileDefaultIndexZoomLvl) *
                                         (1 << tiles::kTileDefaultIndexZoomLvl));
@@ -131,7 +29,7 @@ TEST_CASE("repack_features", "[!hide]") {
   size_t initial_packs = 0;
   while (handle.size() < 1024ULL * 1024 * 1024 * 40) {
     size_t size = std::fabs(size_dist(rand));
-    if (size > kMaxRecordSize / 100 || size == 0) {
+    if (size == 0) {
       continue;
     }
     tasks[insert_dist(rand)].records_.emplace_back(handle.append(size));
@@ -145,7 +43,7 @@ TEST_CASE("repack_features", "[!hide]") {
                     [](auto const& t) { return !t.records_.empty(); });
 
   size_t finished_task_count = 0;
-  tiles::repack_features(
+  tiles::repack_features<std::string_view>(
       handle, tasks,
       [&](auto, auto const& packs) {
         static std::mt19937_64 rand{123456};
@@ -155,8 +53,7 @@ TEST_CASE("repack_features", "[!hide]") {
             begin(packs), end(packs), 0ULL,
             [](auto const& acc, auto const& p) { return acc + p.size(); });
         size *= std::fabs(dist(rand));
-        size = std::min(size, kMaxRecordSize);
-        return std::string(size, '\0');
+        return std::string_view{nullptr, size};
       },
       [&](auto const& updates) { finished_task_count += updates.size(); });
 

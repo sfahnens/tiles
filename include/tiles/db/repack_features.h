@@ -32,7 +32,7 @@ struct tile_record_single {
 constexpr size_t const kRepackInFlightMemory = 1024ULL * 1024 * 1024;
 constexpr auto kRepackBatchSize = 32;
 
-template <typename PackHandle>
+template <typename Buffer, typename PackHandle>
 struct repack_memory_manager {
   repack_memory_manager(PackHandle& pack_handle,
                         std::vector<tiles::tile_record> tasks)
@@ -55,7 +55,7 @@ struct repack_memory_manager {
     return task;
   }
 
-  void insert_result(geo::tile const tile, std::string const& buf) {
+  void insert_result(geo::tile const tile, Buffer const& buf) {
     if (tasks_.empty()) {  // no more pending tasks!
       updates_.emplace_back(tile, pack_handle_.append(buf));
       return;
@@ -102,9 +102,10 @@ struct repack_memory_manager {
           largest_record < end_offset - used_space,
           "defragment: largest_record > working free space ({}, {}, {})",
           largest_record, end_offset, used_space);
-
+#ifndef TILES_REPACK_FEATURES_SILENT
       t_log("defragment : free space {}",
             printable_bytes{end_offset - used_space});
+#endif
     }
 
     auto const total_records = q_frag.size();
@@ -122,8 +123,10 @@ struct repack_memory_manager {
               q_defrag.clear();
               q_frag_idx = 0;
 
+#ifndef TILES_REPACK_FEATURES_SILENT
               t_log("fragmented records left {}/{}",  //
                     q_frag.size(), total_records);
+#endif
 
               utl::verify(
                   task_idx != last_task_idx || record_idx != last_record_idx,
@@ -274,21 +277,25 @@ struct repack_memory_manager {
   std::vector<tile_record_single> updates_;
 };
 
-template <typename PackHandle, typename PackFeatures, typename Callback>
+template <typename Buffer, typename PackHandle, typename PackFeatures,
+          typename Callback>
 void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
                      PackFeatures&& pack_features, Callback&& callback) {
 
-  repack_memory_manager<PackHandle> mgr{pack_handle, std::move(in_tasks)};
+  repack_memory_manager<Buffer, PackHandle> mgr{pack_handle,
+                                                std::move(in_tasks)};
+#ifndef TILES_REPACK_FEATURES_SILENT
   progress_tracker pack_progress{"pack features", mgr.tasks_.size()};
+#endif
 
   queue_wrapper<std::function<void()>> work_queue;
-  queue_wrapper<std::pair<geo::tile, std::string>> result_queue;
+  queue_wrapper<std::pair<geo::tile, Buffer>> result_queue;
 
   auto const enqueue_work = [&](auto n) {
     auto const enqueue = [&] {
       auto task = mgr.dequeue_task();
       auto packs = utl::to_vec(task.records_, [&](auto const& r) {
-        return std::string{pack_handle.get(r)};
+        return Buffer{pack_handle.get(r)};
       });
       work_queue.enqueue([&, tile = task.tile_, packs = std::move(packs)] {
         result_queue.enqueue({tile, pack_features(tile, packs)});
@@ -314,11 +321,13 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
 
   auto dequeue_results = [&](auto n) {
     auto const dequeue = [&] {
-      std::pair<geo::tile, std::string> result;
+      std::pair<geo::tile, Buffer> result;
       if (result_queue.dequeue(result)) {
         mgr.insert_result(result.first, result.second);
         result_queue.finish();
+#ifndef TILES_REPACK_FEATURES_SILENT
         pack_progress.inc();
+#endif
       }
     };
 
@@ -350,9 +359,11 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
     mgr.housekeeping_flush(callback);
   }
 
+#ifndef TILES_REPACK_FEATURES_SILENT
   t_log("pack file utilization: {:.2f}% ({} / {})",
         100. * pack_handle.size() / pack_handle.capacity(),  //
         pack_handle.size(), pack_handle.capacity());
+#endif
 
   utl::verify(mgr.tasks_.empty(), "pack_features: task queue not empty");
   utl::verify(work_queue.queue_.size_approx() == 0,

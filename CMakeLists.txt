@@ -117,10 +117,27 @@ target_link_libraries(tiles-benchmark
   geo
 )
 
-file(GLOB_RECURSE tiles-test-files test/*.cc src/osm/hybrid_node_idx.cc)
+file(GLOB_RECURSE tiles-test-files
+  test/catch_main.cc
+  test/*_test.cc
+  src/osm/hybrid_node_idx.cc
+)
 
 add_executable(tiles-test EXCLUDE_FROM_ALL ${tiles-test-files})
 set_property(TARGET tiles-test PROPERTY CXX_STANDARD 17)
 target_compile_options(tiles-test PRIVATE ${TILES_WARNINGS})
 target_include_directories(tiles-test PUBLIC include)
 target_link_libraries(tiles-test tiles Catch2)
+
+
+# --- fuzzing
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  file(GLOB_RECURSE tiles-fuzz-repack-features-files test/repack_features_fuzz.cc)
+  add_executable(tiles-fuzz-repack-features EXCLUDE_FROM_ALL ${tiles-fuzz-repack-features-files})
+  set_property(TARGET tiles-fuzz-repack-features PROPERTY CXX_STANDARD 17)
+  target_compile_options(tiles-fuzz-repack-features PRIVATE -fsanitize=address,fuzzer)
+  # target_compile_options(tiles-fuzz-repack-features PRIVATE -g -O0 -fsanitize=address,fuzzer)
+  target_include_directories(tiles-fuzz-repack-features PUBLIC include)
+  target_link_libraries(tiles-fuzz-repack-features tiles -fsanitize=address,fuzzer)
+  # target_link_libraries(tiles-fuzz-repack-features tiles -fsanitize=address,undefined,fuzzer)
+endif()

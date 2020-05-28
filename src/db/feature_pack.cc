@@ -98,20 +98,20 @@ void pack_features(
     txn.commit();
   }
 
-  repack_features(pack_handle, std::move(tasks), std::move(pack_fn),
-                  [&](auto const& updates) {
-                    if (updates.empty()) {
-                      return;
-                    }
+  repack_features<std::string>(pack_handle, std::move(tasks),
+                               std::move(pack_fn), [&](auto const& updates) {
+                                 if (updates.empty()) {
+                                   return;
+                                 }
 
-                    auto txn = db_handle.make_txn();
-                    auto feature_dbi = db_handle.features_dbi(txn);
-                    for (auto const& [tile, records] : updates) {
-                      txn.put(feature_dbi, make_feature_key(tile),
-                              pack_records_serialize(records));
-                    }
-                    txn.commit();
-                  });
+                                 auto txn = db_handle.make_txn();
+                                 auto feature_dbi = db_handle.features_dbi(txn);
+                                 for (auto const& [tile, records] : updates) {
+                                   txn.put(feature_dbi, make_feature_key(tile),
+                                           pack_records_serialize(records));
+                                 }
+                                 txn.commit();
+                               });
 }
 
 }  // namespace tiles

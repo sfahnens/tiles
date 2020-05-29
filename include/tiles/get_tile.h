@@ -70,7 +70,7 @@ void render_seaside(tile_builder& builder, render_ctx const& ctx,
     boost::geometry::correct(polygon);
 
     start<perf_task::RENDER_TILE_ADD_SEASIDE>(pc);
-    builder.add_feature({0ULL,
+    builder.add_feature({make_feature_key(seaside_tile),
                          kLayerCoastlineIdx,
                          std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
                          {{"layer", "coastline"}},

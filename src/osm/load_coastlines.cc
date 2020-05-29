@@ -155,7 +155,7 @@ void to_fixed_polygon(fixed_polygon& polygon, cl::PolyNodes const& nodes) {
 }
 
 std::optional<std::string> finalize_tile(
-    cl::Path const& draw_clip, cl::Path const& insert_clip,
+    uint64_t const id, cl::Path const& draw_clip, cl::Path const& insert_clip,
     std::vector<coastline_ptr> const& coastlines) {
   cl::Clipper clpr;
   clpr.AddPath(draw_clip, cl::ptSubject, true);
@@ -177,7 +177,7 @@ std::optional<std::string> finalize_tile(
   to_fixed_polygon(polygon, solution.Childs);
 
   boost::geometry::correct(polygon);
-  return serialize_feature({0ULL,
+  return serialize_feature({id,
                             kLayerCoastlineIdx,
                             std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
                             {},
@@ -234,7 +234,9 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
     } else if (child.z_ < 10) {
       geo_q.enqueue(geo_task{child, std::move(matching)});
     } else {
-      if (auto str = finalize_tile(draw_clip, insert_clip, matching); str) {
+      if (auto str = finalize_tile(make_feature_key(child),  //
+                                   draw_clip, insert_clip, matching);
+          str) {
         db_q.enqueue({child, std::move(*str)});
       } else {
         ++stats.fully_dirtside_;

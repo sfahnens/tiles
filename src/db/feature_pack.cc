@@ -81,9 +81,9 @@ void pack_features(
     auto feature_dbi = db_handle.features_dbi(txn);
     lmdb::cursor c{txn, feature_dbi};
 
-    for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-         el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-      auto tile = feature_key_to_tile(el->first);
+    for (auto el = c.get<tile_key_t>(lmdb::cursor_op::FIRST); el;
+         el = c.get<tile_key_t>(lmdb::cursor_op::NEXT)) {
+      auto tile = key_to_tile(el->first);
       auto records = pack_records_deserialize(el->second);
       utl::verify(!records.empty(), "pack_features: empty pack_records");
 
@@ -107,7 +107,7 @@ void pack_features(
                                  auto txn = db_handle.make_txn();
                                  auto feature_dbi = db_handle.features_dbi(txn);
                                  for (auto const& [tile, records] : updates) {
-                                   txn.put(feature_dbi, make_feature_key(tile),
+                                   txn.put(feature_dbi, tile_to_key(tile),
                                            pack_records_serialize(records));
                                  }
                                  txn.commit();

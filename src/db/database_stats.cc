@@ -102,8 +102,8 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
   std::vector<size_t> geometry_sizes;
 
   auto fc = lmdb::cursor{txn, features_dbi};
-  for (auto el = fc.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-       el = fc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
+  for (auto el = fc.get<tile_key_t>(lmdb::cursor_op::FIRST); el;
+       el = fc.get<tile_key_t>(lmdb::cursor_op::NEXT)) {
     pack_records_foreach(el->second, [&](auto record) {
       auto const pack = pack_handle.get(record);
       utl::verify(feature_pack_valid(pack),  //
@@ -167,9 +167,9 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
   std::vector<std::vector<size_t>> tile_sizes(max_prep + 1);
 
   auto tc = lmdb::cursor{txn, tiles_dbi};
-  for (auto el = tc.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-       el = tc.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-    auto const& tile = tile_key_to_tile(el->first);
+  for (auto el = tc.get<tile_key_t>(lmdb::cursor_op::FIRST); el;
+       el = tc.get<tile_key_t>(lmdb::cursor_op::NEXT)) {
+    auto const tile = key_to_tile(el->first);
     utl::verify(tile.z_ <= max_prep, "tile outside prepared range found!");
     tile_sizes.at(tile.z_).emplace_back(el->second.size());
   }

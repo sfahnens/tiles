@@ -109,9 +109,9 @@ prepare_manager make_prepare_manager(tile_db_handle& db_handle,
   auto txn = db_handle.make_txn();
   auto feature_dbi = db_handle.features_dbi(txn);
   auto c = lmdb::cursor{txn, feature_dbi};
-  for (auto el = c.get<tile_index_t>(lmdb::cursor_op::FIRST); el;
-       el = c.get<tile_index_t>(lmdb::cursor_op::NEXT)) {
-    auto const tile = feature_key_to_tile(el->first);
+  for (auto el = c.get<tile_key_t>(lmdb::cursor_op::FIRST); el;
+       el = c.get<tile_key_t>(lmdb::cursor_op::NEXT)) {
+    auto const tile = key_to_tile(el->first);
     minx = std::min(minx, tile.x_);
     miny = std::min(miny, tile.y_);
     maxx = std::max(maxx, tile.x_);
@@ -186,7 +186,7 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
           auto tiles_dbi = db_handle.tiles_dbi(txn);
           for (auto& task : batch) {
             if (task.result_) {
-              txn.put(tiles_dbi, make_tile_key(task.tile_), *task.result_);
+              txn.put(tiles_dbi, tile_to_key(task.tile_), *task.result_);
             }
           }
           txn.commit();

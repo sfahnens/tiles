@@ -234,7 +234,7 @@ void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
     } else if (child.z_ < 10) {
       geo_q.enqueue(geo_task{child, std::move(matching)});
     } else {
-      if (auto str = finalize_tile(make_feature_key(child),  //
+      if (auto str = finalize_tile(tile_to_key(child),  //
                                    draw_clip, insert_clip, matching);
           str) {
         db_q.enqueue({child, std::move(*str)});

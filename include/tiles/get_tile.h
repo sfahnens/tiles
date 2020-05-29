@@ -70,7 +70,7 @@ void render_seaside(tile_builder& builder, render_ctx const& ctx,
     boost::geometry::correct(polygon);
 
     start<perf_task::RENDER_TILE_ADD_SEASIDE>(pc);
-    builder.add_feature({make_feature_key(seaside_tile),
+    builder.add_feature({tile_to_key(seaside_tile),
                          kLayerCoastlineIdx,
                          std::pair<uint32_t, uint32_t>{0, kMaxZoomLevel + 1},
                          {{"layer", "coastline"}},
@@ -86,15 +86,14 @@ void pack_records_foreach(lmdb::cursor& c, geo::tile const& query_tile,
   auto const bounds = query_tile.bounds_on_z(kTileDefaultIndexZoomLvl);
   for (auto y = bounds.miny_; y < bounds.maxy_; ++y) {
     auto const key_begin =
-        make_feature_key(bounds.minx_, y, kTileDefaultIndexZoomLvl);
-    auto const key_end =
-        make_feature_key(bounds.maxx_, y, kTileDefaultIndexZoomLvl);
+        tile_to_key(bounds.minx_, y, kTileDefaultIndexZoomLvl);
+    auto const key_end = tile_to_key(bounds.maxx_, y, kTileDefaultIndexZoomLvl);
 
     for (auto el = c.get(lmdb::cursor_op::SET_RANGE, key_begin);
          el && el->first < key_end;
          el = c.get<decltype(key_begin)>(lmdb::cursor_op::NEXT)) {
 
-      auto const result_tile = feature_key_to_tile(el->first);
+      auto const result_tile = key_to_tile(el->first);
       pack_records_foreach(el->second, [&](auto const& pack_record) {
         fn(result_tile, pack_record);
       });
@@ -191,7 +190,7 @@ std::optional<std::string> get_tile(tile_db_handle& handle, lmdb::txn& txn,
     auto tiles_dbi = handle.tiles_dbi(txn);
 
     start<perf_task::GET_TILE_FETCH>(pc);
-    auto db_tile = txn.get(tiles_dbi, make_tile_key(tile));
+    auto db_tile = txn.get(tiles_dbi, tile_to_key(tile));
     stop<perf_task::GET_TILE_FETCH>(pc);
 
     if (db_tile) {

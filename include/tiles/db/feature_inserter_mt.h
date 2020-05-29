@@ -130,7 +130,7 @@ struct feature_inserter_mt {
       lmdb::cursor c{txn_dbi.first, txn_dbi.second};
 
       for (auto const& [bucket_ptr, features] : queue) {
-        auto key = make_feature_key(bucket_ptr->tile_);
+        auto key = tile_to_key(bucket_ptr->tile_);
         auto pack_record = pack_handle_.append(pack_features(features));
 
         if (auto el = c.get(lmdb::cursor_op::SET_KEY, key); el) {

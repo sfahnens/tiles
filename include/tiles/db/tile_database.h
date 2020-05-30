@@ -5,6 +5,8 @@
 #include "geo/tile.h"
 #include "lmdb/lmdb.hpp"
 
+#include "tiles/util.h"
+
 namespace tiles {
 
 constexpr auto kDefaultMeta = "default_meta";
@@ -25,7 +27,12 @@ inline lmdb::env make_tile_database(
   lmdb::env e;
   e.set_mapsize(1024ULL * 1024 * 1024 * 1024);
   e.set_maxdbs(8);
-  e.open(db_fname, flags);
+  try {
+    e.open(db_fname, flags);
+  } catch (...) {
+    t_log("make_tile_database failed [file={}]", db_fname);
+    throw;
+  }
   return e;
 }
 

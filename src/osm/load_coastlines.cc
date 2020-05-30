@@ -1,6 +1,5 @@
 #include "tiles/osm/load_coastlines.h"
 
-#include <fstream>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -269,7 +268,13 @@ void load_coastlines(tile_db_handle& db_handle, feature_inserter_mt& inserter,
       coastlines.emplace_back(std::make_shared<struct coastline>(
           bounding_box(geo), std::move(coastline)));
     };
-    load_shapefile(fname, coastline_handler);
+
+    try {
+      load_shapefile(fname, coastline_handler);
+    } catch (...) {
+      t_log("load_shapefile failed [file={}]", fname);
+      throw;
+    }
 
     constexpr auto const kInitialZoomlevel = 4ULL;
     auto it = geo::tile_iterator(kInitialZoomlevel);

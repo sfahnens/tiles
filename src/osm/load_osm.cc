@@ -29,15 +29,23 @@ namespace ou = osmium::util;
 namespace oeb = osmium::osm_entity_bits;
 
 void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
-              std::string const& osm_fname_, std::string const& osm_profile) {
-  oio::File input_file{osm_fname_};
+              std::string const& osm_fname, std::string const& osm_profile) {
+  oio::File input_file;
+  size_t file_size{0};
+  try {
+    input_file = oio::File{osm_fname};
+    file_size = oio::Reader{input_file}.file_size();
+  } catch (...) {
+    t_log("load_osm failed [file={}]", osm_fname);
+    throw;
+  }
 
-  progress_tracker reader_progress{"load osm features",
-                                   2 * oio::Reader{input_file}.file_size()};
+  progress_tracker reader_progress{"load osm features", 2 * file_size};
 
   oa::MultipolygonManager<oa::Assembler> mp_manager{
       oa::Assembler::config_type{}};
 
+  // TODO configurable dir or / tmp / anonymous (+error handling)
   hybrid_node_idx node_idx{fileno(std::fopen("idx.bin", "wb+")),
                            fileno(std::fopen("dat.bin", "wb+"))};
 

@@ -1,5 +1,7 @@
 #include "tiles/osm/load_osm.h"
 
+#include "boost/filesystem.hpp"
+
 #include "utl/verify.h"
 
 #include "osmium/area/assembler.hpp"
@@ -28,8 +30,29 @@ namespace om = osmium::memory;
 namespace ou = osmium::util;
 namespace oeb = osmium::osm_entity_bits;
 
+struct tmp_file {
+  explicit tmp_file(std::string path)
+      : path_{std::move(path)}, file_(std::fopen(path_.c_str(), "wb+e")) {
+    utl::verify(file_ != nullptr, "tmp_file: unable to open file {}", path_);
+  }
+
+  ~tmp_file() {
+    if (file_ != nullptr) {
+      std::fclose(file_);
+      boost::filesystem::remove(path_);
+    }
+    file_ = nullptr;
+  }
+
+  int fileno() const { return ::fileno(file_); }
+
+  std::string path_;
+  FILE* file_;
+};
+
 void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
-              std::string const& osm_fname, std::string const& osm_profile) {
+              std::string const& osm_fname, std::string const& osm_profile,
+              std::string const& tmp_dname) {
   oio::File input_file;
   size_t file_size{0};
   try {
@@ -46,9 +69,11 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
   oa::MultipolygonManager<oa::Assembler> mp_manager{
       oa::Assembler::config_type{}};
 
-  // TODO configurable dir or / tmp / anonymous (+error handling)
-  hybrid_node_idx node_idx{fileno(std::fopen("idx.bin", "wb+")),
-                           fileno(std::fopen("dat.bin", "wb+"))};
+  auto const node_idx_file = tmp_file{
+      (boost::filesystem::path{tmp_dname} / "idx.bin").generic_string()};
+  auto const node_dat_file = tmp_file{
+      (boost::filesystem::path{tmp_dname} / "dat.bin").generic_string()};
+  hybrid_node_idx node_idx{node_idx_file.fileno(), node_dat_file.fileno()};
 
   {
     reader_progress->status("Load OSM / Pass 1");

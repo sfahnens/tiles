@@ -22,6 +22,7 @@ struct import_settings : public conf::configuration {
     param(osm_fname_, "osm_fname", "/path/to/latest.osm.pbf");
     param(osm_profile_, "osm_profile", "/path/to/profile.lua");
     param(coastlines_fname_, "coastlines_fname", "/path/to/coastlines.zip");
+    param(tmp_dname_, "tmp_dname", "/path/to/tmp/directory");
     param(tasks_, "tasks",
           "'all' or any combination of: 'coastlines', "
           "'features', 'stats', 'pack', 'tiles'");
@@ -38,6 +39,7 @@ struct import_settings : public conf::configuration {
   std::string osm_fname_{"planet-latest.osm.pbf"};
   std::string osm_profile_{"../profile/profile.lua"};
   std::string coastlines_fname_{"land-polygons-complete-4326.zip"};
+  std::string tmp_dname_{"."};
   std::vector<std::string> tasks_{{"all"}};
 };
 
@@ -86,7 +88,8 @@ int run_tiles_import(int argc, char const** argv) {
 
     if (opt.has_any_task({"features"})) {
       t_log("load features");
-      load_osm(db_handle, inserter, opt.osm_fname_, opt.osm_profile_);
+      load_osm(db_handle, inserter, opt.osm_fname_, opt.osm_profile_,
+               opt.tmp_dname_);
     }
   }
 

@@ -40,7 +40,8 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     throw;
   }
 
-  progress_tracker reader_progress{"load osm features", 2 * file_size};
+  progress_tracker reader_progress;
+  reader_progress->status("Load OSM").out_mod(3.F).in_high(2 * file_size);
 
   oa::MultipolygonManager<oa::Assembler> mp_manager{
       oa::Assembler::config_type{}};
@@ -50,16 +51,15 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
                            fileno(std::fopen("dat.bin", "wb+"))};
 
   {
-    t_log("Pass 1...");
+    reader_progress->status("Load OSM / Pass 1");
     hybrid_node_idx_builder node_idx_builder{node_idx};
 
     oio::Reader reader{input_file, oeb::node | oeb::relation};
     while (auto buffer = reader.read()) {
-      reader_progress.update(reader.offset());
+      reader_progress->update(reader.offset());
       o::apply(buffer, node_idx_builder, mp_manager);
     }
     reader.close();
-    t_log("Pass 1 done");
 
     mp_manager.prepare_for_lookup();
     t_log("Multipolygon Manager Memory:");
@@ -76,7 +76,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
   in_order_queue<om::Buffer> mp_queue;
 
   {
-    t_log("Pass 2...");
+    reader_progress->status("Load OSM / Pass 2");
     auto const thread_count =
         std::max(2, static_cast<int>(std::thread::hardware_concurrency()));
 
@@ -112,6 +112,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
       return reader.read();
     }};
 
+    std::atomic_bool has_exception{false};
     std::vector<std::future<void>> workers;
     for (auto i = 0; i < thread_count / 2; ++i) {
       workers.emplace_back(pool.submit([&] {
@@ -149,8 +150,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     utl::verify(mp_queue.queue_.empty(), "mp_queue not empty!");
 
     reader.close();
-    // progress_bar.file_done(input_file.size());
-    t_log("Pass 2 done");
+    reader_progress->update(reader_progress->in_high_);
 
     t_log("Multipolygon Manager Memory:");
     orel::print_used_memory(std::clog, mp_manager.used_memory());

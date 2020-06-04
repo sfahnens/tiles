@@ -50,14 +50,13 @@ using db_queue_t = queue_wrapper<std::pair<geo::tile, std::string>>;
 struct coastline_stats {
   static constexpr uint64_t kTotal = (1 << 10) * (1 << 10);
 
-  coastline_stats()
-      : progress_{"process coastline", kTotal},
-        fully_dirtside_{0},
-        fully_seaside_{0} {}
+  coastline_stats() : fully_dirtside_{0}, fully_seaside_{0} {
+
+    progress_->status("Process Coastline").out_mod(5.F).in_high(kTotal);
+  }
 
   void report_progess(uint32_t z) {
-    auto const increment = 1ULL << (10 - z) * 1ULL << (10 - z);
-    progress_.inc(increment);
+    progress_->increment(1ULL << (10 - z) * 1ULL << (10 - z));
   }
 
   void summary() {

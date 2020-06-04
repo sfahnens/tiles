@@ -285,7 +285,10 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
   repack_memory_manager<Buffer, PackHandle> mgr{pack_handle,
                                                 std::move(in_tasks)};
 #ifndef TILES_REPACK_FEATURES_SILENT
-  progress_tracker pack_progress{"pack features", mgr.tasks_.size()};
+  progress_tracker pack_progress;
+  pack_progress->status("Repack Features")
+      .out_mod(5.F)
+      .in_high(mgr.tasks_.size());
 #endif
 
   queue_wrapper<std::function<void()>> work_queue;
@@ -326,7 +329,7 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
         mgr.insert_result(result.first, result.second);
         result_queue.finish();
 #ifndef TILES_REPACK_FEATURES_SILENT
-        pack_progress.inc();
+        pack_progress->increment();
 #endif
       }
     };

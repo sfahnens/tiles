@@ -14,6 +14,7 @@
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 
+#include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
 namespace tiles {
@@ -35,48 +36,19 @@ inline void t_log(Args&&... args) {
 std::string compress_deflate(std::string const&);
 
 struct progress_tracker {
-  explicit progress_tracker(std::string label, size_t total)
-      : label_{std::move(label)},
-        total_{total},
-        curr_{0},
-        pos_{std::numeric_limits<size_t>::max()} {}
-
-  void update(size_t new_curr) {
-    // see https://stackoverflow.com/a/16190791
-    size_t old_curr = curr_;
-    while (old_curr < new_curr &&
-           !curr_.compare_exchange_weak(old_curr, new_curr))
-      ;
-
-    log_progress_maybe();
-  }
-
-  void inc(size_t i = 1) {
-    curr_ += i;
-    log_progress_maybe();
-  }
-
-  void log_progress_maybe() {
-#ifdef MOTIS_IMPORT_PROGRESS_FORMAT
-    size_t curr_pos = static_cast<size_t>(100. * curr_ / total_);
+#ifdef TILES_GLOBAL_PROGRESS_TRACKER
+  progress_tracker() : ref_{utl::get_active_progress_tracker()} {}
 #else
-    size_t curr_pos = static_cast<size_t>(100. * curr_ / total_ / 5) * 5;
+  progress_tracker()
+      : mem_{std::make_unique<utl::progress_tracker>(
+            [](auto const& t) { t_log("{} : {:>3}%", t.status_, t.out_); })},
+        ref_{*mem_} {}
 #endif
 
-    size_t prev_pos = pos_.exchange(curr_pos);
-    if (prev_pos != curr_pos) {
-      t_log("{} : {:>3}%", label_, curr_pos);
+  utl::progress_tracker* operator->() { return &ref_; }
 
-#ifdef MOTIS_IMPORT_PROGRESS_FORMAT
-      std::clog << '\0' << curr_pos << '\0' << std::flush;
-#endif
-    }
-  }
-
-  std::string label_;
-  size_t total_;
-  std::atomic_size_t curr_;
-  std::atomic_size_t pos_;
+  std::unique_ptr<utl::progress_tracker> mem_;
+  utl::progress_tracker& ref_;
 };
 
 template <typename Fun>

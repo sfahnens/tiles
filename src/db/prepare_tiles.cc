@@ -37,7 +37,11 @@ struct prepare_manager {
         curr_zoomlevel_{0},
         base_range_{std::move(base_range)},
         curr_range_{geo::tile_range_on_z(base_range_, curr_zoomlevel_)},
-        stats_(max_zoomlevel + 1) {}
+        stats_(max_zoomlevel + 1) {
+#ifdef TILES_GLOBAL_PROGRESS_TRACKER
+    utl::get_active_progress_tracker().in_high(max_zoomlevel);
+#endif
+  }
 
   std::vector<prepare_task> get_batch() {
     std::lock_guard<std::mutex> lock{mutex_};
@@ -60,8 +64,8 @@ struct prepare_manager {
         ++curr_zoomlevel_;
         curr_range_ = geo::tile_range_on_z(base_range_, curr_zoomlevel_);
 
-#ifdef MOTIS_IMPORT_PROGRESS_FORMAT
-        std::clog << '\0' << curr_zoomlevel_ << '\0' << std::flush;
+#ifdef TILES_GLOBAL_PROGRESS_TRACKER
+        utl::get_active_progress_tracker().increment();
 #endif
       }
     }

@@ -38,11 +38,9 @@ struct layer_builder {
                 tile_spec const& spec)
       : ctx_{ctx},
         layer_name_{std::move(layer_name)},
-        spec_(spec),
-        has_geometry_(false),
-        buf_(),
-        pb_(buf_) {
-
+        spec_{spec},
+        has_geometry_{false},
+        pb_{buf_} {
     pb_.add_uint32(ttm::Layer::required_uint32_version, 2);
     pb_.add_string(ttm::Layer::required_string_name, layer_name_);
     pb_.add_uint32(ttm::Layer::optional_uint32_extent, kVectorTileExtend);
@@ -72,11 +70,11 @@ struct layer_builder {
     } else {
       f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
       f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
-      write_feature(std::move(f));
+      write_feature(f);
     }
   }
 
-  void write_feature(feature f) {
+  void write_feature(feature const& f) {
     if (mpark::holds_alternative<fixed_null>(f.geometry_)) {
       return;
     }
@@ -125,7 +123,7 @@ struct layer_builder {
           continue;
         }
 
-        write_feature(std::move(f));
+        write_feature(f);
       }
     }
 
@@ -134,7 +132,7 @@ struct layer_builder {
            aggregate_line_features(std::move(line_buffer_), spec_.tile_.z_)) {
         f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
         f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
-        write_feature(std::move(f));
+        write_feature(f);
       }
     }
   }
@@ -217,13 +215,13 @@ struct layer_builder {
 struct tile_builder::impl {
   impl(render_ctx const& ctx, geo::tile const& tile) : ctx_{ctx}, spec_{tile} {}
 
-  void add_feature(feature const& f) {
+  void add_feature(feature f) {
     utl::verify(f.layer_ < ctx_.layer_names_.size(), "invalid layer in db");
-
-    utl::get_or_create(builders_, f.layer_, [&] {
+    auto& builder = utl::get_or_create(builders_, f.layer_, [&] {
       return std::make_unique<layer_builder>(
           ctx_, ctx_.layer_names_.at(f.layer_), spec_);
-    })->add_feature(f);
+    });
+    builder->add_feature(std::move(f));
   }
 
   std::string finish() {

@@ -13,7 +13,7 @@ struct quadtree_feature {
   quadtree_feature(std::vector<uint8_t> quad_key, geo::tile best_tile,
                    feature feature)
       : quad_key_{std::move(quad_key)},
-        best_tile_{std::move(best_tile)},
+        best_tile_{best_tile},
         feature_{std::move(feature)} {}
 
   friend bool operator<(quadtree_feature const& a, quadtree_feature const& b) {
@@ -34,6 +34,11 @@ struct quadtree_feature_packer {
   }
 
   virtual ~quadtree_feature_packer() = default;
+
+  quadtree_feature_packer(quadtree_feature_packer const&) = delete;
+  quadtree_feature_packer(quadtree_feature_packer&&) = delete;
+  quadtree_feature_packer& operator=(quadtree_feature_packer const&) = delete;
+  quadtree_feature_packer& operator=(quadtree_feature_packer&&) = delete;
 
   void pack_features(std::vector<std::string> const& packs);
 

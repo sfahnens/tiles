@@ -4,6 +4,7 @@
 
 #include "zlib.h"
 
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 namespace tiles {
@@ -15,26 +16,22 @@ std::string compress_deflate(std::string const& input) {
   auto error = compress2(reinterpret_cast<uint8_t*>(&buffer[0]), &out_size,
                          reinterpret_cast<uint8_t const*>(&input[0]),
                          input.size(), Z_BEST_COMPRESSION);
-  utl::verify(!error, "compress_deflate failed");
+  utl::verify(error == 0, "compress_deflate failed");
 
   buffer.resize(out_size);
   return buffer;
 }
 
 struct regex_matcher::impl {
-  explicit impl(std::regex regex) : regex_{std::move(regex)} {}
+  explicit impl(std::string const& pattern) : regex_{pattern} {}
 
   match_result_t match(std::string_view target) const {
     std::cmatch match;
     if (std::regex_match<char const*>(&*begin(target), &*end(target), match,
                                       regex_)) {
-      std::vector<std::string_view> matches;
-      matches.reserve(match.size());
-      for (auto i = 0ULL; i < match.size(); ++i) {
-        matches.push_back(std::string_view{
-            match[i].first, static_cast<size_t>(match[i].length())});
-      }
-      return matches;
+      return utl::to_vec(match, [](auto const& m) {
+        return std::string_view{m.first, static_cast<size_t>(m.length())};
+      });
     }
     return std::nullopt;
   }
@@ -42,8 +39,8 @@ struct regex_matcher::impl {
   std::regex regex_;
 };
 
-regex_matcher::regex_matcher(std::string pattern)
-    : impl_{std::make_unique<regex_matcher::impl>(std::regex{pattern})} {}
+regex_matcher::regex_matcher(std::string const& pattern)
+    : impl_{std::make_unique<regex_matcher::impl>(pattern)} {}
 
 regex_matcher::~regex_matcher() = default;
 

@@ -1,22 +1,15 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include "protozero/pbf_builder.hpp"
-#include "protozero/pbf_writer.hpp"
 #include "protozero/types.hpp"
-#include "protozero/varint.hpp"
-
-namespace tiles {
 
 // following directly:
 // https://github.com/mapbox/vector-tile-spec/blob/master/2.1/vector_tile.proto
-namespace tags {
-namespace mvt {
+namespace tiles::tags::mvt {
 
+// NOLINTNEXTLINE
 enum GeomType : int { UNKNOWN = 0, POINT = 1, LINESTRING = 2, POLYGON = 3 };
 
+// NOLINTNEXTLINE
 enum class Value : protozero::pbf_tag_type {
   optional_string_string_value = 1,
   optional_float_float_value = 2,
@@ -27,6 +20,7 @@ enum class Value : protozero::pbf_tag_type {
   optional_bool_bool_value = 7
 };
 
+// NOLINTNEXTLINE
 enum class Feature : protozero::pbf_tag_type {
   optional_uint64_id = 1,
   packed_uint32_tags = 2,
@@ -34,6 +28,7 @@ enum class Feature : protozero::pbf_tag_type {
   packed_uint32_geometry = 4
 };
 
+// NOLINTNEXTLINE
 enum class Layer : protozero::pbf_tag_type {
   required_uint32_version = 15,
   required_string_name = 1,
@@ -43,8 +38,7 @@ enum class Layer : protozero::pbf_tag_type {
   optional_uint32_extent = 5
 };
 
+// NOLINTNEXTLINE
 enum class Tile : protozero::pbf_tag_type { repeated_Layer_layers = 3 };
 
-}  // namespace mvt
-}  // namespace tags
-}  // namespace tiles
+}  // namespace tiles::tags::mvt

@@ -128,19 +128,19 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
       }
 
       unpack_features(pack, [&](auto const& str) {
-        protozero::pbf_message<tags::Feature> msg{str};
+        protozero::pbf_message<tags::feature> msg{str};
         while (msg.next()) {
           switch (msg.tag()) {
-            case tags::Feature::packed_sint64_header: {
+            case tags::feature::packed_sint64_header: {
               auto const* pre = msg.m_data;
               msg.skip();
               auto const* post = msg.m_data;
               header_sizes.push_back(std::distance(pre, post));
             } break;
-            case tags::Feature::repeated_string_simplify_masks:
+            case tags::feature::repeated_string_simplify_masks:
               simplify_mask_sizes.push_back(msg.get_view().size());
               break;
-            case tags::Feature::required_FixedGeometry_geometry:
+            case tags::feature::required_fixed_geometry_geometry:
               geometry_sizes.push_back(msg.get_view().size());
               break;
             default: msg.skip();

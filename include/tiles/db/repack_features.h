@@ -32,10 +32,9 @@ struct tile_record_single {
 constexpr size_t const kRepackInFlightMemory = 1024ULL * 1024 * 1024;
 constexpr auto kRepackBatchSize = 32;
 
-template <typename Buffer, typename PackHandle>
+template <typename Buf, typename PackHandle>
 struct repack_memory_manager {
-  repack_memory_manager(PackHandle& pack_handle,
-                        std::vector<tiles::tile_record> tasks)
+  repack_memory_manager(PackHandle& pack_handle, std::vector<tile_record> tasks)
       : pack_handle_{pack_handle}, tasks_{std::move(tasks)} {
     utl::erase_if(tasks_, [](auto const& t) { return t.records_.empty(); });
     for (auto& task : tasks_) {
@@ -55,7 +54,7 @@ struct repack_memory_manager {
     return task;
   }
 
-  void insert_result(geo::tile const tile, Buffer const& buf) {
+  void insert_result(geo::tile const tile, Buf const& buf) {
     if (tasks_.empty()) {  // no more pending tasks!
       updates_.emplace_back(tile, pack_handle_.append(buf));
       return;
@@ -79,7 +78,7 @@ struct repack_memory_manager {
     };
 
     size_t end_offset = pack_handle_.size();
-    std::vector<owned_pack> q_frag, q_defrag;  // double buffering
+    std::vector<owned_pack> q_frag, q_defrag;  // double bufing
     {
       size_t used_space = 0;
       size_t largest_record = 0;
@@ -260,8 +259,8 @@ struct repack_memory_manager {
     pack_handle_.resize(insert_offset_);
   }
 
-  template <typename Callback>
-  void housekeeping_flush(Callback const& callback) {
+  template <typename Cb>
+  void housekeeping_flush(Cb const& callback) {
     callback(updates_);
     updates_.clear();
   }
@@ -277,13 +276,11 @@ struct repack_memory_manager {
   std::vector<tile_record_single> updates_;
 };
 
-template <typename Buffer, typename PackHandle, typename PackFeatures,
-          typename Callback>
-void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
-                     PackFeatures&& pack_features, Callback&& callback) {
-
-  repack_memory_manager<Buffer, PackHandle> mgr{pack_handle,
-                                                std::move(in_tasks)};
+template <typename Buf, typename PackHandle, typename PackFeatures, typename Cb>
+void repack_features(PackHandle& pack_handle,
+                     std::vector<tile_record> in_tasks,  // NOLINT
+                     PackFeatures&& pack_features, Cb&& callback) {
+  repack_memory_manager<Buf, PackHandle> mgr{pack_handle, std::move(in_tasks)};
 #ifndef TILES_REPACK_FEATURES_SILENT
   progress_tracker pack_progress;
   pack_progress->status("Repack Features")
@@ -292,13 +289,13 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
 #endif
 
   queue_wrapper<std::function<void()>> work_queue;
-  queue_wrapper<std::pair<geo::tile, Buffer>> result_queue;
+  queue_wrapper<std::pair<geo::tile, Buf>> result_queue;
 
   auto const enqueue_work = [&](auto n) {
     auto const enqueue = [&] {
       auto task = mgr.dequeue_task();
       auto packs = utl::to_vec(task.records_, [&](auto const& r) {
-        return Buffer{pack_handle.get(r)};
+        return Buf{pack_handle.get(r)};
       });
       work_queue.enqueue([&, tile = task.tile_, packs = std::move(packs)] {
         result_queue.enqueue({tile, pack_features(tile, packs)});
@@ -324,7 +321,7 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
 
   auto dequeue_results = [&](auto n) {
     auto const dequeue = [&] {
-      std::pair<geo::tile, Buffer> result;
+      std::pair<geo::tile, Buf> result;
       if (result_queue.dequeue(result)) {
         mgr.insert_result(result.first, result.second);
         result_queue.finish();
@@ -348,7 +345,7 @@ void repack_features(PackHandle& pack_handle, std::vector<tile_record> in_tasks,
 
   {
     queue_processor proc{work_queue};
-    enqueue_work(-1);  // some more as buffer
+    enqueue_work(-1);  // some more as buf
     mgr.defragment_pack_file();  // now we have some space
     while (!mgr.tasks_.empty()) {
       dequeue_results(kRepackBatchSize);

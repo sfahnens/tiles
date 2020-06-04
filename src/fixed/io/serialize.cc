@@ -4,6 +4,8 @@
 
 #include "boost/numeric/conversion/cast.hpp"
 
+#include "protozero/pbf_builder.hpp"
+
 #include "utl/verify.h"
 #include "utl/zip.h"
 
@@ -31,15 +33,15 @@ void serialize_points(SW& sw, delta_encoder& x_enc, delta_encoder& y_enc,
 
 std::string serialize(fixed_point const& point) {
   std::string buffer;
-  pz::pbf_builder<tags::FixedGeometry> pb(buffer);
+  pz::pbf_builder<tags::fixed_geometry> pb(buffer);
 
-  pb.add_enum(tags::FixedGeometry::required_FixedGeometryType_type,
-              tags::FixedGeometryType::POINT);
+  pb.add_enum(tags::fixed_geometry::required_fixed_geometry_type,
+              tags::fixed_geometry_type::POINT);
 
   {
     pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
-                tags::FixedGeometry::packed_sint64_geometry)};
+                tags::fixed_geometry::packed_sint64_geometry)};
 
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};
@@ -52,15 +54,15 @@ std::string serialize(fixed_point const& point) {
 
 std::string serialize(fixed_polyline const& polyline) {
   std::string buffer;
-  pz::pbf_builder<tags::FixedGeometry> pb(buffer);
+  pz::pbf_builder<tags::fixed_geometry> pb(buffer);
 
-  pb.add_enum(tags::FixedGeometry::required_FixedGeometryType_type,
-              tags::FixedGeometryType::POLYLINE);
+  pb.add_enum(tags::fixed_geometry::required_fixed_geometry_type,
+              tags::fixed_geometry_type::POLYLINE);
 
   {
     pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
-                tags::FixedGeometry::packed_sint64_geometry)};
+                tags::fixed_geometry::packed_sint64_geometry)};
 
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};
@@ -77,14 +79,14 @@ std::string serialize(fixed_polyline const& polyline) {
 
 std::string serialize(fixed_polygon const& multi_polygon) {
   std::string buffer;
-  pz::pbf_builder<tags::FixedGeometry> pb(buffer);
+  pz::pbf_builder<tags::fixed_geometry> pb(buffer);
 
-  pb.add_enum(tags::FixedGeometry::required_FixedGeometryType_type,
-              tags::FixedGeometryType::POLYGON);
+  pb.add_enum(tags::fixed_geometry::required_fixed_geometry_type,
+              tags::fixed_geometry_type::POLYGON);
   {
     pz::packed_field_sint64 sw{
         pb, static_cast<pz::pbf_tag_type>(
-                tags::FixedGeometry::packed_sint64_geometry)};
+                tags::fixed_geometry::packed_sint64_geometry)};
 
     delta_encoder x_encoder{kFixedCoordMagicOffset};
     delta_encoder y_encoder{kFixedCoordMagicOffset};

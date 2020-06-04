@@ -14,6 +14,11 @@ struct tile_builder {
   tile_builder(render_ctx const&, geo::tile const&);
   ~tile_builder();
 
+  tile_builder(tile_builder const&) = delete;
+  tile_builder(tile_builder&&) noexcept = default;
+  tile_builder& operator=(tile_builder const&) = delete;
+  tile_builder& operator=(tile_builder&&) noexcept = default;
+
   void add_feature(feature);
 
   std::string finish();

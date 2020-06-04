@@ -38,8 +38,8 @@ struct perf_counter {
   static constexpr auto const kInvalidTimePoint = time_point_t::max();
 
   perf_counter() {
-    for (auto i = 0ULL; i < running_.size(); ++i) {
-      running_[i] = kInvalidTimePoint;
+    for (auto& r : running_) {
+      r = kInvalidTimePoint;
     }
   }
 

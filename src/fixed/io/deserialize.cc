@@ -46,9 +46,9 @@ struct default_decoder {
   delta_decoder y_decoder_{kFixedCoordMagicOffset};
 };
 
-default_decoder make_default_decoder(pz::pbf_message<tags::FixedGeometry>& m) {
+default_decoder make_default_decoder(pz::pbf_message<tags::fixed_geometry>& m) {
   utl::verify(m.next(), "invalid message");
-  utl::verify(m.tag() == tags::FixedGeometry::packed_sint64_geometry,
+  utl::verify(m.tag() == tags::fixed_geometry::packed_sint64_geometry,
               "invalid tag");
   return default_decoder{m.get_packed_sint64()};
 }
@@ -90,10 +90,10 @@ struct simplifying_decoder : public default_decoder {
 };
 
 simplifying_decoder make_simplifying_decoder(
-    pz::pbf_message<tags::FixedGeometry>& m,
+    pz::pbf_message<tags::fixed_geometry>& m,
     std::vector<std::string_view> simplify_masks, uint32_t z) {
   utl::verify(m.next(), "invalid message");
-  utl::verify(m.tag() == tags::FixedGeometry::packed_sint64_geometry,
+  utl::verify(m.tag() == tags::fixed_geometry::packed_sint64_geometry,
               "invalid tag");
   return {m.get_packed_sint64(), std::move(simplify_masks), z};
 }
@@ -146,17 +146,17 @@ fixed_geometry deserialize_polygon(Decoder&& decoder) {
 }
 
 fixed_geometry deserialize(std::string_view geo) {
-  pz::pbf_message<tags::FixedGeometry> m{geo};
+  pz::pbf_message<tags::fixed_geometry> m{geo};
   utl::verify(m.next(), "invalid msg");
-  utl::verify(m.tag() == tags::FixedGeometry::required_FixedGeometryType_type,
+  utl::verify(m.tag() == tags::fixed_geometry::required_fixed_geometry_type,
               "invalid tag");
 
-  switch (static_cast<tags::FixedGeometryType>(m.get_enum())) {
-    case tags::FixedGeometryType::POINT:
+  switch (static_cast<tags::fixed_geometry_type>(m.get_enum())) {
+    case tags::fixed_geometry_type::POINT:
       return deserialize_point(make_default_decoder(m));
-    case tags::FixedGeometryType::POLYLINE:
+    case tags::fixed_geometry_type::POLYLINE:
       return deserialize_polyline(make_default_decoder(m));
-    case tags::FixedGeometryType::POLYGON:
+    case tags::fixed_geometry_type::POLYGON:
       return deserialize_polygon(make_default_decoder(m));
     default: throw utl::fail("unknown geometry");
   }
@@ -165,18 +165,18 @@ fixed_geometry deserialize(std::string_view geo) {
 fixed_geometry deserialize(std::string_view geo,
                            std::vector<std::string_view> simplify_masks,
                            uint32_t const z) {
-  pz::pbf_message<tags::FixedGeometry> m{geo};
+  pz::pbf_message<tags::fixed_geometry> m{geo};
   utl::verify(m.next(), "invalid msg");
-  utl::verify(m.tag() == tags::FixedGeometry::required_FixedGeometryType_type,
+  utl::verify(m.tag() == tags::fixed_geometry::required_fixed_geometry_type,
               "invalid tag");
 
-  switch (static_cast<tags::FixedGeometryType>(m.get_enum())) {
-    case tags::FixedGeometryType::POINT:
+  switch (static_cast<tags::fixed_geometry_type>(m.get_enum())) {
+    case tags::fixed_geometry_type::POINT:
       return deserialize_point(make_default_decoder(m));
-    case tags::FixedGeometryType::POLYLINE:
+    case tags::fixed_geometry_type::POLYLINE:
       return deserialize_polyline(
           make_simplifying_decoder(m, std::move(simplify_masks), z));
-    case tags::FixedGeometryType::POLYGON:
+    case tags::fixed_geometry_type::POLYGON:
       return deserialize_polygon(
           make_simplifying_decoder(m, std::move(simplify_masks), z));
     default: throw utl::fail("unknown geometry");

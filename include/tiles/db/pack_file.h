@@ -84,19 +84,19 @@ inline std::string pack_file_name(char const* db_fname) {
 
 inline void clear_pack_file(char const* db_fname) {
   auto const fname = pack_file_name(db_fname);
-  auto f = std::fopen(fname.c_str(), "wb+");
-  utl::verify(f, "clear_pack_file: failed to fopen {}", fname);
+  auto f = std::fopen(fname.c_str(), "wb+e");
+  utl::verify(f != nullptr, "clear_pack_file: failed to fopen {}", fname);
   utl::verify(std::fclose(f) == 0, "clear_pack_file: problem while fclose");
 }
 
 struct pack_handle {
   explicit pack_handle(char const* db_fname) {
     auto const fname = pack_file_name(db_fname);
-    file_ = std::fopen(fname.c_str(), "rb+");
-    if (!file_) {
-      file_ = std::fopen(fname.c_str(), "wb+");
+    file_ = std::fopen(fname.c_str(), "rb+e");
+    if (file_ == nullptr) {
+      file_ = std::fopen(fname.c_str(), "wb+e");
     }
-    utl::verify(file_, "pack_handle: failed to fopen {}", fname);
+    utl::verify(file_ != nullptr, "pack_handle: failed to fopen {}", fname);
     dat_ = osmium::detail::mmap_vector_file<char>{fileno(file_)};
   }
 
@@ -107,6 +107,11 @@ struct pack_handle {
     }
     utl::verify(std::fclose(file_) == 0, "pack_handle: problem while fclose");
   }
+
+  pack_handle(pack_handle const&) = delete;
+  pack_handle(pack_handle&&) noexcept = default;
+  pack_handle& operator=(pack_handle const&) = delete;
+  pack_handle& operator=(pack_handle&&) noexcept = default;
 
   [[nodiscard]] size_t size() const { return dat_.size(); }
   [[nodiscard]] size_t capacity() const { return dat_.capacity(); }

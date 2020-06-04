@@ -20,7 +20,7 @@ struct line;
 using line_handle = std::unique_ptr<line>;
 
 struct line {
-  fixed_xy from_, to_;
+  fixed_xy from_{}, to_{};
 
   line_handle left_, right_;
   feature* feature_{nullptr};
@@ -112,7 +112,7 @@ void join_lines(std::vector<line_handle>& handles) {
   auto const mark_reversed = [](line* l) {
     std::stack<line*> stack{{l}};
     while (!stack.empty()) {
-      auto* curr = std::move(stack.top());
+      auto* curr = stack.top();
       stack.pop();
 
       curr->reversed_ = !curr->reversed_;
@@ -132,7 +132,7 @@ void join_lines(std::vector<line_handle>& handles) {
     }
 
     line_handle* other = nullptr;
-    while ((other = find_incident_line(*it, (**it).from_))) {
+    while ((other = find_incident_line(*it, (**it).from_)) != nullptr) {
       if (*other == nullptr) {
         break;  // other alreay moved if join already discarded
       }
@@ -166,7 +166,7 @@ void join_lines(std::vector<line_handle>& handles) {
       continue;  // cycle detected
     }
 
-    while ((other = find_incident_line(*it, (**it).to_))) {
+    while ((other = find_incident_line(*it, (**it).to_)) != nullptr) {
       if (*other == nullptr) {
         break;  // other alreay moved if join already discarded
       }

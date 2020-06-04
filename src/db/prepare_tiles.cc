@@ -35,7 +35,7 @@ struct prepare_manager {
   prepare_manager(geo::tile_range base_range, uint32_t max_zoomlevel)
       : max_zoomlevel_{max_zoomlevel},
         curr_zoomlevel_{0},
-        base_range_{std::move(base_range)},
+        base_range_{base_range},
         curr_range_{geo::tile_range_on_z(base_range_, curr_zoomlevel_)},
         stats_(max_zoomlevel + 1) {
 #ifdef TILES_GLOBAL_PROGRESS_TRACKER
@@ -46,12 +46,12 @@ struct prepare_manager {
   std::vector<prepare_task> get_batch() {
     std::lock_guard<std::mutex> lock{mutex_};
     // do not process all expensive low-z tiles in one thread
-    auto const batch_size = (1u << 9u);
-    auto const batch_inc = 1u << static_cast<uint32_t>(std::max(
+    auto const batch_size = 1U << 9U;
+    auto const batch_inc = 1U << static_cast<uint32_t>(std::max(
                                9 - static_cast<int>(curr_zoomlevel_), 0));
 
     std::vector<prepare_task> batch;
-    for (auto i = 0u; i < batch_size; i += batch_inc) {
+    for (auto i = 0U; i < batch_size; i += batch_inc) {
       if (curr_zoomlevel_ > max_zoomlevel_) {
         break;
       }
@@ -142,7 +142,8 @@ void prepare_tiles(tile_db_handle& db_handle, pack_handle& pack_handle,
   null_perf_counter npc;
 
   std::vector<std::thread> threads;
-  for (auto i = 0u; i < std::thread::hardware_concurrency(); ++i) {
+  threads.reserve(std::thread::hardware_concurrency());
+  for (auto i = 0U; i < std::thread::hardware_concurrency(); ++i) {
     threads.emplace_back([&] {
       while (true) {
         auto batch = m.get_batch();

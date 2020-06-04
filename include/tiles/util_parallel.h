@@ -170,6 +170,11 @@ struct queue_processor {
     std::for_each(begin(threads_), end(threads_), [](auto& t) { t.join(); });
   }
 
+  queue_processor(queue_processor const&) = delete;
+  queue_processor(queue_processor&&) = delete;
+  queue_processor& operator=(queue_processor const&) = delete;
+  queue_processor& operator=(queue_processor&&) = delete;
+
   queue_wrapper<std::function<void()>>& queue_;
   std::atomic_bool shutdown_;
   std::vector<std::thread> threads_;

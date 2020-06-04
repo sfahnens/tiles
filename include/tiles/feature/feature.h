@@ -11,15 +11,16 @@
 
 namespace tiles {
 
+constexpr auto const kInvalidFeatureId = std::numeric_limits<uint64_t>::max();
+constexpr auto const kInvalidLayerId = std::numeric_limits<size_t>::max();
+
 constexpr uint32_t kInvalidZoomLevel = 0x3F;  // 63; max for one byte in svarint
 constexpr fixed_coord_t kInvalidBoxHint =
     std::numeric_limits<fixed_coord_t>::max();
 
-constexpr auto const kInvalidFeatureId = std::numeric_limits<uint64_t>::max();
-
 struct feature {
-  uint64_t id_;
-  size_t layer_;
+  uint64_t id_{kInvalidFeatureId};
+  size_t layer_{kInvalidLayerId};
   std::pair<uint32_t, uint32_t> zoom_levels_;
   std::vector<metadata> meta_;
   fixed_geometry geometry_;
@@ -27,7 +28,7 @@ struct feature {
 
 namespace tags {
 
-enum class Feature : protozero::pbf_tag_type {
+enum class feature : protozero::pbf_tag_type {
   packed_sint64_header = 1,
 
   required_uint64_id = 2,
@@ -38,7 +39,7 @@ enum class Feature : protozero::pbf_tag_type {
   repeated_string_values = 5,
 
   repeated_string_simplify_masks = 6,
-  required_FixedGeometry_geometry = 7
+  required_fixed_geometry_geometry = 7
 };
 
 }  // namespace tags

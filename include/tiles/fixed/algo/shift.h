@@ -69,7 +69,7 @@ inline fixed_geometry shift(fixed_polygon multi_polygon, uint32_t const z) {
 }
 
 inline fixed_geometry shift(fixed_geometry geometry, uint32_t const z) {
-  return mpark::visit([&](auto&& arg) { return shift(std::move(arg), z); },
+  return mpark::visit([&](auto arg) { return shift(std::move(arg), z); },
                       std::move(geometry));
 }
 

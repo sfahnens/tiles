@@ -33,10 +33,10 @@ inline std::optional<feature> deserialize_feature(
   fixed_geometry geometry;
 
   namespace pz = protozero;
-  pz::pbf_message<tags::Feature> msg{str.data(), str.size()};
+  pz::pbf_message<tags::feature> msg{str.data(), str.size()};
   while (msg.next()) {
     switch (msg.tag()) {
-      case tags::Feature::packed_sint64_header: {
+      case tags::feature::packed_sint64_header: {
         auto range = msg.get_packed_sint64();
         auto next = [&range] {
           utl::verify(!range.empty(), "read_header: range empty");
@@ -78,9 +78,9 @@ inline std::optional<feature> deserialize_feature(
         utl::verify(range.empty(), "read_header: superfluous elements");
       } break;
 
-      case tags::Feature::required_uint64_id: id = msg.get_uint64(); break;
+      case tags::feature::required_uint64_id: id = msg.get_uint64(); break;
 
-      case tags::Feature::packed_uint64_meta_pairs:
+      case tags::feature::packed_uint64_meta_pairs:
         utl::verify(meta.empty(),
                     "meta_pairs must come before, meta keys/values!");
         for (auto const id : msg.get_packed_uint64()) {
@@ -88,20 +88,24 @@ inline std::optional<feature> deserialize_feature(
         }
         meta_fill = meta.size();
         break;
-      case tags::Feature::repeated_string_keys:
+      case tags::feature::repeated_string_keys:
         meta.emplace_back(msg.get_string(), std::string{});
         break;
-      case tags::Feature::repeated_string_values:
+      case tags::feature::repeated_string_values:
         utl::verify(meta_fill < meta.size(), "meta data imbalance! (a)");
         meta[meta_fill++].value_ = msg.get_string();
         break;
 
-      case tags::Feature::repeated_string_simplify_masks:
+      case tags::feature::repeated_string_simplify_masks:
         simplify_masks.emplace_back(msg.get_view());
         break;
-      case tags::Feature::required_FixedGeometry_geometry:
-        if (zoom_level_hint != kInvalidZoomLevel && !simplify_masks.empty()) {
-          geometry = deserialize(msg.get_view(), std::move(simplify_masks),
+      case tags::feature::required_fixed_geometry_geometry: {
+
+        std::vector<std::string_view> simplify_masks_tmp;
+        std::swap(simplify_masks, simplify_masks_tmp);
+        if (zoom_level_hint != kInvalidZoomLevel &&
+            !simplify_masks_tmp.empty()) {
+          geometry = deserialize(msg.get_view(), std::move(simplify_masks_tmp),
                                  zoom_level_hint);
           if (mpark::holds_alternative<fixed_null>(geometry)) {
             return std::nullopt;  // killed by mask
@@ -109,7 +113,7 @@ inline std::optional<feature> deserialize_feature(
         } else {
           geometry = deserialize(msg.get_view());
         }
-        break;
+      } break;
       default: msg.skip();
     }
   }

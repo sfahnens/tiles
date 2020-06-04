@@ -22,7 +22,7 @@ inline std::string encode_bool(bool v) {
   return buf;
 }
 
-inline std::string encode_string(std::string v) {
+inline std::string encode_string(std::string const& v) {
   std::string buf;
   append(buf, metadata_value_t::string);
   buf.append(v);

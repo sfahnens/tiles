@@ -1,8 +1,8 @@
 #pragma once
 
-#include <time.h>
 #include <charconv>
 #include <chrono>
+#include <ctime>
 #include <atomic>
 #include <functional>
 #include <iomanip>
@@ -22,7 +22,7 @@ template <typename... Args>
 inline void t_log(Args&&... args) {
   using clock = std::chrono::system_clock;
   auto const now = clock::to_time_t(clock::now());
-  struct tm tmp;
+  struct tm tmp {};
 #if _MSC_VER >= 1400
   gmtime_s(&tmp, &now);
 #else
@@ -51,14 +51,6 @@ struct progress_tracker {
   utl::progress_tracker& ref_;
 };
 
-template <typename Fun>
-struct raii_helper {
-  raii_helper(Fun&& fun) : fun_{std::move(fun)} {}
-  ~raii_helper() { fun_(); }
-
-  Fun fun_;
-};
-
 struct scoped_timer final {
   explicit scoped_timer(std::string label)
       : label_{std::move(label)}, start_{std::chrono::steady_clock::now()} {
@@ -80,6 +72,11 @@ struct scoped_timer final {
     }
     std::clog << ")" << std::endl;
   }
+
+  scoped_timer(scoped_timer const&) = delete;
+  scoped_timer(scoped_timer&&) = delete;
+  scoped_timer& operator=(scoped_timer const&) = delete;
+  scoped_timer& operator=(scoped_timer&&) = delete;
 
   std::string label_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
@@ -215,8 +212,13 @@ inline uint32_t stou(std::string_view sv) {
 struct regex_matcher {
   using match_result_t = std::optional<std::vector<std::string_view>>;
 
-  explicit regex_matcher(std::string pattern);
+  explicit regex_matcher(std::string const& pattern);
   ~regex_matcher();
+
+  regex_matcher(regex_matcher const&) = delete;
+  regex_matcher(regex_matcher&&) noexcept = default;
+  regex_matcher& operator=(regex_matcher const&) = delete;
+  regex_matcher& operator=(regex_matcher&&) noexcept = default;
 
   match_result_t match(std::string_view) const;
 

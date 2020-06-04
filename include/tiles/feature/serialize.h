@@ -17,7 +17,7 @@ inline std::string serialize_feature(
     feature const& f, shared_metadata_coder const& metadata_coder = {},
     bool fast = true) {
   std::string buf;
-  protozero::pbf_builder<tags::Feature> pb(buf);
+  protozero::pbf_builder<tags::feature> pb(buf);
 
   auto const box = bounding_box(f.geometry_);
 
@@ -35,10 +35,10 @@ inline std::string serialize_feature(
       static_cast<int64_t>(f.layer_)  // 6
   }};
 
-  pb.add_packed_sint64(tags::Feature::packed_sint64_header,  //
+  pb.add_packed_sint64(tags::feature::packed_sint64_header,  //
                        begin(header), end(header));
 
-  pb.add_uint64(tags::Feature::required_uint64_id, f.id_);
+  pb.add_uint64(tags::feature::required_uint64_id, f.id_);
 
   if (!fast) {
     std::vector<size_t> coded_metas;
@@ -54,32 +54,32 @@ inline std::string serialize_feature(
     }
 
     if (!coded_metas.empty()) {
-      pb.add_packed_uint64(tags::Feature::packed_uint64_meta_pairs,  //
+      pb.add_packed_uint64(tags::feature::packed_uint64_meta_pairs,  //
                            begin(coded_metas), end(coded_metas));
     }
     for (auto const& k : uncoded_keys) {
-      pb.add_string(tags::Feature::repeated_string_keys, k);
+      pb.add_string(tags::feature::repeated_string_keys, k);
     }
     for (auto const& v : uncoded_values) {
-      pb.add_string(tags::Feature::repeated_string_values, v);
+      pb.add_string(tags::feature::repeated_string_values, v);
     }
 
   } else {
     for (auto const& m : f.meta_) {
-      pb.add_string(tags::Feature::repeated_string_keys, m.key_);
+      pb.add_string(tags::feature::repeated_string_keys, m.key_);
     }
     for (auto const& m : f.meta_) {
-      pb.add_string(tags::Feature::repeated_string_values, m.value_);
+      pb.add_string(tags::feature::repeated_string_values, m.value_);
     }
   }
 
   if (!fast) {
     for (auto const& mask : make_simplify_mask(f.geometry_)) {
-      pb.add_string(tags::Feature::repeated_string_simplify_masks, mask);
+      pb.add_string(tags::feature::repeated_string_simplify_masks, mask);
     }
   }
 
-  pb.add_message(tags::Feature::required_FixedGeometry_geometry,
+  pb.add_message(tags::feature::required_fixed_geometry_geometry,
                  serialize(f.geometry_));
 
   return buf;

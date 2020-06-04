@@ -25,7 +25,7 @@ inline fixed_geometry simplify(fixed_polygon multi_polygon, uint32_t const) {
 }
 
 inline fixed_geometry simplify(fixed_geometry geometry, uint32_t const z) {
-  return mpark::visit([&](auto&& arg) { return simplify(std::move(arg), z); },
+  return mpark::visit([&](auto arg) { return simplify(std::move(arg), z); },
                       std::move(geometry));
 }
 

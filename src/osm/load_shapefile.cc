@@ -7,6 +7,7 @@
 #include "utl/parser/buffer.h"
 #include "utl/parser/file.h"
 #include "utl/parser/mmap_reader.h"
+#include "utl/raii.h"
 
 #include "tiles/fixed/algo/area.h"
 #include "tiles/fixed/convert.h"
@@ -107,7 +108,7 @@ utl::buffer load_buffer(std::string const& fname) {
   mz_zip_archive ar{};
   utl::verify(mz_zip_reader_init_mem(&ar, mem.m_.ptr(), mem.m_.size(), 0),
               "shp: invalid zip");
-  raii_helper ar_deleter{[&ar] { mz_zip_reader_end(&ar); }};
+  auto const ar_deleter = utl::make_finally([&ar] { mz_zip_reader_end(&ar); });
 
   auto n = mz_zip_reader_get_num_files(&ar);
   for (auto i = 0ULL; i < n; ++i) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "protozero/pbf_builder.hpp"
+
 #include "tiles/fixed/fixed_geometry.h"
 
 #include "tiles/mvt/tags.h"

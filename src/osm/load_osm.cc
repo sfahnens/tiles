@@ -108,7 +108,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
 
     oio::Reader reader{input_file, pool};
     sequential_until_finish<om::Buffer> seq_reader{[&] {
-      reader_progress.update(reader.file_size() + reader.offset());
+      reader_progress->update(reader.file_size() + reader.offset());
       return reader.read();
     }};
 
@@ -135,10 +135,13 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
             });
           }
         } catch (std::exception const& e) {
-          std::clog << "EX " << std::this_thread::get_id() << " " << e.what()
-                    << "\n";
+          fmt::print(std::clog, "EXCEPTION CAUGHT: {} {}\n",
+                     std::this_thread::get_id(), e.what());
+          has_exception = true;
         } catch (...) {
-          std::clog << "EX " << std::this_thread::get_id() << "\n";
+          fmt::print(std::clog, "UNKNOWN EXCEPTION CAUGHT: {} \n",
+                     std::this_thread::get_id());
+          has_exception = true;
         }
       }));
     }
@@ -147,6 +150,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
       worker.wait();
     }
 
+    utl::verify(!has_exception, "load_osm: exception caught!");
     utl::verify(mp_queue.queue_.empty(), "mp_queue not empty!");
 
     reader.close();

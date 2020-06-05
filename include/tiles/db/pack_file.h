@@ -92,9 +92,9 @@ inline void clear_pack_file(char const* db_fname) {
 struct pack_handle {
   explicit pack_handle(char const* db_fname) {
     auto const fname = pack_file_name(db_fname);
-    file_ = std::fopen(fname.c_str(), "rb+e");
+    file_ = std::fopen(fname.c_str(), "rb+");
     if (file_ == nullptr) {
-      file_ = std::fopen(fname.c_str(), "wb+e");
+      file_ = std::fopen(fname.c_str(), "wb+");
     }
     utl::verify(file_ != nullptr, "pack_handle: failed to fopen {}", fname);
     dat_ = osmium::detail::mmap_vector_file<char>{fileno(file_)};

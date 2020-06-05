@@ -32,7 +32,7 @@ namespace oeb = osmium::osm_entity_bits;
 
 struct tmp_file {
   explicit tmp_file(std::string path)
-      : path_{std::move(path)}, file_(std::fopen(path_.c_str(), "wb+e")) {
+      : path_{std::move(path)}, file_(std::fopen(path_.c_str(), "wb+")) {
     utl::verify(file_ != nullptr, "tmp_file: unable to open file {}", path_);
   }
 

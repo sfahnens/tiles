@@ -20,7 +20,7 @@
 namespace tiles {
 
 struct cache_bucket {
-  geo::tile tile_;
+  geo::tile tile_{};
 
   std::mutex mutex_;
   size_t mem_size_{0};
@@ -34,18 +34,22 @@ struct feature_inserter_mt {
   feature_inserter_mt(dbi_handle dbi_handle, pack_handle& pack_handle)
       : dbi_handle_{std::move(dbi_handle)},
         pack_handle_{pack_handle},
-        cache_((1 << kTileDefaultIndexZoomLvl) *
-               (1 << kTileDefaultIndexZoomLvl)) {
+        cache_((1ULL << kTileDefaultIndexZoomLvl) *
+               (1ULL << kTileDefaultIndexZoomLvl)) {
     auto it = geo::tile_iterator{kTileDefaultIndexZoomLvl};
-    for (auto i = 0ULL; i < cache_.size(); ++i) {
+    for (auto& c : cache_) {
       utl::verify(it->z_ == kTileDefaultIndexZoomLvl, "it broken");
-      cache_[i].tile_ = *it;
-      ++it;
+      c.tile_ = *it;
     }
     utl::verify(it->z_ == kTileDefaultIndexZoomLvl + 1, "it broken");
   }
 
   ~feature_inserter_mt() { flush(0, 0); }
+
+  feature_inserter_mt(feature_inserter_mt const&) = delete;
+  feature_inserter_mt(feature_inserter_mt&&) noexcept = delete;
+  feature_inserter_mt& operator=(feature_inserter_mt const&) = delete;
+  feature_inserter_mt& operator=(feature_inserter_mt&&) noexcept = delete;
 
   geo::tile insert(feature const& f) {
     auto const box = bounding_box(f.geometry_);

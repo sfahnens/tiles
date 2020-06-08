@@ -12,7 +12,7 @@
 namespace tiles {
 
 struct script_runner {
-  script_runner(std::string const& osm_profile) {
+  explicit script_runner(std::string const& osm_profile) {
     lua_.script_file(osm_profile);
     lua_.open_libraries(sol::lib::base, sol::lib::package);
 

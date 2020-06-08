@@ -24,10 +24,8 @@ namespace tiles {
 namespace o = osmium;
 namespace oa = osmium::area;
 namespace oio = osmium::io;
-namespace oh = osmium::handler;
 namespace orel = osmium::relations;
 namespace om = osmium::memory;
-namespace ou = osmium::util;
 namespace oeb = osmium::osm_entity_bits;
 
 struct tmp_file {
@@ -43,6 +41,11 @@ struct tmp_file {
     }
     file_ = nullptr;
   }
+
+  tmp_file(tmp_file const&) = default;
+  tmp_file(tmp_file&&) = default;
+  tmp_file& operator=(tmp_file const&) = default;
+  tmp_file& operator=(tmp_file&&) = default;
 
   int fileno() const { return ::fileno(file_); }
 
@@ -108,6 +111,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
     // poor mans thread local (we dont know the threads themselves)
     std::atomic_size_t next_handlers_slot{0};
     std::vector<std::pair<std::thread::id, feature_handler>> handlers;
+    handlers.reserve(thread_count);
     for (auto i = 0; i < thread_count; ++i) {
       handlers.emplace_back(std::thread::id{},
                             feature_handler{osm_profile, inserter,
@@ -139,6 +143,7 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
 
     std::atomic_bool has_exception{false};
     std::vector<std::future<void>> workers;
+    workers.reserve(thread_count / 2);
     for (auto i = 0; i < thread_count / 2; ++i) {
       workers.emplace_back(pool.submit([&] {
         try {
@@ -154,7 +159,8 @@ void load_osm(tile_db_handle& db_handle, feature_inserter_mt& inserter,
 
             mp_queue.process_in_order(idx, std::move(buf), [&](auto buf2) {
               o::apply(buf2, mp_manager.handler([&](auto&& mp_buffer) {
-                auto p = std::make_shared<om::Buffer>(std::move(mp_buffer));
+                auto p = std::make_shared<om::Buffer>(
+                    std::forward<decltype(mp_buffer)>(mp_buffer));
                 pool.submit([p, &get_handler] { o::apply(*p, get_handler()); });
               }));
             });

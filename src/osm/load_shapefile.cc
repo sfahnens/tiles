@@ -106,14 +106,14 @@ utl::buffer load_buffer(std::string const& fname) {
   utl::mmap_reader mem{fname.c_str()};
 
   mz_zip_archive ar{};
-  utl::verify(mz_zip_reader_init_mem(&ar, mem.m_.ptr(), mem.m_.size(), 0),
-              "shp: invalid zip");
+  utl::verify(mz_zip_reader_init_mem(&ar, mem.m_.ptr(), mem.m_.size(), 0) != 0,
+              "shp: invalid zipu");
   auto const ar_deleter = utl::make_finally([&ar] { mz_zip_reader_end(&ar); });
 
   auto n = mz_zip_reader_get_num_files(&ar);
   for (auto i = 0ULL; i < n; ++i) {
     mz_zip_archive_file_stat stat{};
-    utl::verify(mz_zip_reader_file_stat(&ar, i, &stat),
+    utl::verify(mz_zip_reader_file_stat(&ar, i, &stat) != 0,
                 "shp: unable to stat zip entry");
 
     std::string_view name{stat.m_filename};
@@ -122,8 +122,9 @@ utl::buffer load_buffer(std::string const& fname) {
     }
 
     utl::buffer buf{stat.m_uncomp_size};
-    utl::verify(mz_zip_reader_extract_to_mem(&ar, i, buf.data(), buf.size(), 0),
-                "shp: error extracting .shp file");
+    utl::verify(
+        mz_zip_reader_extract_to_mem(&ar, i, buf.data(), buf.size(), 0) != 0,
+        "shp: error extracting .shp file");
     return buf;
   }
   throw utl::fail("shp: .zip file contains no .shp file");

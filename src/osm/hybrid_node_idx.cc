@@ -154,8 +154,8 @@ void get_coords(
 
   osm_id_t curr_id = std::numeric_limits<osm_id_t>::min();
   char const* dat_it = nullptr;
-  long span_size = 0;  // length of current span
-  long span_pos = 0;  // position in current span
+  int64_t span_size = 0;  // length of current span
+  int64_t span_pos = 0;  // position in current span
 
   delta_decoder x_dec{0};
   delta_decoder y_dec{0};
@@ -434,7 +434,7 @@ struct hybrid_node_idx_builder::impl {
 
   void push_fixed(uint32_t v) {
     for (auto i = 0ULL; i < sizeof(v); ++i) {
-      dat_.push_back(char(v & 0xffu));
+      dat_.push_back(static_cast<char>(v & 0xffU));
       v >>= 8ULL;
     }
   }

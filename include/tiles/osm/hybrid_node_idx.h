@@ -22,6 +22,11 @@ struct hybrid_node_idx : public osmium::handler::Handler {
   hybrid_node_idx(int idx_fd, int dat_fd);
   ~hybrid_node_idx();
 
+  hybrid_node_idx(hybrid_node_idx const&) = delete;
+  hybrid_node_idx(hybrid_node_idx&&) noexcept = default;
+  hybrid_node_idx& operator=(hybrid_node_idx const&) = delete;
+  hybrid_node_idx& operator=(hybrid_node_idx&&) noexcept = default;
+
   void way(osmium::Way& way) const;
 
   struct impl;
@@ -42,6 +47,12 @@ struct hybrid_node_idx_builder : public osmium::handler::Handler {
   explicit hybrid_node_idx_builder(hybrid_node_idx&);
   hybrid_node_idx_builder(int idx_fd, int dat_fd);
   ~hybrid_node_idx_builder();
+
+  hybrid_node_idx_builder(hybrid_node_idx_builder const&) = delete;
+  hybrid_node_idx_builder(hybrid_node_idx_builder&&) noexcept = default;
+  hybrid_node_idx_builder& operator=(hybrid_node_idx_builder const&) = delete;
+  hybrid_node_idx_builder& operator=(hybrid_node_idx_builder&&) noexcept =
+      default;
 
   void node(osmium::Node const& n) {
     push(n.id(), {static_cast<fixed_coord_t>(n.location().x()) +

@@ -78,20 +78,20 @@ struct pending_feature {
     target_layer_ = std::move(target_layer);
   }
 
-  void add_bool(std::string tag, bool v) {
-    metadata_.emplace_back(tag, encode_bool(v));
+  void add_bool(std::string tag, bool const v) {
+    metadata_.emplace_back(std::move(tag), encode_bool(v));
   }
 
-  void add_string(std::string tag, std::string v) {
-    metadata_.emplace_back(tag, encode_string(v));
+  void add_string(std::string tag, std::string const& v) {
+    metadata_.emplace_back(std::move(tag), encode_string(v));
   }
 
-  void add_numeric(std::string tag, double v) {
-    metadata_.emplace_back(tag, encode_numeric(v));
+  void add_numeric(std::string tag, double const v) {
+    metadata_.emplace_back(std::move(tag), encode_numeric(v));
   }
 
-  void add_integer(std::string tag, int64_t v) {
-    metadata_.emplace_back(tag, encode_integer(v));
+  void add_integer(std::string tag, int64_t const v) {
+    metadata_.emplace_back(std::move(tag), encode_integer(v));
   }
 
   void add_tag_as_bool(std::string tag) {

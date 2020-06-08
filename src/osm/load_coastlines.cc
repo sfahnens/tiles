@@ -24,15 +24,13 @@
 #include "tiles/util_parallel.h"
 
 namespace cl = ClipperLib;
-namespace sc = std::chrono;
 
 namespace tiles {
 
 static_assert(sizeof(cl::cInt) == sizeof(fixed_coord_t), "coord type problem");
 
 struct coastline {
-  coastline(fixed_box box, cl::Paths geo)
-      : box_{std::move(box)}, geo_{std::move(geo)} {}
+  coastline(fixed_box box, cl::Paths geo) : box_{box}, geo_{std::move(geo)} {}
 
   fixed_box box_;
   cl::Paths geo_;
@@ -40,7 +38,7 @@ struct coastline {
 using coastline_ptr = std::shared_ptr<coastline>;
 
 struct geo_task {
-  geo::tile tile_;
+  geo::tile tile_{};
   std::vector<coastline_ptr> coastlines_;
 };
 
@@ -182,9 +180,10 @@ std::optional<std::string> finalize_tile(
                             std::move(polygon)});
 }
 
-void process_coastline(geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
-                       coastline_stats& stats,
-                       std::function<void(geo::tile const&)> seaside_appender) {
+void process_coastline(
+    geo_task& task, geo_queue_t& geo_q, db_queue_t& db_q,
+    coastline_stats& stats,
+    std::function<void(geo::tile const&)>&& seaside_appender) {
   for (auto const& child : task.tile_.direct_children()) {
     auto const insert_bounds = tile_spec{child}.insert_bounds_;
     auto const insert_clip = box_to_path(insert_bounds);
@@ -289,6 +288,7 @@ void load_coastlines(tile_db_handle& db_handle, feature_inserter_mt& inserter,
   // auto const num_workers = 1;
   auto const num_workers = std::thread::hardware_concurrency();
   std::vector<std::thread> threads;
+  threads.reserve(num_workers);
   for (auto i = 0ULL; i < num_workers; ++i) {
     threads.emplace_back([&] {
       while (!geo_queue.finished()) {

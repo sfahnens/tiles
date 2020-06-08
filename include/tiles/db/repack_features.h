@@ -16,7 +16,7 @@
 namespace tiles {
 
 struct tile_record {
-  geo::tile tile_;
+  geo::tile tile_{};
   std::vector<pack_record> records_;
 };
 

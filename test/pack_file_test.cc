@@ -5,10 +5,10 @@
 TEST_CASE("pack_record") {
   SECTION("empty") {
     auto ser = tiles::pack_records_serialize(std::vector<tiles::pack_record>{});
-    CHECK(ser == std::string{});
+    CHECK(ser.empty());
 
     auto deser0 = tiles::pack_records_deserialize(ser);
-    CHECK(deser0 == std::vector<tiles::pack_record>{});
+    CHECK(deser0.empty());
 
     tiles::pack_records_update(ser, tiles::pack_record{1, 2});
     auto deser1 = tiles::pack_records_deserialize(ser);

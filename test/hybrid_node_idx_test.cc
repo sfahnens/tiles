@@ -12,13 +12,13 @@
   {                                            \
     auto const result = get_coords(nodes, id); \
     REQUIRE(result);                           \
-    CHECK(pos_x == result->x());               \
-    CHECK(pos_y == result->y());               \
+    CHECK((pos_x) == result->x());             \
+    CHECK((pos_y) == result->y());             \
   }
 
 #define CHECK_LOCATION(loc, pos_x, pos_y) \
-  CHECK(pos_x == loc.x());                \
-  CHECK(pos_y == loc.y());
+  CHECK((pos_x) == (loc).x());            \
+  CHECK((pos_y) == (loc).y());
 
 void get_coords_helper(
     tiles::hybrid_node_idx const& nodes,
@@ -26,7 +26,7 @@ void get_coords_helper(
   tiles::get_coords(nodes, query);
 }
 
-TEST_CASE("hybrid_node_idx") {
+TEST_CASE("hybrid_node_idx") {  // NOLINT
   SECTION("null") {
     tiles::hybrid_node_idx nodes;
     CHECK_FALSE(get_coords(nodes, 0));
@@ -62,7 +62,7 @@ TEST_CASE("hybrid_node_idx") {
     CHECK_EXISTS(nodes, 42, 2, 3);
 
     osmium::Location loc;
-    get_coords_helper(nodes, {{42l, &loc}});
+    get_coords_helper(nodes, {{42L, &loc}});
     CHECK_LOCATION(loc, 2, 3);
   }
 
@@ -91,7 +91,7 @@ TEST_CASE("hybrid_node_idx") {
       osmium::Location l42;
       osmium::Location l43;
       osmium::Location l44;
-      get_coords_helper(nodes, {{42l, &l42}, {43l, &l43}, {44l, &l44}});
+      get_coords_helper(nodes, {{42L, &l42}, {43L, &l43}, {44L, &l44}});
       CHECK_LOCATION(l42, 2, 3);
       CHECK_LOCATION(l43, 5, 6);
       CHECK_LOCATION(l44, 8, 9);
@@ -99,14 +99,14 @@ TEST_CASE("hybrid_node_idx") {
     {
       osmium::Location l42;
       osmium::Location l44;
-      get_coords_helper(nodes, {{44l, &l44}, {42l, &l42}});
+      get_coords_helper(nodes, {{44L, &l44}, {42L, &l42}});
       CHECK_LOCATION(l42, 2, 3);
       CHECK_LOCATION(l44, 8, 9);
     }
     {
       osmium::Location l43;
       osmium::Location l44;
-      get_coords_helper(nodes, {{43l, &l43}, {44l, &l44}});
+      get_coords_helper(nodes, {{43L, &l43}, {44L, &l44}});
       CHECK_LOCATION(l43, 5, 6);
       CHECK_LOCATION(l44, 8, 9);
     }
@@ -114,14 +114,14 @@ TEST_CASE("hybrid_node_idx") {
       osmium::Location l43_a;
       osmium::Location l43_b;
       osmium::Location l44;
-      get_coords_helper(nodes, {{43l, &l43_b}, {44l, &l44}, {43l, &l43_a}});
+      get_coords_helper(nodes, {{43L, &l43_b}, {44L, &l44}, {43L, &l43_a}});
       CHECK_LOCATION(l43_a, 5, 6);
       CHECK_LOCATION(l43_b, 5, 6);
       CHECK_LOCATION(l44, 8, 9);
     }
     {
       osmium::Location l44;
-      get_coords_helper(nodes, {{44l, &l44}});
+      get_coords_helper(nodes, {{44L, &l44}});
       CHECK_LOCATION(l44, 8, 9);
     }
   }
@@ -156,7 +156,7 @@ TEST_CASE("hybrid_node_idx") {
       osmium::Location l42;
       osmium::Location l44;
       osmium::Location l45;
-      get_coords_helper(nodes, {{42l, &l42}, {45l, &l45}, {44l, &l44}});
+      get_coords_helper(nodes, {{42L, &l42}, {45L, &l45}, {44L, &l44}});
       CHECK_LOCATION(l42, 2, 3);
       CHECK_LOCATION(l44, 8, 9);
       CHECK_LOCATION(l45, 1, 2);
@@ -164,30 +164,30 @@ TEST_CASE("hybrid_node_idx") {
     {
       osmium::Location l42;
       osmium::Location l45;
-      get_coords_helper(nodes, {{42l, &l42}, {45l, &l45}});
+      get_coords_helper(nodes, {{42L, &l42}, {45L, &l45}});
       CHECK_LOCATION(l42, 2, 3);
       CHECK_LOCATION(l45, 1, 2);
     }
     {
       osmium::Location l45;
-      get_coords_helper(nodes, {{45l, &l45}});
+      get_coords_helper(nodes, {{45L, &l45}});
       CHECK_LOCATION(l45, 1, 2);
     }
     {
       osmium::Location l44;
-      get_coords_helper(nodes, {{44l, &l44}});
+      get_coords_helper(nodes, {{44L, &l44}});
       CHECK_LOCATION(l44, 8, 9);
     }
     {
       osmium::Location l44;
       osmium::Location l46;
-      get_coords_helper(nodes, {{44l, &l44}, {46l, &l46}});
+      get_coords_helper(nodes, {{44L, &l44}, {46L, &l46}});
       CHECK_LOCATION(l44, 8, 9);
       CHECK_LOCATION(l46, 4, 5);
     }
     {
       osmium::Location l46;
-      get_coords_helper(nodes, {{46l, &l46}});
+      get_coords_helper(nodes, {{46L, &l46}});
       CHECK_LOCATION(l46, 4, 5);
     }
   }
@@ -221,7 +221,7 @@ TEST_CASE("hybrid_node_idx") {
 
     {
       osmium::Location l44;
-      get_coords_helper(nodes, {{44l, &l44}});
+      get_coords_helper(nodes, {{44L, &l44}});
       CHECK_LOCATION(l44, (1 << 28) + 14, (1 << 28) + 15);
     }
   }
@@ -280,6 +280,7 @@ TEST_CASE("hybrid_node_idx") {
       mem.emplace_back(i, osmium::Location{});
     }
     std::vector<std::pair<osmium::object_id_type, osmium::Location*>> query;
+    query.reserve(mem.size());
     for (auto& m : mem) {
       query.emplace_back(m.first, &m.second);
     }

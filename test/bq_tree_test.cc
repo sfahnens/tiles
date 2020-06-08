@@ -147,9 +147,7 @@ TEST_CASE("bq_tree_all_leafs") {
     auto const tiles =
         std::vector<geo::tile>{{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}};
 
-    for (auto i = 0ULL; i < tiles.size(); ++i) {
-      auto const& tut = tiles.at(i);
-
+    for (auto const& tut : tiles) {
       auto tree = tiles::make_bq_tree({tut});
       auto result = tree.all_leafs({0, 0, 0});
       REQUIRE(1 == result.size());
@@ -202,7 +200,7 @@ TEST_CASE("bq_tree_tsv_file", "[!hide]") {
   std::ifstream in("tiles.tsv");
 
   std::vector<geo::tile> tiles;
-  geo::tile tmp;
+  geo::tile tmp{};
   while (in >> tmp.x_ >> tmp.y_ >> tmp.z_) {
     tiles.push_back(tmp);
   }

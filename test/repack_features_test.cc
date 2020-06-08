@@ -15,9 +15,9 @@ TEST_CASE("repack_features", "[!hide]") {
   std::vector<tiles::tile_record> tasks((1 << tiles::kTileDefaultIndexZoomLvl) *
                                         (1 << tiles::kTileDefaultIndexZoomLvl));
   auto it = geo::tile_iterator{tiles::kTileDefaultIndexZoomLvl};
-  for (auto i = 0ULL; i < tasks.size(); ++i) {
+  for (auto& task : tasks) {
     utl::verify(it->z_ == tiles::kTileDefaultIndexZoomLvl, "it broken");
-    tasks[i].tile_ = *it;
+    task.tile_ = *it;
     ++it;
   }
   utl::verify(it->z_ == tiles::kTileDefaultIndexZoomLvl + 1, "it broken");

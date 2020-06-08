@@ -82,6 +82,7 @@ void join_lines(std::vector<line_handle>& handles) {
     line_handle* other = nullptr;
     for (auto it = it0; it != end(idx) && it->first == pos; ++it) {
       ++count;
+      // NOLINTNEXTLINE
       if (it->second->get() == lh.get() || it->second->get() == nullptr) {
         continue;  // found self or already gone
       }
@@ -94,6 +95,7 @@ void join_lines(std::vector<line_handle>& handles) {
 
     // degree != 2 -> "burn" this coordinate for further processing
     for (auto it = it0; it != end(idx) && it->first == pos; ++it) {
+      // NOLINTNEXTLINE
       if (it->second->get() == nullptr) {
         continue;  // self can already be gone in bwd pass
       }

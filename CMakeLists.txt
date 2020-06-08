@@ -21,6 +21,11 @@ endif()
 
 include(cmake/pkg.cmake)
 
+file(GLOB_RECURSE tiles-server-res "${CMAKE_CURRENT_SOURCE_DIR}/client/*.*")
+create_resource("${CMAKE_CURRENT_SOURCE_DIR}/client/" "${tiles-server-res}" tiles_server_res)
+
+include(cmake/clang-tidy.cmake)
+
 file(GLOB_RECURSE tiles-files
   src/db/*.cc
   src/feature/*.cc
@@ -92,8 +97,6 @@ target_link_libraries(tiles-server
   tiles
 )
 
-file(GLOB_RECURSE tiles-server-res "${CMAKE_CURRENT_SOURCE_DIR}/client/*.*")
-create_resource("${CMAKE_CURRENT_SOURCE_DIR}/client/" "${tiles-server-res}" tiles_server_res)
 target_link_libraries(tiles-server
   tiles_server_res
   tiles_server_res-res

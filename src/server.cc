@@ -120,7 +120,7 @@ void http_server(tcp::acceptor& acceptor, tcp::socket& socket,
   });
 }
 
-void serve_forever(std::string const& address, uint16_t port, callback_t cb) {
+void serve_forever(std::string const& address, uint16_t port, callback_t&& cb) {
   try {
     net::io_context ioc{static_cast<int>(std::thread::hardware_concurrency())};
     tcp::acceptor acceptor{ioc, {net::ip::make_address(address), port}};
@@ -186,7 +186,7 @@ int run_tiles_server(int argc, char const** argv) {
   pack_handle pack_handle{opt.db_fname_.c_str()};
 
   auto const maybe_serve_tile = [&](auto const& req, auto& res) -> bool {
-    static regex_matcher matcher{"^\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
+    static regex_matcher matcher{R"(^\/(\d+)\/(\d+)\/(\d+).mvt$)"};
     auto const decoded_url = url_decode(req);
     auto const match = matcher.match(decoded_url);
     if (!match) {
@@ -247,7 +247,7 @@ int run_tiles_server(int argc, char const** argv) {
 
     bool found = false;
     std::string fname(match ? match->at(1) : "index.html");
-    if (opt.res_dname_.size() != 0) {
+    if (!opt.res_dname_.empty()) {
       auto p = boost::filesystem::path{opt.res_dname_} / fname;
       if (boost::filesystem::exists(p)) {
         utl::mmap_reader mem{p.string().c_str()};

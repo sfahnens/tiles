@@ -15,7 +15,7 @@ geo::tile url_match_to_tile(RegexResult const& rr) {
 }
 
 inline std::optional<geo::tile> parse_tile_url(std::string const& url) {
-  static regex_matcher matcher{".*\\/(\\d+)\\/(\\d+)\\/(\\d+).mvt$"};
+  static regex_matcher matcher{R"(.*\/(\d+)\/(\d+)\/(\d+).mvt$)"};
   auto match = matcher.match(url);
   if (!match) {
     return {};

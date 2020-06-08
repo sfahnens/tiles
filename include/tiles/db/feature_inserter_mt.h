@@ -40,6 +40,7 @@ struct feature_inserter_mt {
     for (auto& c : cache_) {
       utl::verify(it->z_ == kTileDefaultIndexZoomLvl, "it broken");
       c.tile_ = *it;
+      ++it;
     }
     utl::verify(it->z_ == kTileDefaultIndexZoomLvl + 1, "it broken");
   }

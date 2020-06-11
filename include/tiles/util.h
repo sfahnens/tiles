@@ -37,18 +37,16 @@ std::string compress_deflate(std::string const&);
 
 struct progress_tracker {
 #ifdef TILES_GLOBAL_PROGRESS_TRACKER
-  progress_tracker() : ref_{utl::get_active_progress_tracker()} {}
+  progress_tracker() : ptr_{utl::get_active_progress_tracker()} {}
 #else
   progress_tracker()
-      : mem_{std::make_unique<utl::progress_tracker>(
-            [](auto const& t) { t_log("{} : {:>3}%", t.status_, t.out_); })},
-        ref_{*mem_} {}
+      : ptr_{std::make_shared<utl::progress_tracker>(
+            [](auto const& t) { t_log("{} : {:>3}%", t.status_, t.out_); })} {}
 #endif
 
-  utl::progress_tracker* operator->() { return &ref_; }
+  utl::progress_tracker* operator->() { return ptr_.get(); }
 
-  std::unique_ptr<utl::progress_tracker> mem_;
-  utl::progress_tracker& ref_;
+  utl::progress_tracker_ptr ptr_;
 };
 
 struct scoped_timer final {

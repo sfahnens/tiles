@@ -39,7 +39,7 @@ struct prepare_manager {
         curr_range_{geo::tile_range_on_z(base_range_, curr_zoomlevel_)},
         stats_(max_zoomlevel + 1) {
 #ifdef TILES_GLOBAL_PROGRESS_TRACKER
-    utl::get_active_progress_tracker().in_high(max_zoomlevel);
+    utl::get_active_progress_tracker()->in_high(max_zoomlevel);
 #endif
   }
 
@@ -65,7 +65,7 @@ struct prepare_manager {
         curr_range_ = geo::tile_range_on_z(base_range_, curr_zoomlevel_);
 
 #ifdef TILES_GLOBAL_PROGRESS_TRACKER
-        utl::get_active_progress_tracker().increment();
+        utl::get_active_progress_tracker()->increment();
 #endif
       }
     }

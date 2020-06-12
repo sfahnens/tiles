@@ -100,20 +100,20 @@ void transform_erase(Container& c, Fn&& fn) {
 }
 
 struct printable_num {
-  explicit printable_num(double n) : n_{n} {}
-  explicit printable_num(uint64_t n) : n_{static_cast<double>(n)} {}
+  template <typename T>
+  explicit printable_num(T&& t) : n_{static_cast<double>(t)} {}
   double n_;
 };
 
 struct printable_ns {
-  explicit printable_ns(double n) : n_{n} {}
-  explicit printable_ns(uint64_t n) : n_{static_cast<double>(n)} {}
+  template <typename T>
+  explicit printable_ns(T&& t) : n_{static_cast<double>(t)} {}
   double n_;
 };
 
 struct printable_bytes {
-  explicit printable_bytes(double n) : n_{n} {}
-  explicit printable_bytes(uint64_t n) : n_{static_cast<double>(n)} {}
+  template <typename T>
+  explicit printable_bytes(T&& t) : n_{static_cast<double>(t)} {}
   double n_;
 };
 

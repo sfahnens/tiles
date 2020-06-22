@@ -22,64 +22,30 @@
 namespace tiles {
 
 void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
-  auto const format_num = [](auto& os, char const* label, double const n) {
-    auto const k = n / 1e3;
-    auto const m = n / 1e6;
-    auto const g = n / 1e9;
-    if (n < 1e3) {
-      fmt::print(os, "{}: {:>6}  ", label, n);
-    } else if (k < 1e3) {
-      fmt::print(os, "{}: {:>6.1f}K ", label, k);
-    } else if (m < 1e3) {
-      fmt::print(os, "{}: {:>6.1f}M ", label, m);
-    } else {
-      fmt::print(os, "{}: {:>6.1f}G ", label, g);
-    }
-  };
-
-  auto const format_bytes = [](auto& os, char const* label, double const n) {
-    auto const k = n / 1024;
-    auto const m = n / (1024 * 1024);
-    auto const g = n / (1024 * 1024 * 1024);
-    if (n < 1024) {
-      fmt::print(os, "{}: {:>7.2f}B  ", label, n);
-    } else if (k < 1024) {
-      fmt::print(os, "{}: {:>7.2f}KB ", label, k);
-    } else if (m < 1024) {
-      fmt::print(os, "{}: {:>7.2f}MB ", label, m);
-    } else {
-      fmt::print(os, "{}: {:>7.2f}GB ", label, g);
-    }
-  };
-
-  auto const print_stat = [&](auto& os, char const* label, auto const& stat) {
-    fmt::print(std::cout, "{:<14} > ", label);
-    format_bytes(os, "page", stat.ms_psize);
-    format_num(os, "depth", stat.ms_depth);
-    format_num(os, "branch", stat.ms_branch_pages);
-    format_num(os, "leafs", stat.ms_leaf_pages);
-    format_num(os, "oflow", stat.ms_overflow_pages);
-    format_num(os, "numdat", stat.ms_entries);
-    std::cout << "\n";
+  auto const print_stat = [&](char const* label, auto const& stat) {
+    fmt::print(
+        std::cout,
+        "{:<14} > page: {} depth: {} branch: {} leaf: {} oflow: {} ndat: {}\n",
+        label, printable_bytes{stat.ms_psize}, printable_num{stat.ms_depth},
+        printable_num{stat.ms_branch_pages}, printable_num{stat.ms_leaf_pages},
+        printable_num{stat.ms_overflow_pages}, printable_num{stat.ms_entries});
   };
 
   auto const print_sizes = [&](auto const& label, auto& m) {
     auto const sum = std::accumulate(begin(m), end(m), 0.);
     std::sort(begin(m), end(m));
 
-    fmt::print(std::cout, "{:<16} > ", label);
-    format_num(std::cout, "cnt", m.size());
-    format_bytes(std::cout, "sum", sum);
+    fmt::print(std::cout, "{:<16} > cnt: {} sum: {}", label,
+               printable_num(m.size()), printable_bytes(sum));
 
     if (m.empty()) {
       std::cout << "\n";
       return;
     }
 
-    format_bytes(std::cout, "mean", sum / m.size());
-    format_bytes(std::cout, "q95", m[m.size() * .95]);
-    format_bytes(std::cout, "max", m.back());
-    std::cout << "\n";
+    fmt::print(std::cout, "mean: {} q95: {} max: {}\n",
+               printable_bytes{sum / m.size()},
+               printable_bytes{m[m.size() * .95]}, printable_bytes{m.back()});
   };
 
   auto txn = db_handle.make_txn();
@@ -89,10 +55,10 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
   auto meta_dbi = db_handle.meta_dbi(txn);
 
   std::cout << ">> lmdb stat:\n";
-  print_stat(std::cout, "lmdb:env", db_handle.env_.stat());
-  print_stat(std::cout, " dbi:features", features_dbi.stat());
-  print_stat(std::cout, " dbi:tiles", tiles_dbi.stat());
-  print_stat(std::cout, " dbi:meta", meta_dbi.stat());
+  print_stat("lmdb:env", db_handle.env_.stat());
+  print_stat(" dbi:features", features_dbi.stat());
+  print_stat(" dbi:tiles", tiles_dbi.stat());
+  print_stat(" dbi:meta", meta_dbi.stat());
   std::cout << "\n";
 
   std::vector<size_t> pack_sizes;
@@ -167,7 +133,7 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
   }
 
   std::cout << "====\n";
-  format_bytes(std::cout, "total", total);
+  fmt::print(std::cout, "total: {}", printable_bytes{total});
   std::cout << "\n\n";
 }
 

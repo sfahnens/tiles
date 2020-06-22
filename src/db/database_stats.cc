@@ -109,44 +109,30 @@ void database_stats(tile_db_handle& db_handle, pack_handle& pack_handle) {
       utl::verify(feature_pack_valid(pack),  //
                   "have invalid feature pack {}", el->first);
 
+      auto const feature_end_offset =
+          unpack_features(pack, [&](auto const& str) {
+            protozero::pbf_message<tags::feature> msg{str};
+            while (msg.next()) {
+              switch (msg.tag()) {
+                case tags::feature::packed_sint64_header: {
+                  auto const* pre = msg.m_data;
+                  msg.skip();
+                  auto const* post = msg.m_data;
+                  header_sizes.push_back(std::distance(pre, post));
+                } break;
+                case tags::feature::repeated_string_simplify_masks:
+                  simplify_mask_sizes.push_back(msg.get_view().size());
+                  break;
+                case tags::feature::required_fixed_geometry_geometry:
+                  geometry_sizes.push_back(msg.get_view().size());
+                  break;
+                default: msg.skip();
+              }
+            }
+          });
+
       pack_sizes.push_back(pack.size());
-
-      auto const index_offset = read_nth<uint32_t>(pack.data(), 1);
-      if (index_offset != 0) {
-        auto idx_ptr = pack.data() + index_offset;
-        auto const end_ptr = pack.data() + pack.size();
-        auto tree_offset = 0ULL;
-        while (idx_ptr < end_ptr && tree_offset == 0) {
-          tree_offset = protozero::decode_varint(&idx_ptr, end_ptr);
-        }
-
-        if (tree_offset == 0) {
-          index_sizes.push_back(pack.size() - index_offset);
-        } else {
-          index_sizes.push_back(pack.size() - tree_offset);
-        }
-      }
-
-      unpack_features(pack, [&](auto const& str) {
-        protozero::pbf_message<tags::feature> msg{str};
-        while (msg.next()) {
-          switch (msg.tag()) {
-            case tags::feature::packed_sint64_header: {
-              auto const* pre = msg.m_data;
-              msg.skip();
-              auto const* post = msg.m_data;
-              header_sizes.push_back(std::distance(pre, post));
-            } break;
-            case tags::feature::repeated_string_simplify_masks:
-              simplify_mask_sizes.push_back(msg.get_view().size());
-              break;
-            case tags::feature::required_fixed_geometry_geometry:
-              geometry_sizes.push_back(msg.get_view().size());
-              break;
-            default: msg.skip();
-          }
-        }
-      });
+      index_sizes.push_back(pack.size() - feature_end_offset);
     });
   }
 

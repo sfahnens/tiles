@@ -140,7 +140,7 @@ inline std::optional<uint32_t> find_segment_offset(std::string_view const pack,
 }
 
 template <typename Fn>
-void unpack_features(std::string_view const& string, Fn&& fn) {
+size_t unpack_features(std::string_view const& string, Fn&& fn) {
   utl::verify(string.size() >= 5, "unpack_features: invalid feature_pack");
   auto const feature_count = read_nth<uint32_t>(string.data(), 0);
   auto const segment_count = read_nth<uint8_t>(string.data(), 4);
@@ -155,6 +155,7 @@ void unpack_features(std::string_view const& string, Fn&& fn) {
     fn(std::string_view{ptr, size});
     ptr += size;
   }
+  return std::distance(string.data(), ptr);
 }
 
 template <typename Fn>
@@ -163,7 +164,8 @@ void unpack_features(geo::tile const& root, std::string_view const& string,
   utl::verify(string.size() >= 5, "unpack_features: invalid feature_pack");
   auto const idx_offset = find_segment_offset(string, kQuadTreeFeatureIndexId);
   if (!idx_offset) {
-    return unpack_features(string, fn);  // no quad tree available, fallback
+    unpack_features(string, fn);  // no quad tree available, fallback
+    return;
   }
 
   utl::verify(string.size() >= *idx_offset, "invalid feature_pack idx_offset");

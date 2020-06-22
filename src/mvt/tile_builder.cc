@@ -118,7 +118,7 @@ struct layer_builder {
         f.geometry_ = clip(f.geometry_, spec_.draw_bounds_);
         f.geometry_ = shift(f.geometry_, spec_.tile_.z_);
 
-        if (ctx_.tb_drop_subpixel_polygons_ &&
+        if (f.layer_ != kLayerCoastlineIdx && ctx_.tb_drop_subpixel_polygons_ &&
             area(f.geometry_) < kScreenPixelArea) {
           continue;
         }

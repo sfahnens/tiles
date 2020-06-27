@@ -29,6 +29,13 @@ inline std::string encode_string(std::string const& v) {
   return buf;
 }
 
+inline std::string encode_string(std::string_view v) {
+  std::string buf;
+  append(buf, metadata_value_t::string);
+  buf.append(v);
+  return buf;
+}
+
 inline std::string encode_numeric(double v) {
   std::string buf;
   append(buf, metadata_value_t::numeric);

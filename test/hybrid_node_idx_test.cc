@@ -307,6 +307,100 @@ TEST_CASE("hybrid_node_idx") {  // NOLINT
     CHECK(mem.at(6).second.x() == osmium::Location::undefined_coordinate);
     CHECK(mem.at(6).second.y() == osmium::Location::undefined_coordinate);
   }
+
+  SECTION("negative nodes") {
+    auto const idx_fd = osmium::detail::create_tmp_file();
+    auto const dat_fd = osmium::detail::create_tmp_file();
+
+    {
+      tiles::hybrid_node_idx_builder builder{idx_fd, dat_fd};
+      builder.push(-42, {1, 1});
+      builder.push(-43, {2, 2});
+      builder.finish();
+    }
+
+    tiles::hybrid_node_idx nodes{idx_fd, dat_fd};
+
+    {
+      osmium::Location l42;
+      get_coords_helper(nodes, {{42L, &l42}});
+      CHECK_LOCATION(l42, 1, 1);
+    }
+    {
+      osmium::Location lm42;
+      get_coords_helper(nodes, {{42L, &lm42}});
+      CHECK_LOCATION(lm42, 1, 1);
+    }
+    {
+      osmium::Location l43;
+      get_coords_helper(nodes, {{43L, &l43}});
+      CHECK_LOCATION(l43, 2, 2);
+    }
+    {
+      osmium::Location lm43;
+      get_coords_helper(nodes, {{43L, &lm43}});
+      CHECK_LOCATION(lm43, 2, 2);
+    }
+
+    {
+      std::vector<std::pair<osmium::object_id_type, osmium::Location>> mem;
+      for (auto i = 42; i < 44; ++i) {
+        mem.emplace_back(-i, osmium::Location{});
+      }
+      std::vector<std::pair<osmium::object_id_type, osmium::Location*>> query;
+      query.reserve(mem.size());
+      for (auto& m : mem) {
+        query.emplace_back(m.first, &m.second);
+      }
+      tiles::get_coords(nodes, query);
+
+      CHECK(mem.at(0).second.x() == 1);
+      CHECK(mem.at(0).second.y() == 1);
+
+      CHECK(mem.at(1).second.x() == 2);
+      CHECK(mem.at(1).second.y() == 2);
+    }
+  }
+
+  SECTION("duplicates") {
+    auto const idx_fd = osmium::detail::create_tmp_file();
+    auto const dat_fd = osmium::detail::create_tmp_file();
+
+    {
+      tiles::hybrid_node_idx_builder builder{idx_fd, dat_fd};
+      builder.push(-42, {1, 1});
+      builder.push(-42, {1, 1});
+      builder.push(42, {1, 1});
+      builder.push(42, {1, 1});
+      builder.push(-42, {1, 1});
+      builder.finish();
+    }
+
+    tiles::hybrid_node_idx nodes{idx_fd, dat_fd};
+
+    {
+      osmium::Location l42;
+      get_coords_helper(nodes, {{42L, &l42}});
+      CHECK_LOCATION(l42, 1, 1);
+    }
+    {
+      osmium::Location lm42;
+      get_coords_helper(nodes, {{42L, &lm42}});
+      CHECK_LOCATION(lm42, 1, 1);
+    }
+  }
+
+  SECTION("duplicates mismatch") {
+    auto const idx_fd = osmium::detail::create_tmp_file();
+    auto const dat_fd = osmium::detail::create_tmp_file();
+
+    {
+      tiles::hybrid_node_idx_builder builder{idx_fd, dat_fd};
+      builder.push(-42, {1, 1});
+      CHECK_THROWS(builder.push(-42, {2, 2}));
+      CHECK_THROWS(builder.push(42, {2, 2}));
+    }
+  }
 }
 
 TEST_CASE("hybrid_node_idx_benchmark", "[!hide]") {

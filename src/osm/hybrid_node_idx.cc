@@ -92,21 +92,23 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
   if (idx.empty()) {  // very unlikely in prod
     return std::nullopt;
   }
+  auto const abs_id = std::abs(id);
   auto it =
-      std::lower_bound(std::begin(idx), std::end(idx), id,
+      std::lower_bound(std::begin(idx), std::end(idx), abs_id,
                        [](auto const& o, auto const& i) { return o.id_ < i; });
 
-  if (it == std::begin(idx) && it->id_ != id) {  // not empty -> begin != end
+  if (it == std::begin(idx) &&
+      it->id_ != abs_id) {  // not empty -> begin != end
     return std::nullopt;
   }
-  if (it == std::end(idx) || it->id_ != id) {
+  if (it == std::end(idx) || it->id_ != abs_id) {
     --it;
   }
 
   osm_id_t curr_id = it->id_;
   auto dat_it = dat.data() + it->offset_;
 
-  while (curr_id <= id && dat_it != std::end(dat)) {
+  while (curr_id <= abs_id && dat_it != std::end(dat)) {
     auto const header = pz::decode_varint(&dat_it, std::end(dat));
     auto const span_size = header >> 1;
     auto const root_idx = header & 0x1;
@@ -122,7 +124,7 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
 
     delta_decoder x_dec{read_fixed(&dat_it)};
     delta_decoder y_dec{read_fixed(&dat_it)};
-    if (curr_id == id) {
+    if (curr_id == abs_id) {
       return fixed_xy{x_dec.curr_, y_dec.curr_};
     }
     ++curr_id;
@@ -133,7 +135,7 @@ std::optional<fixed_xy> get_coords(hybrid_node_idx const& nodes,
       auto y = y_dec.decode(
           pz::decode_zigzag64(pz::decode_varint(&dat_it, std::end(dat))));
 
-      if (curr_id == id) {
+      if (curr_id == abs_id) {
         return fixed_xy{x, y};
       }
       ++curr_id;
@@ -168,16 +170,19 @@ void get_coords(
 
   fsm_state state = fsm_state::from_index;
 
-  std::sort(begin(queries), end(queries));
+  std::sort(begin(queries), end(queries), [](auto const& lhs, auto const& rhs) {
+    return std::abs(lhs.first) < std::abs(rhs.first);
+  });
   auto q_it = begin(queries);
-  for (; q_it != end(queries) && q_it->first < idx.at(0).id_; ++q_it) {
+  for (; q_it != end(queries) && std::abs(q_it->first) < idx.at(0).id_;
+       ++q_it) {
     // skip missing pre
   }
 
   constexpr auto kReInitDistance = 1024;
 
   while (q_it != end(queries)) {
-    auto const& query_id = q_it->first;
+    auto const& query_id = std::abs(q_it->first);
 
     switch (state) {
       // pre cond: have any query_id
@@ -216,7 +221,8 @@ void get_coords(
 
         // not found : skip missing queries
         if (query_id < curr_id) {
-          for (; q_it != end(queries) && q_it->first < curr_id; ++q_it) {
+          for (; q_it != end(queries) && std::abs(q_it->first) < curr_id;
+               ++q_it) {
           }
           x_dec.reset(read_fixed(&dat_it));
           y_dec.reset(read_fixed(&dat_it));
@@ -258,7 +264,8 @@ void get_coords(
           }
 
           utl::verify(query_id == curr_id, "missed node");
-          for (; q_it != end(queries) && q_it->first == query_id; ++q_it) {
+          for (; q_it != end(queries) && std::abs(q_it->first) == query_id;
+               ++q_it) {
             q_it->second->set_x(x_dec.curr_);
             q_it->second->set_y(y_dec.curr_);
           }
@@ -342,16 +349,27 @@ struct hybrid_node_idx_builder::impl {
                     pos.x() <= coord_max && pos.y() <= coord_max,
                 "pos ({}, {}) not within bounds ({} / {})",  //
                 pos.x(), pos.y(), coord_min, coord_max);
-    utl::verify(id > last_id_, "ids not sorted!");
 
-    ++stat_nodes_;
-
-    if (last_id_ + 1 != id && !span_.empty()) {
-      push_coord_span();
-      push_empty_span(id);
+    auto const abs_id = std::abs(id);
+    if (abs_id == last_id_) {
+      utl::verify(
+          pos == last_pos_,
+          "input: duplicate absolute node id with mismatching coordinates {}",
+          abs_id);
+      return;
     }
 
-    last_id_ = id;
+    utl::verify(abs_id > last_id_, "input: node ids are not sorted! {} <= {}",
+                abs_id, last_id_);
+    ++stat_nodes_;
+
+    if (last_id_ + 1 != abs_id && !span_.empty()) {
+      push_coord_span();
+      push_empty_span(abs_id);
+    }
+
+    last_id_ = abs_id;
+    last_pos_ = pos;
     span_.emplace_back(pos);
   }
 
@@ -469,7 +487,9 @@ struct hybrid_node_idx_builder::impl {
   od::mmap_vector_file<id_offset>& idx_;
   od::mmap_vector_file<char>& dat_;
 
-  osm_id_t last_id_ = 0;
+  osm_id_t last_id_ = std::numeric_limits<osm_id_t>::min();
+  fixed_xy last_pos_{0, 0};
+
   std::vector<fixed_xy> span_;
 
   static constexpr auto const kCoordsPerIndex = 1024;  // one idx entry each n

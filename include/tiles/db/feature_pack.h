@@ -78,7 +78,7 @@ struct feature_packer {
     }
   }
 
-  void upate_segment_offset(uint8_t segment_id, uint32_t const offset) {
+  void update_segment_offset(uint8_t segment_id, uint32_t const offset) {
     tiles::write(buf_.data(), segment_offsets_.at(segment_id), offset);
   }
 

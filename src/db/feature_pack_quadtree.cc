@@ -52,7 +52,7 @@ void quadtree_feature_packer::pack_features(
   // var : one quad tree per level
   // var : index array of offsets of the quad trees
   // the segment offset points to the begin of the index array
-  packer_.upate_segment_offset(
+  packer_.update_segment_offset(
       kQuadTreeFeatureIndexId,
       packer_.append_packed(utl::to_vec(quad_trees, [&](auto const& quad_tree) {
         return quad_tree.empty() ? 0U : packer_.append(quad_tree);

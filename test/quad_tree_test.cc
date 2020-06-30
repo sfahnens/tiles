@@ -147,3 +147,52 @@ TEST_CASE("quad_tree") {
     }
   }
 }
+
+TEST_CASE("quad_tree_real_world_problem_1") {
+  geo::tile root{534, 362, 10};
+
+  std::vector<tiles::quad_tree_input> input;
+  input.push_back({{534, 362, 10}, 1703394, 1});
+  input.push_back({{17099, 11600, 15}, 1704003, 1});
+  input.push_back({{8546, 5807, 14}, 1704193, 1});
+  input.push_back({{34185, 23231, 16}, 1704499, 1});
+  input.push_back({{136744, 92925, 18}, 1704727, 1});
+  input.push_back({{2137, 1451, 12}, 1704785, 1});
+  input.push_back({{4275, 2903, 13}, 1705392, 1});
+  input.push_back({{547239, 371607, 20}, 1706102, 1});
+  input.push_back({{17101, 11613, 15}, 1706160, 1});
+  input.push_back({{547241, 371633, 20}, 1706233, 1});
+  input.push_back({{547241, 371634, 20}, 1706291, 1});
+  input.push_back({{547216, 371700, 20}, 1706349, 1});
+  input.push_back({{17101, 11615, 15}, 1706464, 1});
+  input.push_back({{1069, 725, 11}, 1706666, 1});
+  input.push_back({{8552, 5807, 14}, 1706732, 1});
+  input.push_back({{2139, 1451, 12}, 1706992, 1});
+  input.push_back({{34229, 23221, 16}, 1707667, 1});
+  input.push_back({{547671, 371550, 20}, 1707754, 1});
+  input.push_back({{4278, 2903, 13}, 1707812, 1});
+  input.push_back({{8556, 5806, 14}, 1707938, 1});
+  input.push_back({{17112, 11612, 15}, 1708308, 1});
+  input.push_back({{34224, 23224, 16}, 1708378, 1});
+  input.push_back({{68448, 46449, 17}, 1708513, 1});
+  input.push_back({{273794, 185797, 19}, 1708571, 1});
+  input.push_back({{17113, 11612, 15}, 1708638, 1});
+  input.push_back({{68452, 46450, 17}, 1708914, 1});
+  input.push_back({{34226, 23228, 16}, 1708974, 1});
+
+  auto tree = tiles::make_quad_tree(root, input);
+
+  // tiles::dump_tree(tree);
+
+  geo::tile query{17097, 11585, 15};
+
+  std::optional<std::pair<uint32_t, uint32_t>> result;
+  tiles::walk_quad_tree(tree.data(), root, query,
+                        [&](auto const offset, auto const count) {
+                          REQUIRE(!result.has_value());
+                          result = {offset, count};
+                        });
+  REQUIRE(result.has_value());
+  CHECK(result->first == 1703394);
+  CHECK(result->second == 1);
+}
